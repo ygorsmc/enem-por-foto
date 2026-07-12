@@ -1,5 +1,7 @@
 # Corretor ENEM 📝
 
+<p><a href="https://github.com/ygorsmc/enem-por-foto/actions/workflows/ci.yml"><img src="https://github.com/ygorsmc/enem-por-foto/actions/workflows/ci.yml/badge.svg" alt="CI"></a> <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a></p>
+
 Bot multicanal (**WhatsApp + Telegram**) que corrige redações do ENEM a partir de uma **foto do manuscrito**: o aluno informa o tema, cola os textos motivadores (se tiver) e manda a foto — e recebe de volta a nota estimada (0 a 1000) por competência, com feedback pedagógico citando trechos exatos do próprio texto.
 
 
