@@ -1,0 +1,10 @@
+# Só configuração de ferramentas — dependências em requirements.txt (o projeto
+# roda como app via `uvicorn src.main:app`, não é instalado como pacote).
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

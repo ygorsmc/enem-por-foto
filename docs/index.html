@@ -1,0 +1,2008 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Corretor de Redação do ENEM — Ygor Carvalho</title>
+<style>
+:root{
+  --ink:#20293A; --ink-2:#3E4A5C; --ink-3:#5E6C80;
+  --line:#E4D9C7; --line-2:#EFE7D8;
+  --bg:#F7F1E4; --surface:#FFFDF7;
+  --accent:#9A3324; --accent-2:#7A2519; --accent-soft:#FBEDE6;
+  --grid:#E9DEC9;
+  --code-bg:#1F3B2C; --code-fg:#E9F3E7; --code-cm:#8FB39A;
+  --why:#B15C43; --what:#3E6B96; --who:#4E7A5E; --how:#9A7734; --when:#6E5A87;
+  --whatsapp:#25D366; --telegram:#229ED9;
+  --radius:8px;
+  --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+  --sans:'IBM Plex Sans',system-ui,-apple-system,sans-serif;
+  --serif:'IBM Plex Serif',Georgia,serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{font-family:var(--sans);color:var(--ink-2);line-height:1.7;background-color:var(--bg);background-image:repeating-linear-gradient(var(--grid) 0 1px,transparent 1px 32px);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;}
+::selection{background:rgba(154,51,36,.16);}
+
+/* ---------- HERO ---------- */
+.hero{position:relative;background:var(--surface);background-image:repeating-linear-gradient(var(--grid) 0 1px,transparent 1px 26px);border-bottom:1px solid var(--line);overflow:hidden;}
+.hero::before,.hero::after{content:'';position:absolute;top:20px;width:16px;height:16px;opacity:.5;}
+.hero::before{left:20px;border-left:2px solid var(--accent);border-top:2px solid var(--accent);}
+.hero::after{right:20px;border-right:2px solid var(--accent);border-top:2px solid var(--accent);}
+.hero-inner{position:relative;max-width:1200px;margin:0 auto;padding:54px 40px 46px;}
+.hero-title{margin:0;font:600 40px/1.12 var(--serif);color:var(--ink);letter-spacing:-.01em;max-width:22ch;padding-left:18px;border-left:4px solid var(--accent);}
+.hero-pitch{margin:18px 0 0;max-width:72ch;font:400 17px/1.62 var(--sans);color:var(--ink-2);}
+.hero-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:24px;}
+.hero-chip{font:500 12px/1 var(--mono);padding:7px 13px;border-radius:999px;background:rgba(255,255,255,.72);border:1px solid var(--line);color:var(--accent-2);}
+.hero-chip--whatsapp{background:rgba(37,211,102,.13);border-color:rgba(37,211,102,.4);color:#1B7F44;}
+.hero-chip--telegram{background:rgba(34,158,217,.13);border-color:rgba(34,158,217,.4);color:#1976A3;}
+.hero-role{display:flex;align-items:center;gap:9px;margin-top:20px;font:500 13px/1.4 var(--mono);color:var(--ink-3);}
+.hero-role .tick{width:8px;height:8px;background:var(--accent);flex:none;}
+.hero-stats{display:grid;grid-template-columns:repeat(4,1fr);margin-top:34px;border:1px solid var(--line);background:rgba(255,255,255,.62);}
+.hero-stat{padding:20px 22px;border-right:1px solid var(--line);}
+.hero-stat:last-child{border-right:0;}
+.hero-statnum{display:flex;align-items:baseline;gap:5px;font:600 27px/1 var(--mono);color:var(--ink);}
+.hero-statnum .u{font-size:13px;color:var(--ink-3);font-weight:500;}
+.hero-statlab{margin-top:8px;font:500 11px/1.4 var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);}
+
+/* ---------- STICKY NAV ---------- */
+.sticky-nav{position:sticky;top:0;z-index:1000;background:var(--surface);display:flex;align-items:stretch;justify-content:center;flex-wrap:wrap;border-bottom:1px solid var(--line);box-shadow:0 1px 0 rgba(22,35,58,.04);}
+.tab-wrapper{position:relative;display:inline-block;}
+.tab-btn{background:none;border:0;border-right:1px solid var(--line-2);color:var(--ink-3);padding:14px 17px;font:500 12.5px/1 var(--mono);letter-spacing:.01em;cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;transition:color .15s,background .15s;}
+.tab-btn:hover{color:var(--accent);background:var(--accent-soft);}
+.tab-btn.active{color:#fff;background:var(--accent);border-bottom-color:var(--accent-2);}
+.tab-wrapper:last-child .tab-btn{border-right:0;}
+.tab-dropdown{visibility:hidden;opacity:0;position:absolute;top:100%;left:0;background:var(--surface);min-width:272px;max-height:70vh;overflow-y:auto;border:1px solid var(--line);border-top:2px solid var(--accent);box-shadow:0 14px 32px rgba(22,35,58,.16);border-radius:0 0 6px 6px;z-index:2000;transition:opacity .15s,visibility .15s;}
+.tab-wrapper::after{content:'';position:absolute;bottom:-10px;left:0;width:100%;height:10px;}
+.tab-wrapper:hover .tab-dropdown{visibility:visible;opacity:1;}
+.dropdown-group-header{padding:8px 14px;font:600 10.5px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent);background:var(--accent-soft);border-bottom:1px solid var(--line-2);position:sticky;top:0;}
+.dropdown-link{display:block;padding:9px 16px;color:var(--ink-2);text-decoration:none;font:400 13px/1.45 var(--sans);border-bottom:1px solid var(--line-2);white-space:normal;}
+.dropdown-link:last-child{border-bottom:0;}
+.dropdown-link:hover{background:var(--accent-soft);color:var(--accent);}
+
+/* ---------- CONTAINER / PAGES ---------- */
+.container{max-width:1200px;margin:0 auto;padding:34px 40px 20px;}
+.page-content{display:none;}
+.page-content.active{display:block;animation:fadeIn .3s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:none;}}
+
+/* ---------- CONTENT WRAPPER ---------- */
+.content-wrapper{background:var(--surface);padding:48px 52px;border:1px solid var(--line);border-radius:var(--radius);box-shadow:0 1px 2px rgba(22,35,58,.04);}
+.content-wrapper + .content-wrapper{margin-top:22px;}
+
+/* ---------- TYPOGRAPHY ---------- */
+.content-wrapper h1{font:600 31px/1.18 var(--serif);color:var(--ink);letter-spacing:-.01em;padding-bottom:18px;margin-bottom:8px;border-bottom:1px solid var(--line);}
+.content-wrapper h1::before{content:'✓';display:inline-block;color:var(--accent);margin-right:10px;font-family:var(--sans);}
+h2{font:600 22px/1.3 var(--serif);color:var(--ink);margin:46px 0 16px;padding-bottom:11px;border-bottom:1px solid var(--line-2);display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+h2:first-child{margin-top:0;}
+h3{font:600 15.5px/1.45 var(--sans);color:var(--accent-2);margin:28px 0 10px;letter-spacing:.005em;}
+h4{font:600 13px/1.4 var(--mono);color:var(--ink-3);letter-spacing:.03em;text-transform:uppercase;margin:20px 0 8px;}
+p{margin:14px 0;}
+.content-wrapper p{color:var(--ink-2);font-size:16px;}
+ul,ol{margin:14px 0 14px 2px;padding-left:24px;}
+li{margin:7px 0;padding-left:5px;}
+li::marker{color:var(--accent);}
+ol li::marker{font-family:var(--mono);font-size:.85em;}
+strong{color:var(--ink);font-weight:600;}
+
+blockquote{border-left:3px solid var(--accent);background:var(--accent-soft);padding:16px 22px;margin:22px 0;border-radius:0 6px 6px 0;color:var(--ink-2);}
+blockquote p{margin:6px 0;}
+blockquote p:first-child{margin-top:0;}
+blockquote p:last-child{margin-bottom:0;}
+
+pre{background:var(--code-bg);color:var(--code-fg);padding:18px 20px;border-radius:8px;overflow-x:auto;margin:20px 0;border:1px solid #142a1e;}
+code{font-family:var(--mono);font-size:.9em;}
+pre code{background:none;padding:0;color:inherit;font-size:13px;line-height:1.7;}
+p code,li code,td code,th code{background:var(--accent-soft);padding:2px 6px;border-radius:4px;color:var(--accent-2);font-size:.86em;border:1px solid var(--line-2);}
+
+a{color:var(--accent);text-decoration:none;}
+a:hover{color:var(--accent-2);text-decoration:underline;}
+
+/* ---------- TABLES ---------- */
+.table-wrap{overflow-x:auto;margin:22px 0;border:1px solid var(--line);border-radius:8px;}
+table{width:100%;border-collapse:collapse;}
+th,td{padding:12px 15px;text-align:left;border-bottom:1px solid var(--line-2);border-right:1px solid var(--line-2);vertical-align:top;font-size:14px;line-height:1.6;}
+th:last-child,td:last-child{border-right:0;}
+tr:last-child td{border-bottom:0;}
+th{background:var(--accent-soft);color:var(--accent-2);font:600 11px/1.3 var(--mono);letter-spacing:.05em;text-transform:uppercase;}
+td{color:var(--ink-2);}
+tbody tr:hover,table tr:hover{background:#F7FAFC;}
+
+/* ---------- CANVAS (5W1H) ---------- */
+.canvas-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(212px,1fr));gap:16px;margin-bottom:44px;}
+.canvas-col{background:var(--surface);border:1px solid var(--line);border-radius:8px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 1px 2px rgba(22,35,58,.04);transition:box-shadow .2s,transform .2s;}
+.canvas-col:hover{transform:translateY(-3px);box-shadow:0 8px 22px rgba(22,35,58,.10);}
+.col-header{padding:12px 14px;font:600 11px/1.2 var(--mono);letter-spacing:.08em;text-align:left;color:#fff;text-transform:uppercase;}
+.col-content{padding:13px;flex-grow:1;display:flex;flex-direction:column;gap:10px;}
+.block-card{background:var(--surface);border:1px solid var(--line-2);border-left:3px solid;border-radius:6px;padding:12px 13px;cursor:pointer;text-decoration:none;display:block;color:var(--ink-2);font-size:12.5px;line-height:1.55;transition:box-shadow .15s,transform .15s;}
+.block-card:hover{box-shadow:0 5px 14px rgba(22,35,58,.12);transform:translateY(-1px);}
+.block-card b{display:block;margin-bottom:6px;font:700 12.5px/1.3 var(--mono);}
+.col-why .col-header{background:var(--why);} .col-why .block-card{border-left-color:var(--why);} .col-why .block-card b{color:var(--why);} .col-why .col-content{background:rgba(177,92,67,.05);}
+.col-what .col-header{background:var(--what);} .col-what .block-card{border-left-color:var(--what);} .col-what .block-card b{color:var(--what);} .col-what .col-content{background:rgba(62,107,150,.05);}
+.col-who .col-header{background:var(--who);} .col-who .block-card{border-left-color:var(--who);} .col-who .block-card b{color:var(--who);} .col-who .col-content{background:rgba(78,122,94,.05);}
+.col-how .col-header{background:var(--how);} .col-how .block-card{border-left-color:var(--how);} .col-how .block-card b{color:var(--how);} .col-how .col-content{background:rgba(154,119,52,.05);}
+.col-when .col-header{background:var(--when);} .col-when .block-card{border-left-color:var(--when);} .col-when .block-card b{color:var(--when);} .col-when .col-content{background:rgba(110,90,135,.05);}
+
+/* badges (in h2 of detailed canvas sections) */
+.badge{display:inline-flex;align-items:center;padding:5px 9px;border-radius:4px;font:600 10.5px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:#fff;vertical-align:middle;}
+.bg-why{background:var(--why);} .bg-what{background:var(--what);} .bg-who{background:var(--who);} .bg-how{background:var(--how);} .bg-when{background:var(--when);}
+
+.content-section{padding-top:8px;}
+.content-wrapper h1[id],h2[id],h3[id],.content-section[id]{scroll-margin-top:92px;}
+hr{border:0;height:1px;background:var(--line);margin:40px 0;}
+
+/* ---------- FOOTER ---------- */
+footer.site-footer{background:#2A2018;color:#C4B6A0;margin-top:64px;border-top:2px solid var(--accent);}
+.footer-inner{max-width:1200px;margin:0 auto;padding:42px 40px;display:flex;flex-wrap:wrap;gap:30px 60px;align-items:flex-start;justify-content:space-between;}
+.footer-brand{max-width:48ch;}
+.fb-name{font:600 15px/1.3 var(--serif);color:#F7EEE0;}
+.fb-desc{margin-top:9px;font:400 13px/1.62 var(--sans);color:#AB9C86;}
+.fb-stack{margin-top:13px;font:500 11px/1.5 var(--mono);letter-spacing:.04em;color:#8A7A63;text-transform:uppercase;}
+.footer-contact{display:flex;flex-direction:column;gap:10px;}
+.fc-label{font:600 10.5px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:#8A7A63;margin-bottom:2px;}
+.footer-contact a{display:flex;align-items:center;gap:10px;color:#DDD0BB;font:500 13px/1 var(--mono);text-decoration:none;}
+.footer-contact a:hover{color:#fff;text-decoration:none;}
+.fc-tick{width:6px;height:6px;background:var(--accent);flex:none;}
+
+/* ---------- RESPONSIVE ---------- */
+@media (max-width:900px){
+  .hero-inner,.container,.footer-inner{padding-left:24px;padding-right:24px;}
+  .hero-title{font-size:32px;}
+  .hero-stats{grid-template-columns:repeat(2,1fr);}
+  .hero-stat:nth-child(2){border-right:0;}
+  .hero-stat:nth-child(1),.hero-stat:nth-child(2){border-bottom:1px solid var(--line);}
+  .content-wrapper{padding:32px 24px;}
+  .canvas-grid{grid-template-columns:repeat(2,1fr);}
+}
+@media (max-width:560px){
+  .hero-stats{grid-template-columns:1fr;}
+  .hero-stat{border-right:0;border-bottom:1px solid var(--line);}
+  .hero-stat:last-child{border-bottom:0;}
+  .canvas-grid{grid-template-columns:1fr;}
+  .tab-btn{padding:12px 13px;font-size:11.5px;}
+  .content-wrapper h1{font-size:26px;}
+}
+</style>
+</head>
+<body>
+
+<header class="hero">
+    <div class="hero-inner">
+        <h1 class="hero-title">Corretor de Redação do ENEM</h1>
+        <p class="hero-pitch">Bot multicanal (WhatsApp + Telegram) que corrige redações do ENEM a partir de uma <strong>foto do manuscrito</strong>: o aluno manda a foto e recebe a nota estimada por competência (0–1.000), com feedback pedagógico que cita trechos exatos do próprio texto. Sem instalar app, com privacidade pensada para um público menor de idade.</p>
+        <div class="hero-chips"><span class="hero-chip">FastAPI</span><span class="hero-chip">Redis embutido</span><span class="hero-chip">Mistral OCR</span><span class="hero-chip">LLM plugável</span><span class="hero-chip hero-chip--whatsapp">💬 WhatsApp</span><span class="hero-chip hero-chip--telegram">✈️ Telegram</span></div>
+        <div class="hero-role"><span class="tick"></span>Concepção, arquitetura e desenvolvimento — Ygor Carvalho · Engenharia de IA</div>
+        <div class="hero-stats">
+            <div class="hero-stat"><div class="hero-statnum">5</div><div class="hero-statlab">competências (matriz INEP)</div></div>
+            <div class="hero-stat"><div class="hero-statnum">0–1000</div><div class="hero-statlab">nota estimada</div></div>
+            <div class="hero-stat"><div class="hero-statnum">2</div><div class="hero-statlab">canais sem app</div></div>
+            <div class="hero-stat"><div class="hero-statnum">45<span class="u">min</span></div><div class="hero-statlab">TTL — nada persiste depois</div></div>
+        </div>
+    </div>
+</header>
+
+<nav class="sticky-nav" id="mainNav">
+    
+    <div class="tab-wrapper" data-page="inicio">
+        <button class="tab-btn active" data-page="inicio">Início</button>
+        <div class="tab-dropdown">
+<a href="#como-funciona" class="dropdown-link" data-page="inicio">Como funciona</a>
+<a href="#o-fluxo-etapa-por-etapa" class="dropdown-link" data-page="inicio">O fluxo, etapa por etapa</a>
+<a href="#arquitetura" class="dropdown-link" data-page="inicio">Arquitetura</a>
+<a href="#por-que-mensageria-e-n-o-um-app-de-ia" class="dropdown-link" data-page="inicio">Por que mensageria, e não um app de IA</a>
+<a href="#lgpd-o-p-blico-menor-de-idade-" class="dropdown-link" data-page="inicio">LGPD (o público é menor de idade)</a>
+<a href="#rodando-local" class="dropdown-link" data-page="inicio">Rodando local</a>
+<a href="#testes-e-lint" class="dropdown-link" data-page="inicio">Testes e lint</a>
+<a href="#conectando-os-canais" class="dropdown-link" data-page="inicio">Conectando os canais</a>
+<a href="#deploy-azure-container-apps-" class="dropdown-link" data-page="inicio">Deploy (Azure Container Apps)</a>
+<a href="#estrutura" class="dropdown-link" data-page="inicio">Estrutura</a>
+</div>
+    </div>
+
+    <div class="tab-wrapper" data-page="diagnostico">
+        <button class="tab-btn" data-page="diagnostico">Diagnóstico e Objetivos</button>
+        <div class="tab-dropdown">
+<a href="#1-1-contexto-a-reda-o-do-enem-e-o-acesso" class="dropdown-link" data-page="diagnostico">1.1 Contexto: a redação do ENEM e o acesso ao ensino superior</a>
+<a href="#1-2-o-problema-real-o-gargalo-a-corre-o-" class="dropdown-link" data-page="diagnostico">1.2 O problema real: o gargalo é a correção, não a escrita</a>
+<a href="#1-3-an-lise-de-causas-raiz" class="dropdown-link" data-page="diagnostico">1.3 Análise de Causas-Raiz</a>
+<a href="#1-4-consequ-ncias-mensur-veis" class="dropdown-link" data-page="diagnostico">1.4 Consequências Mensuráveis</a>
+<a href="#1-5-a-solu-o-corre-o-instant-nea-por-fot" class="dropdown-link" data-page="diagnostico">1.5 A Solução: correção instantânea por foto, no canal que o aluno já usa</a>
+<a href="#planejamento-macro-pmc-" class="dropdown-link" data-page="diagnostico">Planejamento Macro (PMC)</a>
+<a href="#1-6-contextualiza-o-do-desafio" class="dropdown-link" data-page="diagnostico">1.6 Contextualização do Desafio</a>
+<a href="#1-7-objetivos-smart" class="dropdown-link" data-page="diagnostico">1.7 Objetivos SMART</a>
+<a href="#objetivo-principal" class="dropdown-link" data-page="diagnostico">Objetivo Principal</a>
+<a href="#objetivos-espec-ficos" class="dropdown-link" data-page="diagnostico">Objetivos Específicos</a>
+</div>
+    </div>
+
+    <div class="tab-wrapper" data-page="canvas">
+        <button class="tab-btn" data-page="canvas">Canvas de Projeto</button>
+        <div class="tab-dropdown">
+<a href="#bloco-1" class="dropdown-link" data-page="canvas">1. Justificativa</a>
+<a href="#bloco-2" class="dropdown-link" data-page="canvas">2. Objetivo SMART</a>
+<a href="#bloco-3" class="dropdown-link" data-page="canvas">3. Benefícios</a>
+<a href="#bloco-4" class="dropdown-link" data-page="canvas">4. Produto</a>
+<a href="#bloco-5" class="dropdown-link" data-page="canvas">5. Requisitos</a>
+<a href="#bloco-6" class="dropdown-link" data-page="canvas">6. Stakeholders</a>
+<a href="#bloco-7" class="dropdown-link" data-page="canvas">7. Equipe</a>
+<a href="#bloco-8" class="dropdown-link" data-page="canvas">8. Premissas</a>
+<a href="#bloco-9" class="dropdown-link" data-page="canvas">9. Entregas (EAP)</a>
+<a href="#bloco-10" class="dropdown-link" data-page="canvas">10. Restrições</a>
+<a href="#bloco-11" class="dropdown-link" data-page="canvas">11. Riscos</a>
+<a href="#bloco-12" class="dropdown-link" data-page="canvas">12. Cronograma</a>
+<a href="#bloco-13" class="dropdown-link" data-page="canvas">13. Custos</a>
+</div>
+    </div>
+
+    <div class="tab-wrapper" data-page="arquitetura">
+        <button class="tab-btn" data-page="arquitetura">Arquitetura</button>
+        <div class="tab-dropdown">
+<a href="#2-1-topologia-mono-cont-iner-app-redis-e" class="dropdown-link" data-page="arquitetura">2.1 Topologia: mono-contêiner (app + Redis embutido)</a>
+<a href="#2-2-a-borda-http-responder-r-pido-proces" class="dropdown-link" data-page="arquitetura">2.2 A borda HTTP: responder rápido, processar depois</a>
+<a href="#2-3-detalhamento-dos-componentes" class="dropdown-link" data-page="arquitetura">2.3 Detalhamento dos componentes</a>
+<a href="#interface-de-canal-agn-stica" class="dropdown-link" data-page="arquitetura">Interface de canal agnóstica</a>
+<a href="#2-4-o-fluxo-conversacional-m-quina-de-es" class="dropdown-link" data-page="arquitetura">2.4 O fluxo conversacional (máquina de estados)</a>
+<a href="#2-5-o-motor-de-corre-o-prompt-em-dois-bl" class="dropdown-link" data-page="arquitetura">2.5 O motor de correção: prompt em dois blocos e cache de contexto</a>
+<a href="#2-6-deploy-azure-container-apps-" class="dropdown-link" data-page="arquitetura">2.6 Deploy (Azure Container Apps)</a>
+</div>
+    </div>
+
+    <div class="tab-wrapper" data-page="limitacoes">
+        <button class="tab-btn" data-page="limitacoes">Análise e Limitações</button>
+        <div class="tab-dropdown">
+<a href="#3-1-ocr-de-manuscrito-o-limite-da-letra-" class="dropdown-link" data-page="limitacoes">3.1 OCR de manuscrito: o limite da letra difícil</a>
+<a href="#alternativa-avaliada-e-descartada-segund" class="dropdown-link" data-page="limitacoes">Alternativa avaliada e descartada: "segundo olhar" de uma LLM multimodal</a>
+<a href="#3-2-a-nota-uma-estimativa-n-o-a-nota-ofi" class="dropdown-link" data-page="limitacoes">3.2 A nota é uma estimativa, não a nota oficial</a>
+<a href="#3-3-r-plica-nica-o-redis-embutido-n-o-es" class="dropdown-link" data-page="limitacoes">3.3 Réplica única: o Redis embutido não escala horizontalmente</a>
+<a href="#3-4-custo-por-corre-o-ocr-llm-a-cada-red" class="dropdown-link" data-page="limitacoes">3.4 Custo por correção: OCR + LLM a cada redação</a>
+<a href="#3-5-sem-hist-rico-o-pre-o-deliberado-da-" class="dropdown-link" data-page="limitacoes">3.5 Sem histórico: o preço (deliberado) da privacidade</a>
+<a href="#3-6-custo-de-mensageria-o-whatsapp-deixa" class="dropdown-link" data-page="limitacoes">3.6 Custo de mensageria: o WhatsApp deixa de ser gratuito</a>
+</div>
+    </div>
+
+    <div class="tab-wrapper" data-page="stress">
+        <button class="tab-btn" data-page="stress">Testes de Stress</button>
+        <div class="tab-dropdown">
+<a href="#objetivo" class="dropdown-link" data-page="stress">Objetivo</a>
+<a href="#componentes-a-medir" class="dropdown-link" data-page="stress">Componentes a Medir</a>
+<a href="#ganho-do-cache-de-contexto-a-medir-" class="dropdown-link" data-page="stress">Ganho do Cache de Contexto (a medir)</a>
+<a href="#teste-de-rajada-burst-na-borda-http-a-me" class="dropdown-link" data-page="stress">Teste de Rajada (Burst) na Borda HTTP (a medir)</a>
+<a href="#reflex-o-cr-tica-a-preencher-ap-s-a-cole" class="dropdown-link" data-page="stress">Reflexão Crítica (a preencher após a coleta)</a>
+</div>
+    </div>
+
+    <div class="tab-wrapper" data-page="robustez">
+        <button class="tab-btn" data-page="robustez">Robustez e Escala</button>
+        <div class="tab-dropdown">
+<a href="#6-1-tratamento-de-erros-e-resili-ncia" class="dropdown-link" data-page="robustez">6.1 Tratamento de Erros e Resiliência</a>
+<a href="#como-foi-implementado" class="dropdown-link" data-page="robustez">Como foi implementado</a>
+<a href="#justificativa-arquitetural" class="dropdown-link" data-page="robustez">Justificativa Arquitetural</a>
+<a href="#6-2-observabilidade-logs-estruturados" class="dropdown-link" data-page="robustez">6.2 Observabilidade: logs estruturados</a>
+<a href="#como-foi-implementado" class="dropdown-link" data-page="robustez">Como foi implementado</a>
+<a href="#justificativa-arquitetural" class="dropdown-link" data-page="robustez">Justificativa Arquitetural</a>
+<a href="#6-3-configura-o-via-ambiente-twelve-fact" class="dropdown-link" data-page="robustez">6.3 Configuração via ambiente (Twelve-Factor)</a>
+<a href="#como-foi-implementado" class="dropdown-link" data-page="robustez">Como foi implementado</a>
+<a href="#justificativa-arquitetural" class="dropdown-link" data-page="robustez">Justificativa Arquitetural</a>
+<a href="#6-4-estado-persist-ncia-e-escalabilidade" class="dropdown-link" data-page="robustez">6.4 Estado, persistência e escalabilidade</a>
+<a href="#como-foi-implementado" class="dropdown-link" data-page="robustez">Como foi implementado</a>
+<a href="#o-limite-de-escala-e-o-caminho-para-supe" class="dropdown-link" data-page="robustez">O limite de escala — e o caminho para superá-lo</a>
+<a href="#6-5-qualidade-testes-puros" class="dropdown-link" data-page="robustez">6.5 Qualidade: testes puros</a>
+</div>
+    </div>
+
+    <div class="tab-wrapper" data-page="metricas">
+        <button class="tab-btn" data-page="metricas">Métricas e ROI</button>
+        <div class="tab-dropdown">
+<a href="#8-1-lat-ncia-tempo-at-a-nota-chegar" class="dropdown-link" data-page="metricas">8.1 Latência: tempo até a nota chegar</a>
+<a href="#8-2-confiabilidade" class="dropdown-link" data-page="metricas">8.2 Confiabilidade</a>
+<a href="#8-3-custo-e-roi" class="dropdown-link" data-page="metricas">8.3 Custo e ROI</a>
+<a href="#8-3-1-custo-por-corre-o-estrutura-" class="dropdown-link" data-page="metricas">8.3.1 Custo por correção (estrutura)</a>
+<a href="#8-3-2-valor-gerado-a-l-gica-" class="dropdown-link" data-page="metricas">8.3.2 Valor gerado (a lógica)</a>
+<a href="#8-3-3-modelos-de-sustenta-o-hip-teses-a-" class="dropdown-link" data-page="metricas">8.3.3 Modelos de sustentação (hipóteses — a definir)</a>
+<a href="#8-4-roadmap-priorizado" class="dropdown-link" data-page="metricas">8.4 Roadmap Priorizado</a>
+<a href="#prioridade-1-medir-para-decidir" class="dropdown-link" data-page="metricas">Prioridade 1 — Medir para decidir</a>
+<a href="#prioridade-2-calibrar-a-qualidade-da-cor" class="dropdown-link" data-page="metricas">Prioridade 2 — Calibrar a qualidade da correção</a>
+<a href="#prioridade-3-escala-e-produto" class="dropdown-link" data-page="metricas">Prioridade 3 — Escala e produto</a>
+</div>
+    </div>
+
+    <div class="tab-wrapper" data-page="storytelling">
+        <button class="tab-btn" data-page="storytelling">Dashboard e Storytelling</button>
+        <div class="tab-dropdown">
+<a href="#9-1-a-hist-ria-do-projeto" class="dropdown-link" data-page="storytelling">9.1 A História do Projeto</a>
+<a href="#9-2-conex-o-entre-decis-o-hist-ria-e-obj" class="dropdown-link" data-page="storytelling">9.2 Conexão entre Decisão, História e Objetivo</a>
+<a href="#9-3-o-que-j-d-para-afirmar-e-o-que-falta" class="dropdown-link" data-page="storytelling">9.3 O Que Já Dá Para Afirmar (e o que falta)</a>
+</div>
+    </div>
+
+    <div class="tab-wrapper" data-page="etica">
+        <button class="tab-btn" data-page="etica">Ética e LGPD</button>
+        <div class="tab-dropdown">
+<a href="#10-1-mapeamento-de-dados-pessoais-no-pip" class="dropdown-link" data-page="etica">10.1 Mapeamento de Dados Pessoais no Pipeline (Data Mapping)</a>
+<a href="#-o-ponto-sens-vel-conte-do-de-uma-reda-o" class="dropdown-link" data-page="etica">O ponto sensível: conteúdo de uma redação de menor</a>
+<a href="#10-2-aplica-o-da-lgpd-ao-projeto" class="dropdown-link" data-page="etica">10.2 Aplicação da LGPD ao Projeto</a>
+<a href="#10-2-1-pap-is-e-bases-legais" class="dropdown-link" data-page="etica">10.2.1 Papéis e bases legais</a>
+<a href="#10-2-2-princ-pios-do-art-6-autoavalia-o" class="dropdown-link" data-page="etica">10.2.2 Princípios do art. 6º — autoavaliação</a>
+<a href="#10-2-3-direitos-dos-titulares-art-18-com" class="dropdown-link" data-page="etica">10.2.3 Direitos dos titulares (art. 18) — como atender</a>
+<a href="#10-2-4-seguran-a-da-informa-o-art-46-" class="dropdown-link" data-page="etica">10.2.4 Segurança da informação (art. 46)</a>
+<a href="#10-2-5-transfer-ncia-internacional-de-da" class="dropdown-link" data-page="etica">10.2.5 Transferência internacional de dados (art. 33) — o ponto que exige honestidade</a>
+<a href="#10-3-an-lise-de-ia-respons-vel" class="dropdown-link" data-page="etica">10.3 Análise de IA Responsável</a>
+<a href="#o-risco-mais-importante-a-nota-tratada-c" class="dropdown-link" data-page="etica">O risco mais importante: a nota tratada como verdade absoluta</a>
+<a href="#10-4-impacto-social" class="dropdown-link" data-page="etica">10.4 Impacto Social</a>
+<a href="#impactos-positivos" class="dropdown-link" data-page="etica">Impactos positivos</a>
+<a href="#riscos-sociais-e-mitiga-o" class="dropdown-link" data-page="etica">Riscos sociais e mitigação</a>
+<a href="#10-5-plano-de-a-o-de-conformidade-checkl" class="dropdown-link" data-page="etica">10.5 Plano de Ação de Conformidade (Checklist Acionável)</a>
+</div>
+    </div>
+</nav>
+
+<main class="container">
+    <div class="page-content active" id="page-inicio">
+
+<div class="content-wrapper"><h1 id="corretor-enem-">Corretor ENEM 📝</h1>
+
+<p>Bot multicanal (<strong>WhatsApp + Telegram</strong>) que corrige redações do ENEM a partir de uma <strong>foto do manuscrito</strong>: o aluno informa o tema, cola os textos motivadores (se tiver) e manda a foto — e recebe de volta a nota estimada (0 a 1000) por competência, com feedback pedagógico citando trechos exatos do próprio texto.</p>
+
+
+<h2 id="como-funciona">Como funciona</h2>
+
+<p>Toda a correção acontece dentro de uma conversa de WhatsApp ou Telegram, a partir de uma <strong>foto do manuscrito</strong> — o aluno não sai do mensageiro:</p>
+
+<pre><code class="lang-text">
+Aluno                    Bot
+  │  /corrigir            │
+  │◀── "digite o tema" ───┤   tema e motivadores: SÓ texto digitado
+  │  tema (texto)         │   (OCR é reservado para a redação)
+  │◀── "textos motivad.?"─┤
+  │  textos / Pular       │
+  │◀── "manda a foto" ────┤
+  │  📷 foto da redação   │──▶ download (background) → Mistral OCR
+  │◀── preview do OCR ────┤   foto descartada; só o texto segue
+  │  [Editar texto]       │   opcional: aluno cola o texto ajustado
+  │◀── eco p/ confirmar ──┤   (letra difícil → OCR imperfeito)
+  │  [Corrigir agora]     │──▶ LLM + matriz de correção do ENEM
+  │◀── nota + feedback ───┤   5 competências, trechos citados
+</code></pre>
+
+<h3 id="o-fluxo-etapa-por-etapa">O fluxo, etapa por etapa</h3>
+
+<ul class="ordered">
+<li><strong>Tema e textos motivadores</strong> entram como texto digitado (o OCR fica reservado para a redação); os motivadores são opcionais.</li>
+<li><strong>A foto da redação</strong> (até 3 imagens, frente/verso) chega ao webhook, que apenas valida, responde <code>200</code> em <200 ms (SLA da Meta) e despacha o trabalho pesado — download da mídia, OCR e LLM — para uma task asyncio. Nunca no handler HTTP.</li>
+<li><strong>O OCR</strong> (Mistral <code>mistral-ocr-latest</code>) transcreve só a foto da redação. Em seguida a <strong>foto é descartada</strong>: apenas o texto segue adiante.</li>
+<li><strong>Preview e edição manual</strong>: o aluno vê a transcrição com as palavras de baixa confiança destacadas e pode ajustar o que a letra difícil fez o OCR errar; o bot ecoa a versão final para confirmação antes de corrigir.</li>
+<li><strong>A correção</strong> vai para um LLM com prompt de corretor especialista baseado na Matriz de Referência do INEP (5 competências, triagem de nota zero, checklist da proposta de intervenção). Volta a nota estimada por competência (0–200 cada; 0–1000 no total) e o feedback citando trechos, formatado para o mensageiro (sem tabelas/<code>#</code>).</li>
+</ul>
+
+<h3 id="arquitetura">Arquitetura</h3>
+
+<ul>
+<li><strong>Mono-container</strong>: FastAPI + Redis no MESMO contêiner. O <code>entrypoint.sh</code> sobe o <code>redis-server</code> (só em <code>127.0.0.1</code>, nunca exposto fora do contêiner), espera o PING responder e só então executa o <code>uvicorn</code>. Um único deploy, sem Redis gerenciado à parte.</li>
+<li><strong>Estado 100% em Redis</strong> (sem banco relacional): máquina de estados da conversa (TTL 45 min), consentimento LGPD, rate-limit diário e idempotência de webhook. O AOF em <code>/data</code> (volume) sobrevive a restart do contêiner.</li>
+<li><strong>Réplica única, sempre</strong>: como o Redis vive dentro do contêiner, ele não é compartilhado entre réplicas — <code>replicas > 1</code> fragmentaria rate-limit, consentimento e estado de fluxo (cada réplica veria um Redis diferente). Mantenha 1 réplica (folgado para o tráfego de uma escola).</li>
+<li><strong>Correção plugável</strong>: o provedor do LLM troca por env var (<code>CORRECTION_PROVIDER</code>: <code>gemini</code> | <code>claude</code> | <code>openai</code> | <code>deepseek</code> | <code>maritaca</code>; <code>CORRECTION_MODEL</code> define o modelo dentro dele — default <code>gemini</code> / <code>gemini-3.5-flash</code>), o que permite comparar modelos rápido. O prompt é dividido em bloco estático (matriz, ~6.000 tokens) + bloco dinâmico (tema/motivadores/redação) para aproveitar cache de contexto — explícito no Gemini e no Claude, automático no OpenAI/DeepSeek (a Maritaca não documenta cache; o bloco estático é reenviado sem desconto confirmado).</li>
+</ul>
+
+<h3 id="por-que-mensageria-e-n-o-um-app-de-ia">Por que mensageria, e não um app de IA</h3>
+
+<p>WhatsApp e Telegram costumam continuar acessíveis em redes escolares que bloqueiam ChatGPT/Gemini/Claude — a correção chega por um canal que já não é bloqueado. E como a entrada é uma <em>foto do manuscrito</em> (não texto digitado), o treino continua fiel ao formato real da prova: o aluno escreve à mão, no papel, como no dia do ENEM.</p>
+
+<h2 id="lgpd-o-p-blico-menor-de-idade-">LGPD (o público é menor de idade)</h2>
+
+<ul>
+<li><strong>Consentimento explícito</strong> no primeiro contato, antes de qualquer processamento.</li>
+<li>A <strong>foto é descartada</strong> logo após o OCR; o texto transcrito vive apenas no estado Redis, que <strong>expira em 45 min</strong>. Nada persiste após a correção (não há histórico).</li>
+<li>O feedback deixa claro que a correção é feita por IA e que a nota é uma <strong>estimativa</strong> (no ENEM oficial são dois corretores humanos).</li>
+<li>Rate-limit diário (<code>ESSAY_DAILY_LIMIT</code>, default 2) — controle de custo do fluxo OCR + LLM.</li>
+</ul>
+
+<h2 id="rodando-local">Rodando local</h2>
+
+<p>Requisitos: Python 3.12, Docker, chaves <code>MISTRAL_API_KEY</code> e <code>GOOGLE_API_KEY</code>.</p>
+
+<p>O <code>Makefile</code> embrulha os comandos multi-passo (<code>make help</code> lista tudo). O único passo manual é preencher as chaves:</p>
+
+<pre><code class="lang-bash">
+cp .env.example .env       # preencha as chaves
+make up                    # 1 único contêiner: app + redis embutido, porta 8000
+</code></pre>
+
+<p>Sem provedor de mensageria configurado, teste o fluxo completo pelo <strong>simulador de terminal</strong> (OCR e correção reais). Como o Redis normalmente vive dentro da imagem, para rodar o simulador FORA do Docker suba um Redis solto só para o dev:</p>
+
+<pre><code class="lang-bash">
+make setup                 # cria o venv e instala deps de dev (só na 1ª vez)
+make redis-dev             # redis avulso, só para dev sem Docker Compose
+make simulate
+# 👤 &gt; /corrigir
+# 👤 &gt; Desafios para a valorização de comunidades tradicionais no Brasil
+# 👤 &gt; btn skip_motivators
+# 👤 &gt; foto /caminho/para/redacao.jpg
+# 👤 &gt; btn confirm_correct
+</code></pre>
+
+<h3 id="testes-e-lint">Testes e lint</h3>
+
+<pre><code class="lang-bash">
+make test                  # puros, sem I/O (Redis fake, LLM/OCR mockados)
+make lint                  # ruff check; `make fmt` para auto-corrigir e formatar
+</code></pre>
+
+<h2 id="conectando-os-canais">Conectando os canais</h2>
+
+<blockquote>
+<p><strong>Telegram é o canal recomendado.</strong> A partir de <strong>01/10/2026</strong>, o WhatsApp Business Platform passa a cobrar por mensagem de serviço (a categoria de conversa que este bot usa) — o Telegram Bot API continua gratuito. Para manter o custo operacional no menor patamar possível, prefira o Telegram como canal principal; o WhatsApp fica como opção para quem já opera nesse canal e absorve o custo por mensagem.</p>
+</blockquote>
+
+<p>O teste real mais barato é o <strong>Telegram</strong> (token grátis no @BotFather) com um túnel local:</p>
+
+<pre><code class="lang-bash">
+make dev             # sobe o app + túnel ngrok persistente, imprime a URL pública
+curl "https://api.telegram.org/bot$TOKEN/setWebhook" \
+  -d "url=https://SEU-TUNEL/v1/webhook/telegram" \
+  -d "secret_token=$TELEGRAM_WEBHOOK_SECRET"      # OBRIGATÓRIO em produção
+</code></pre>
+
+<p>O túnel do <code>make dev</code> fica de pé mesmo depois de Ctrl+C (só o app cai) — reiniciar o app com <code>make dev</code> de novo reaproveita a mesma URL, sem precisar refazer o <code>setWebhook</code>. Para encerrar o túnel de vez: <code>make tunnel-stop</code>.</p>
+
+<p><strong>WhatsApp</strong> (Meta Cloud API): crie um app no Meta for Developers, aponte o webhook para <code>https://SEU-HOST/v1/webhook/whatsapp</code> usando o <code>META_VERIFY_TOKEN</code> do <code>.env</code>, e preencha <code>PHONE_NUMBER_ID</code>, <code>WHATSAPP_TOKEN</code> e <code>META_APP_SECRET</code>.</p>
+
+<blockquote>
+<p>Em produção, <code>ENVIRONMENT</code> ≠ <code>local</code> liga a verificação de assinatura: HMAC SHA-256 (<code>X-Hub-Signature-256</code>) no WhatsApp e secret token no Telegram.</p>
+</blockquote>
+
+<h2 id="deploy-azure-container-apps-">Deploy (Azure Container Apps)</h2>
+
+<p>O docker-compose é a forma canônica de rodar; para produção o alvo é o Azure Container Apps, no mesmo padrão do projeto pai:</p>
+
+<ul>
+<li><strong>1 único Container App</strong> (imagem deste Dockerfile — Redis já embutido, sem Azure Cache for Redis nem serviço separado).</li>
+<li><code>minReplicas=1</code> <strong>e</strong> <code>maxReplicas=1</code> (fixo, não escala) — o Redis embutido não é compartilhável entre réplicas; ver nota acima. Para o volume de uma escola isso é folgado.</li>
+<li>Monte um <strong>Azure Files</strong> em <code>/data</code> (mesmo mount point da <code>VOLUME</code> do Dockerfile) para o AOF do Redis sobreviver a um redeploy/restart do contêiner.</li>
+<li>Segredos (tokens, chaves) via Key Vault/secret refs — nunca env var em texto plano no manifesto.</li>
+</ul>
+
+<h2 id="estrutura">Estrutura</h2>
+
+<p>Só o que é essencial para rodar, testar e fazer deploy do bot. O portal de</p>
+<p>documentação renderizado fica em <code>docs/index.html</code>; a fonte que o gera e os</p>
+<p>scripts de laboratório não fazem parte deste repositório.</p>
+
+<pre><code class="lang-text">
+.
+├── Dockerfile              # imagem única: app + redis embutido (ver entrypoint.sh)
+├── docker-compose.yml      # `make up` — forma canônica de rodar (app + redis)
+├── entrypoint.sh           # sobe redis-server (127.0.0.1) → espera PING → uvicorn
+├── Makefile                 # `make help` lista todos os atalhos de dev
+├── pyproject.toml            # config de ruff (lint/format) e pytest
+├── requirements.txt           # dependências de runtime
+├── requirements-dev.txt        # + pytest/ruff (dependências de dev)
+├── .env.example                 # todas as env vars documentadas — copiar para .env
+│
+├── src/
+│   ├── main.py                    # FastAPI: webhooks (valida → enfileira task → 200)
+│   ├── config.py                   # pydantic-settings — todas as env vars
+│   ├── messages.py                  # toda a copy de UX (nenhuma string solta no flow/)
+│   ├── prompts.py                    # prompt do corretor ENEM (Matriz do INEP; str.format, nunca f-string)
+│   ├── rate_limit.py                  # limite diário de correções por aluno
+│   ├── redis_client.py                 # conexão + idempotência de webhook
+│   │
+│   ├── channels/                        # IMessagingChannel — canais plugáveis
+│   │   ├── interfaces.py                   # contrato agnóstico (InboundMessage, IMessagingChannel)
+│   │   ├── factory.py                       # get_channel(name) — troca via CHANNEL_BACKEND
+│   │   ├── whatsapp.py                       # WhatsApp Cloud API (Meta)
+│   │   ├── telegram.py                        # Telegram Bot API
+│   │   ├── markdown.py                         # *negrito*/_itálico_ → formato de cada canal
+│   │   └── text_utils.py                        # chunking de mensagem longa
+│   │
+│   ├── flow/                             # máquina de estados da conversa (Redis)
+│   │   ├── states.py                        # FlowState, FlowData, load/save/clear
+│   │   └── handlers.py                       # um handler por estado do fluxo
+│   │
+│   └── correction/                       # OCR + correção por LLM
+│       ├── ocr.py                           # Mistral OCR + palavras de baixa confiança
+│       ├── corrector.py                      # lógica comum de chamada ao provedor
+│       ├── interfaces.py                      # contrato ICorrector
+│       ├── factory.py                          # get_corrector(provider) — troca via CORRECTION_PROVIDER
+│       └── providers/                           # gemini.py, claude.py, openai_compatible.py (openai/deepseek/maritaca)
+│
+├── scripts/
+│   └── simulate.py            # REPL de conversa com canal fake — E2E local sem provedor real
+│
+└── tests/
+    └── unit/                     # 52 testes puros — FakeRedis + FakeChannel, sem I/O
+</code></pre>
+</div>
+</div>
+<div class="page-content" id="page-diagnostico">
+
+<div class="content-wrapper"><h1 id="1-diagn-stico-do-problema-e-objetivos">1. Diagnóstico do Problema e Objetivos</h1>
+
+<h2 id="1-1-contexto-a-reda-o-do-enem-e-o-acesso">1.1 Contexto: a redação do ENEM e o acesso ao ensino superior</h2>
+
+<p>A redação é a prova de maior peso simbólico do ENEM: vale de <strong>0 a 1.000 pontos</strong> e é, para muitos cursos concorridos, o fiel da balança na disputa por vagas via <strong>SISU, ProUni e FIES</strong>. O exame reúne, a cada edição, <strong>milhões de participantes</strong> — a maioria estudantes de ensino médio ou recém-egressos — e a nota da redação costuma ser o item que mais separa aprovados de reprovados em cursos de alta demanda.</p>
+
+<p>A correção segue a <strong>Matriz de Referência do INEP</strong>, que divide o texto dissertativo-argumentativo em <strong>cinco competências</strong>, cada uma pontuada de 0 a 200:</p>
+
+<div class="table-wrap"><table>
+<tr><th>Competência</th><th>O que avalia</th></tr>
+<tr><td>C1</td><td>Domínio da norma-padrão da escrita formal</td></tr>
+<tr><td>C2</td><td>Compreensão do tema e repertório sociocultural</td></tr>
+<tr><td>C3</td><td>Seleção, organização e projeto de texto (argumentação)</td></tr>
+<tr><td>C4</td><td>Coesão textual (mecanismos coesivos)</td></tr>
+<tr><td>C5</td><td>Proposta de intervenção que respeite os direitos humanos</td></tr>
+</table></div>
+
+<p>A nota mil é <strong>rara</strong> — algumas dezenas de redações por edição, entre milhões — justamente porque atingir o nível máximo nas cinco competências ao mesmo tempo exige treino sistemático e feedback qualificado.</p>
+
+<blockquote>
+<p><strong>Fonte:</strong> Matriz de Referência para Redação do ENEM e <em>A Redação do ENEM — Cartilha do Participante</em> (INEP). O material de correção usado neste projeto é derivado diretamente dessa matriz oficial.</p>
+</blockquote>
+
+<hr>
+
+<h2 id="1-2-o-problema-real-o-gargalo-a-corre-o-">1.2 O problema real: o gargalo é a correção, não a escrita</h2>
+
+<p>Praticar redação é, do ponto de vista do aluno, a parte fácil: dá para escrever um texto por dia. O gargalo está do <strong>outro lado</strong> — receber uma correção <strong>detalhada, por competência e ancorada no próprio texto</strong> — e é esse retorno que efetivamente faz a nota subir.</p>
+
+<p>Corrigir bem uma única redação exige:</p>
+
+<ul class="ordered">
+<li><strong>Decompor o tema</strong> e verificar aderência (fuga, tangenciamento ou abordagem completa).</li>
+<li><strong>Aplicar a triagem de nota zero</strong> (fuga total, tipo textual errado, cópia, desrespeito aos direitos humanos etc.).</li>
+<li><strong>Avaliar as cinco competências</strong> com um olho treinado, citando trechos exatos.</li>
+<li><strong>Explicar como corrigir</strong> cada problema — não apenas apontá-lo.</li>
+</ul>
+
+<p>Feito com rigor, isso consome <strong>15 a 20 minutos por redação</strong> e depende de alguém que conheça a matriz a fundo. Na prática:</p>
+
+<ul>
+<li>O professor de redação da <strong>escola pública</strong> acompanha, sozinho, dezenas a centenas de alunos — é fisicamente impossível dar retorno detalhado e frequente a todos.</li>
+<li>A <strong>correção particular</strong> ou o cursinho preparatório entregam esse feedback, mas <strong>custam caro</strong> — o que concentra o acesso a quem pode pagar.</li>
+<li>O aluno que escreve muito, mas recebe pouco (ou nenhum) retorno específico, <strong>estagna</strong>: repete os mesmos erros sem saber que os comete.</li>
+</ul>
+
+<p>O resultado é uma <strong>assimetria de acesso ao feedback</strong> que se traduz diretamente em desigualdade de desempenho na prova que mais pesa no acesso ao ensino superior.</p>
+
+<p><strong>E a IA genérica (ChatGPT, GPTs de terceiros) já não resolveria isso?</strong> Só em parte — e não no contexto onde o aluno mais precisa. Colar a redação num chatbot de propósito geral esbarra em três problemas concretos:</p>
+
+<ul>
+<li><strong>A rede da escola costuma bloquear justamente essas ferramentas.</strong> ChatGPT, Gemini e Claude são alvos comuns de bloqueio institucional (ver §1.5); um GPT customizado de terceiros herda o mesmo bloqueio, porque ainda roda dentro do domínio do ChatGPT.</li>
+<li><strong>Exige digitar a redação inteira</strong> — o aluno perde o treino no formato real da prova (escrita à mão, sob o tempo e o cansaço de redigir no papel) só para conseguir uma correção.</li>
+<li><strong>Sem garantia de rigor nem de privacidade adequada a menores.</strong> Um chatbot genérico não segue a Matriz de Referência do INEP por padrão (a menos que o próprio aluno monte um prompt elaborado), não é obrigado a citar trechos exatos, e os termos de uso padrão de uma conta de IA generalista não foram desenhados pensando em dados de adolescentes.</li>
+</ul>
+
+<p>Ou seja: a IA generativa reduziu o <em>custo técnico</em> de gerar uma correção, mas não resolveu o <em>acesso</em> no ambiente onde o aluno de escola pública efetivamente está — dentro da rede da escola, com o celular na mão, sem querer digitar um texto de 30 linhas.</p>
+
+<hr>
+
+<h2 id="1-3-an-lise-de-causas-raiz">1.3 Análise de Causas-Raiz</h2>
+
+<div class="table-wrap"><table>
+<tr><th>#</th><th>Causa-Raiz</th><th>Descrição</th></tr>
+<tr><td>C1</td><td><strong>Correção qualificada é escassa e cara</strong></td><td>Um retorno por competência, com trechos citados, exige tempo e um corretor treinado — recurso caro e mal distribuído</td></tr>
+<tr><td>C2</td><td><strong>Relação professor–aluno desfavorável</strong></td><td>Um único professor de redação para dezenas/centenas de alunos inviabiliza feedback individual e frequente</td></tr>
+<tr><td>C3</td><td><strong>Feedback genérico não ensina</strong></td><td>"Melhore a argumentação" sem apontar o trecho e o porquê não diz ao aluno o que fazer diferente</td></tr>
+<tr><td>C4</td><td><strong>Latência do retorno</strong></td><td>Quando a correção chega (dias/semanas depois), o aluno já perdeu a conexão com o que escreveu</td></tr>
+<tr><td>C5</td><td><strong>Barreira de ferramenta</strong></td><td>Soluções que exigem instalar app, criar conta e digitar o texto criam atrito — o aluno escreve no papel, à mão</td></tr>
+<tr><td>C6</td><td><strong>IA genérica não é acessível no contexto escolar</strong></td><td>ChatGPT/GPTs de terceiros costumam ser bloqueados na rede da escola, exigem digitar e não garantem rigor nem privacidade para menores</td></tr>
+</table></div>
+
+<hr>
+
+<h2 id="1-4-consequ-ncias-mensur-veis">1.4 Consequências Mensuráveis</h2>
+
+<div class="table-wrap"><table>
+<tr><th>Consequência</th><th>Impacto</th></tr>
+<tr><td>Aluno sem feedback detalhado</td><td>Repete os mesmos desvios; a nota estaciona apesar do volume de treino</td></tr>
+<tr><td>Desigualdade de acesso</td><td>Quem paga cursinho/correção evolui mais rápido do que quem depende só da escola</td></tr>
+<tr><td>Tempo do professor consumido em correção repetitiva</td><td>Menos tempo para ensino, planejamento e atendimento individual</td></tr>
+<tr><td>Retorno lento e genérico</td><td>Baixa aderência do aluno; o esforço de escrever não se converte em aprendizado</td></tr>
+</table></div>
+
+<hr>
+
+<h2 id="1-5-a-solu-o-corre-o-instant-nea-por-fot">1.5 A Solução: correção instantânea por foto, no canal que o aluno já usa</h2>
+
+<p>O produto é um <strong>bot multicanal (WhatsApp + Telegram)</strong> que corrige a redação a partir de uma <strong>foto do manuscrito</strong>. O fluxo foi desenhado para ter o <strong>menor atrito possível</strong>:</p>
+
+<ul class="ordered">
+<li><strong>Sem instalar nada</strong> — o aluno usa o WhatsApp ou o Telegram que já tem no celular.</li>
+<li><strong>A partir do papel</strong> — ele fotografa a redação escrita à mão; um <strong>OCR</strong> (Mistral) transcreve o texto.</li>
+<li><strong>Confere e corrige a transcrição</strong> — o bot mostra o que leu; se a letra difícil confundiu o OCR, o aluno ajusta o texto antes de corrigir.</li>
+<li><strong>Recebe a correção completa</strong> — nota estimada de 0 a 1.000 <strong>por competência</strong>, com feedback pedagógico que <strong>cita trechos exatos</strong> do próprio texto e mostra como reescrever.</li>
+</ul>
+
+<p>O motor de correção é um <strong>prompt de corretor especialista</strong> construído sobre a Matriz de Referência do INEP: faz a triagem de nota zero, avalia as cinco competências ancorando cada observação em citações e entrega o resultado formatado para leitura no WhatsApp.</p>
+
+<p><strong>Por que WhatsApp/Telegram, e não um app de IA direto — dois diferenciais que não são só conveniência:</strong></p>
+
+<ul>
+<li><strong>Contorna o bloqueio de IA nas escolas.</strong> Muitas redes de ensino bloqueiam, na rede da escola, o acesso a ferramentas de IA generalistas (ChatGPT, Gemini, Claude etc.) — mas WhatsApp e Telegram, por serem apps de mensagens de uso cotidiano, normalmente <strong>não</strong> entram nesse bloqueio. Ao entregar a correção por um canal de mensageria em vez de um app de IA, o produto continua acessível dentro do ambiente escolar, onde o aluno mais precisaria dele.</li>
+<li><strong>Preserva o treino no formato real da prova.</strong> O ENEM é escrito <strong>à mão, no papel</strong>. Corretores online genéricos pedem o texto <strong>digitado</strong>, o que já é um exercício diferente do que o aluno vai enfrentar no dia da prova (a caligrafia, o tempo de escrita à mão, a ausência de corretor automático). Aqui o aluno fotografa o que escreveu no papel — o treino continua fiel ao formato oficial, e o OCR é que se adapta ao aluno, não o contrário.</li>
+</ul>
+
+<h2 id="planejamento-macro-pmc-">Planejamento Macro (PMC)</h2>
+
+<p>A estruturação executiva do projeto foi concebida com a metodologia <strong>Project Model Canvas (PMC)</strong>. Para a visão completa e interativa dos treze blocos fundamentais (<em>Por Quê, O Quê, Quem, Como, Quando e Quanto</em>), acesse a página <strong>Canvas de Projeto</strong>.</p>
+
+<p>Em resumo: o pipeline transforma uma <strong>foto de uma redação manuscrita</strong> em um <strong>diagnóstico pedagógico acionável</strong>, em cerca de um minuto e no aplicativo de mensagens que o aluno já usa todos os dias.</p>
+
+<hr>
+
+<h2 id="1-6-contextualiza-o-do-desafio">1.6 Contextualização do Desafio</h2>
+
+<p>O público-alvo são <strong>estudantes de ensino médio</strong> em preparação para o ENEM — em boa parte, <strong>menores de idade</strong>. Isso coloca a <strong>conformidade com a LGPD</strong> e o <strong>cuidado ético</strong> no centro do projeto, não como acessório (ver página <strong>Ética e LGPD</strong>):</p>
+
+<ul>
+<li><strong>Consentimento explícito</strong> antes de qualquer processamento.</li>
+<li><strong>Descarte da foto</strong> imediatamente após o OCR; o texto vive apenas no estado temporário (TTL de 45 min) e <strong>nada persiste</strong> após a correção.</li>
+<li><strong>Transparência</strong>: a nota é sempre apresentada como <strong>estimativa</strong> — a nota oficial do ENEM depende de dois corretores humanos.</li>
+</ul>
+
+<hr>
+
+<h2 id="1-7-objetivos-smart">1.7 Objetivos SMART</h2>
+
+<h3 id="objetivo-principal">Objetivo Principal</h3>
+
+<blockquote>
+<p>Desenvolver um bot multicanal que, a partir de <strong>uma foto de redação manuscrita</strong>, entregue uma <strong>correção estimada por competência (0–1.000) com feedback ancorado em trechos exatos</strong>, em <strong>cerca de um minuto</strong> e <strong>sem instalação de aplicativo</strong>, respeitando a LGPD para um público majoritariamente menor de idade.</p>
+</blockquote>
+
+<h3 id="objetivos-espec-ficos">Objetivos Específicos</h3>
+
+<div class="table-wrap"><table>
+<tr><th>#</th><th>Objetivo</th><th>Específico</th><th>Mensurável</th><th>Alcançável</th><th>Relevante</th><th>Fase</th></tr>
+<tr><td>O1</td><td>Transcrever a redação manuscrita por foto</td><td>OCR (Mistral) da foto, com preview e edição manual opcional</td><td>Texto transcrito fielmente; parte ilegível é recusada com orientação</td><td>API de OCR madura; foto é o documento inteiro</td><td>Elimina a digitação — o aluno escreve à mão, como na prova</td><td>Núcleo de IA</td></tr>
+<tr><td>O2</td><td>Estimar a nota por competência com feedback</td><td>Prompt de corretor sobre a Matriz do INEP (5 competências + triagem de zero)</td><td>Saída com nota 0–1.000, notas por competência e trechos citados</td><td>LLM plugável com cache de contexto no bloco estático</td><td>Entrega o feedback específico que faz a nota subir</td><td>Núcleo de IA</td></tr>
+<tr><td>O3</td><td>Operar em multicanal sem atrito</td><td>Webhooks de WhatsApp e Telegram sobre uma interface de canal agnóstica</td><td>Fluxo idêntico nos dois canais; sem app nem cadastro</td><td>Reuso da arquitetura do projeto pai</td><td>Encontra o aluno onde ele já está</td><td>Integração</td></tr>
+<tr><td>O4</td><td>Garantir conformidade e controle de custo</td><td>Consentimento LGPD, descarte da foto, TTL de 45 min, rate-limit diário</td><td>Nada persiste após a correção; limite de correções/aluno/dia</td><td>Estado 100% em Redis com TTL; contador diário</td><td>Protege um público menor de idade e contém o custo de OCR+LLM</td><td>Governança</td></tr>
+</table></div>
+
+<hr>
+</div>
+</div>
+<div class="page-content" id="page-canvas">
+<div class="content-wrapper"><div id="canvas-top" class="canvas-grid">
+
+            <!-- POR QUE -->
+            <div class="canvas-col col-why">
+                <div class="col-header">POR QUÊ?</div>
+                <div class="col-content">
+                    <a href="#bloco-1" class="block-card">
+                        <b>1. Justificativa</b>
+                        • Feedback qualificado é caro e escasso<br>
+                        • Professor não dá conta de todos<br>
+                        • IA genérica não resolve: escola bloqueia
+                    </a>
+                    <a href="#bloco-2" class="block-card">
+                        <b>2. Objetivo SMART</b>
+                        • Correção por competência (0–1.000)<br>
+                        • A partir de uma foto, em ~1 min<br>
+                        • Sem instalar app
+                    </a>
+                    <a href="#bloco-3" class="block-card">
+                        <b>3. Benefícios</b>
+                        • Feedback específico e imediato<br>
+                        • Acesso democratizado<br>
+                        • Funciona onde IA é bloqueada
+                    </a>
+                </div>
+            </div>
+
+            <!-- O QUE -->
+            <div class="canvas-col col-what">
+                <div class="col-header">O QUÊ?</div>
+                <div class="col-content">
+                    <a href="#bloco-4" class="block-card">
+                        <b>4. Produto</b>
+                        • Bot WhatsApp + Telegram<br>
+                        • OCR da foto (Mistral)<br>
+                        • Correção via LLM plugável<br>
+                        • Mono-contêiner (app + Redis)
+                    </a>
+                    <a href="#bloco-5" class="block-card">
+                        <b>5. Requisitos</b>
+                        • Preview + edição do OCR<br>
+                        • Nota por competência c/ trechos<br>
+                        • Consentimento LGPD
+                    </a>
+                </div>
+            </div>
+
+            <!-- QUEM -->
+            <div class="canvas-col col-who">
+                <div class="col-header">QUEM?</div>
+                <div class="col-content">
+                    <a href="#bloco-6" class="block-card">
+                        <b>6. Stakeholders</b>
+                        • Aluno de ensino médio<br>
+                        • Professor de redação<br>
+                        • Responsável legal
+                    </a>
+                    <a href="#bloco-7" class="block-card">
+                        <b>7. Equipe</b>
+                        • Ygor (Eng. de IA)
+                    </a>
+                </div>
+            </div>
+
+            <!-- COMO -->
+            <div class="canvas-col col-how">
+                <div class="col-header">COMO?</div>
+                <div class="col-content">
+                    <a href="#bloco-8" class="block-card">
+                        <b>8. Premissas</b>
+                        • Aluno tem WhatsApp/Telegram<br>
+                        • Caligrafia em geral legível
+                    </a>
+                    <a href="#bloco-9" class="block-card">
+                        <b>9. Entregas (EAP)</b>
+                        • Borda e canais<br>
+                        • Fluxo conversacional<br>
+                        • Núcleo de IA (OCR + correção)
+                    </a>
+                    <a href="#bloco-10" class="block-card">
+                        <b>10. Restrições</b>
+                        • Réplica única (Redis embutido)<br>
+                        • Nota é estimativa, não oficial
+                    </a>
+                </div>
+            </div>
+
+            <!-- QUANDO E QUANTO -->
+            <div class="canvas-col col-when">
+                <div class="col-header">QUANDO E QUANTO?</div>
+                <div class="col-content">
+                    <a href="#bloco-11" class="block-card">
+                        <b>11. Riscos</b>
+                        • OCR erra letra difícil<br>
+                        • Custo aberto de OCR + LLM
+                    </a>
+                    <a href="#bloco-12" class="block-card">
+                        <b>12. Cronograma</b>
+                        • Diagnóstico<br>
+                        • Borda e canais<br>
+                        • Núcleo de IA<br>
+                        • Qualidade e docs
+                    </a>
+                    <a href="#bloco-13" class="block-card">
+                        <b>13. Custos</b>
+                        • Variável por uso (OCR + LLM)<br>
+                        • Contido por rate-limit
+                    </a>
+                </div>
+            </div>
+
+        </div>
+
+        <hr style="border: 0; height: 1px; background: #ddd; margin: 40px 0;">
+
+        <!-- DETAILED SECTIONS -->
+
+        <div id="bloco-1" class="content-section">
+            <h2><span class="badge bg-why">POR QUÊ?</span> 1. Justificativa</h2>
+            <p>A redação do ENEM vale <strong>0 a 1.000 pontos</strong> e é decisiva no acesso ao ensino superior (SISU, ProUni, FIES). O que faz a nota subir não é escrever mais — é receber <strong>feedback detalhado por competência</strong>, ancorado no próprio texto. Esse feedback é <strong>escasso e caro</strong> pela via humana (professor de escola pública com dezenas/centenas de alunos, correção particular que custa dinheiro) — e a <strong>IA genérica</strong> (ChatGPT, GPTs de terceiros) não preenche essa lacuna no contexto escolar: costuma ser <strong>bloqueada na rede da escola</strong>, exige <strong>digitar</strong> a redação (perdendo o treino manuscrito) e não garante rigor da Matriz do INEP nem privacidade adequada a menores.</p>
+            <p><strong>O que motivou este projeto:</strong> dar a qualquer aluno, a partir de uma foto da redação manuscrita e sem instalar nada, uma correção estimada por competência com trechos citados — em cerca de um minuto, no WhatsApp ou Telegram que ele já usa (e que a escola não bloqueia).</p>
+        </div>
+
+        <div id="bloco-2" class="content-section">
+            <h2><span class="badge bg-why">POR QUÊ?</span> 2. Objetivo SMART</h2>
+            <p><strong>Desenvolver</strong> um bot multicanal que, a partir de uma foto de redação manuscrita, <strong>entregue uma correção estimada por competência (0–1.000) com feedback ancorado em trechos exatos</strong>, em cerca de um minuto e sem instalação de aplicativo, respeitando a LGPD para um público majoritariamente menor de idade.</p>
+            <table>
+                <tr><th>#</th><th>Objetivo Específico</th><th>Métrica</th><th>Fase</th></tr>
+                <tr><td>O1</td><td>Transcrever a redação manuscrita (OCR)</td><td>Transcrição fiel; ilegível recusada</td><td>Núcleo de IA</td></tr>
+                <tr><td>O2</td><td>Estimar nota por competência com feedback</td><td>0–1.000, notas por competência, trechos</td><td>Núcleo de IA</td></tr>
+                <tr><td>O3</td><td>Operar em WhatsApp e Telegram</td><td>Fluxo idêntico, sem app/cadastro</td><td>Integração</td></tr>
+                <tr><td>O4</td><td>Conformidade e controle de custo</td><td>Consentimento, TTL 45min, rate-limit</td><td>Governança</td></tr>
+            </table>
+        </div>
+
+        <div id="bloco-3" class="content-section">
+            <h2><span class="badge bg-why">POR QUÊ?</span> 3. Benefícios</h2>
+            <table>
+                <tr><th>#</th><th>Benefício</th><th>Valor Gerado</th></tr>
+                <tr><td>B1</td><td><strong>Feedback específico e imediato</strong></td><td>Nota por competência com trechos citados, em ~1 min</td></tr>
+                <tr><td>B2</td><td><strong>Acesso democratizado</strong></td><td>Correção qualificada sem custo de cursinho</td></tr>
+                <tr><td>B3</td><td><strong>Zero atrito</strong></td><td>Foto no WhatsApp/Telegram — sem app, sem cadastro</td></tr>
+                <tr><td>B4</td><td><strong>Escreve à mão, como na prova</strong></td><td>Treino realista no papel — diferente de corretores online que exigem digitar</td></tr>
+                <tr><td>B5</td><td><strong>Privacidade por design</strong></td><td>Foto descartada após o OCR; nada persiste</td></tr>
+                <tr><td>B6</td><td><strong>Alívio para o professor</strong></td><td>Descarrega a correção repetitiva</td></tr>
+                <tr><td>B7</td><td><strong>Funciona onde a escola bloqueia IA</strong></td><td>WhatsApp/Telegram costumam escapar do bloqueio a ChatGPT/Gemini/Claude</td></tr>
+            </table>
+        </div>
+
+        <div id="bloco-4" class="content-section">
+            <h2><span class="badge bg-what">O QUÊ?</span> 4. Produto</h2>
+            <p>Um <strong>bot conversacional multicanal</strong> composto por:</p>
+            <ul>
+                <li><strong>Borda HTTP (FastAPI):</strong> webhooks de WhatsApp e Telegram, resposta em &lt;200ms, processamento em background.</li>
+                <li><strong>Máquina de estados em Redis:</strong> tema → motivadores → foto → confirmação → correção (TTL 45 min).</li>
+                <li><strong>Motor de OCR:</strong> transcrição da foto via Mistral OCR.</li>
+                <li><strong>Motor de correção:</strong> prompt de corretor (Matriz do INEP) sobre um LLM plugável.</li>
+                <li><strong>Arquitetura mono-contêiner:</strong> app + Redis embutido num único deploy.</li>
+            </ul>
+        </div>
+
+        <div id="bloco-5" class="content-section">
+            <h2><span class="badge bg-what">O QUÊ?</span> 5. Requisitos</h2>
+            <h4>Funcionais</h4>
+            <ul>
+                <li>RF01 — Transcrever a foto da redação via OCR.</li>
+                <li>RF02 — Preview do OCR e edição manual do texto.</li>
+                <li>RF04 — Estimar nota 0–1.000 por competência com trechos citados.</li>
+                <li>RF05 — Operar em WhatsApp e Telegram na mesma interface.</li>
+                <li>RF06 — Consentimento LGPD antes de qualquer processamento.</li>
+            </ul>
+            <h4>Não Funcionais</h4>
+            <ul>
+                <li>RNF01 — Responder o webhook em &lt; 200 ms (SLA da Meta).</li>
+                <li>RNF02 — Foto descartada após OCR; estado com TTL de 45 min.</li>
+                <li>RNF03 — Conter o custo de OCR + LLM (rate-limit + cache).</li>
+            </ul>
+        </div>
+
+        <div id="bloco-6" class="content-section">
+            <h2><span class="badge bg-who">QUEM?</span> 6. Stakeholders</h2>
+            <table>
+                <tr><th>Stakeholder</th><th>Tipo</th><th>Interesse</th><th>Influência</th></tr>
+                <tr><td><strong>Aluno de ensino médio</strong></td><td>Usuário direto</td><td>Feedback rápido e específico</td><td>Alta</td></tr>
+                <tr><td><strong>Professor de redação</strong></td><td>Usuário indireto</td><td>Descarregar correção; acompanhar turmas</td><td>Alta</td></tr>
+                <tr><td><strong>Responsável legal</strong></td><td>Regulatório</td><td>Privacidade dos dados do menor</td><td>Alta</td></tr>
+                <tr><td><strong>Escola / Cursinho</strong></td><td>Institucional</td><td>Apoio pedagógico de baixo custo</td><td>Média</td></tr>
+                <tr><td><strong>Comunidade / Portfólio</strong></td><td>Externo</td><td>Reprodutibilidade e referência técnica</td><td>Baixa</td></tr>
+            </table>
+        </div>
+
+        <div id="bloco-7" class="content-section">
+            <h2><span class="badge bg-who">QUEM?</span> 7. Equipe</h2>
+            <p><strong>Ygor (Autor)</strong>: Engenheiro de Sistemas de IA / Full-Stack responsável pela arquitetura, fluxo conversacional, integração de canais, OCR, provedores de LLM, prompt de correção e documentação. Projeto individual, derivado de um assistente de ensino WhatsApp/Telegram.</p>
+        </div>
+
+        <div id="bloco-8" class="content-section">
+            <h2><span class="badge bg-how">COMO?</span> 8. Premissas</h2>
+            <ul>
+                <li>P1 — O aluno tem WhatsApp ou Telegram e consegue fotografar a redação.</li>
+                <li>P2 — As APIs de OCR (Mistral) e de LLM manterão disponibilidade e termos de uso.</li>
+                <li>P3 — O LLM aplica a Matriz do INEP com aderência a trechos citados.</li>
+                <li>P4 — A caligrafia é, em geral, legível (com edição manual como rede de segurança).</li>
+                <li>P5 — O tráfego (escala de escola) é atendido por uma única réplica.</li>
+            </ul>
+        </div>
+
+        <div id="bloco-9" class="content-section">
+            <h2><span class="badge bg-how">COMO?</span> 9. Entregas (EAP)</h2>
+            <pre style="background: #f4f4f4; padding: 15px; border-radius: 5px; color: black;">
+Corretor de Redação do ENEM
+├── 1. Diagnóstico e Planejamento
+├── 2. Borda e Canais (FastAPI + WhatsApp/Telegram)
+├── 3. Fluxo Conversacional (Redis + consentimento)
+├── 4. Núcleo de IA (OCR + correção + provedores)
+└── 5. Qualidade e Documentação</pre>
+        </div>
+
+        <div id="bloco-10" class="content-section">
+            <h2><span class="badge bg-how">COMO?</span> 10. Restrições</h2>
+            <ul>
+                <li>R1 — Réplica única (Redis embutido não é compartilhável).</li>
+                <li>R2 — Cada correção consome OCR + LLM pagos → rate-limit obrigatório.</li>
+                <li>R3 — Público majoritariamente menor de idade → LGPD no centro.</li>
+                <li>R4 — A nota é estimativa por IA, não a nota oficial do INEP.</li>
+                <li>R6 — Saída formatada para WhatsApp (sem tabelas markdown, sem <code>#</code>).</li>
+            </ul>
+        </div>
+
+        <div id="bloco-11" class="content-section">
+            <h2><span class="badge bg-when">QUANDO E QUANTO?</span> 11. Riscos</h2>
+            <table>
+                <tr><th>Risco</th><th>Mitigação</th></tr>
+                <tr><td>OCR erra a transcrição (letra difícil)</td><td>Preview obrigatório + edição manual + piso de legibilidade</td></tr>
+                <tr><td>LLM superestima/subestima competência</td><td>Prompt calibrado por níveis; ancoragem em trechos; anti-inflação</td></tr>
+                <tr><td>Custo aberto de OCR + LLM</td><td>Rate-limit; cota espiada antes do OCR; cache de contexto</td></tr>
+                <tr><td>Vazamento de dado de menor</td><td>Consentimento; foto descartada; TTL 45 min; sem histórico</td></tr>
+                <tr><td>Indisponibilidade de provedor</td><td>Retry com backoff; provedor plugável; devolução de crédito</td></tr>
+            </table>
+        </div>
+
+        <div id="bloco-12" class="content-section">
+            <h2><span class="badge bg-when">QUANDO E QUANTO?</span> 12. Cronograma</h2>
+            <ul>
+                <li><strong>Diagnóstico:</strong> investigação do problema, canvas e arquitetura.</li>
+                <li><strong>Borda e canais:</strong> FastAPI, webhooks, interface de canal agnóstica.</li>
+                <li><strong>Fluxo:</strong> máquina de estados em Redis, consentimento, rate-limit.</li>
+                <li><strong>Núcleo de IA:</strong> OCR, prompt de correção, provedores e cache.</li>
+                <li><strong>Qualidade e docs:</strong> testes unitários, análise crítica e portal.</li>
+            </ul>
+        </div>
+
+        <div id="bloco-13" class="content-section">
+            <h2><span class="badge bg-when">QUANDO E QUANTO?</span> 13. Custos</h2>
+            <p>Diferente de um projeto 100% local, o custo <strong>não é zero</strong>: cada correção consome APIs pagas (OCR + LLM). O custo é <strong>variável, por uso</strong>, e contido pelo rate-limit diário, pela cota espiada antes do OCR e pelo cache de contexto no bloco estático (~6.000 tokens). A infraestrutura é enxuta: um único Container App (app + Redis embutido, 1 réplica fixa). A modelagem detalhada está na aba <strong>Métricas e ROI</strong>.</p>
+        </div></div>
+</div>
+<div class="page-content" id="page-arquitetura">
+
+<div class="content-wrapper"><h1 id="2-arquitetura-e-fluxo-conversacional">2. Arquitetura e Fluxo Conversacional</h1>
+
+<p>A arquitetura é deliberadamente <strong>enxuta</strong>: um <strong>único contêiner</strong> que embute a aplicação (FastAPI) e o estado (Redis), sem banco relacional e sem serviços gerenciados à parte. A escolha prioriza <strong>um deploy simples, barato e reprodutível</strong> — adequado ao volume de tráfego de uma escola — sobre a elasticidade de uma arquitetura distribuída que o caso de uso não exige.</p>
+
+<h2 id="2-1-topologia-mono-cont-iner-app-redis-e">2.1 Topologia: mono-contêiner (app + Redis embutido)</h2>
+
+<pre><code class="lang-text">
+┌─────────────────────── Container único ───────────────────────┐
+│                                                                │
+│   entrypoint.sh                                                │
+│     ├─ redis-server  (127.0.0.1, AOF em /data, nunca exposto)  │
+│     └─ aguarda o PING responder → exec uvicorn                 │
+│                                                                │
+│   FastAPI (src/main.py)                                        │
+│     ├─ POST /v1/webhook/{whatsapp|telegram}                    │
+│     ├─ GET  /v1/webhook/{...}  (verificação/challenge)         │
+│     └─ GET  /health                                            │
+│                                                                │
+│   Redis (estado)                                               │
+│     ├─ flow:{canal}:{sender}     máquina de estados (TTL 45m)  │
+│     ├─ consent:{canal}:{sender}  consentimento LGPD (sem TTL)  │
+│     ├─ essay_count:{...}:{dia}    rate-limit diário (TTL 24h)  │
+│     └─ idempotência de webhook                                 │
+└────────────────────────────────────────────────────────────────┘
+</code></pre>
+
+<p>O <code>entrypoint.sh</code> sobe o <code>redis-server</code> em modo <em>daemon</em> — <strong>só em <code>127.0.0.1</code></strong>, nunca exposto para fora do contêiner — espera o <code>PING</code> responder e só então executa o <code>uvicorn</code>. Isso evita a corrida de a aplicação tentar conectar antes de o Redis terminar o <em>fork</em> de inicialização.</p>
+
+<blockquote>
+<p><strong>Por que Redis embutido, e não um Redis gerenciado?</strong> Um único Container App carrega tudo. Não há Azure Cache for Redis nem serviço separado para provisionar, pagar e monitorar. O AOF em <code>/data</code> (volume) faz o consentimento LGPD sobreviver a <em>restart</em> do contêiner.</p>
+</blockquote>
+
+<h2 id="2-2-a-borda-http-responder-r-pido-proces">2.2 A borda HTTP: responder rápido, processar depois</h2>
+
+<p>O invariante central — herdado do projeto pai — é que <strong>o handler do webhook nunca faz trabalho pesado</strong>. A Meta exige resposta <code>200</code> em <strong>menos de 200 ms</strong>; um não-2xx dispara uma enxurrada de <em>retries</em>. Então o handler apenas:</p>
+
+<ul class="ordered">
+<li><strong>Valida a assinatura</strong> (HMAC SHA-256 no WhatsApp, <em>secret token</em> no Telegram — em produção).</li>
+<li><strong>Faz o parse</strong> do payload para uma <code>InboundMessage</code> normalizada (agnóstica de canal).</li>
+<li><strong>Descarta duplicatas</strong> (idempotência: Meta/Telegram reenviam o mesmo <em>update</em> em <em>timeout</em>/restart).</li>
+<li><strong>Despacha</strong> o processamento para uma <strong>task asyncio</strong> e retorna <code>200</code> imediatamente.</li>
+</ul>
+
+<p>Todo o trabalho caro — <strong>download da mídia, OCR e LLM</strong> — acontece nessa task de <em>background</em>, nunca no caminho da resposta HTTP. Exceções na task são isoladas e registradas; nunca escapam para o webhook.</p>
+
+<pre><code class="lang-text">
+Meta/Telegram ──POST──▶ verify_signature ──▶ parse_inbound ──▶ is_duplicate?
+                                                                   │ não
+                                                                   ▼
+                                            200 OK ◀── create_task(_process) ──▶ (background)
+                                                                                    handle_message
+</code></pre>
+
+<h2 id="2-3-detalhamento-dos-componentes">2.3 Detalhamento dos componentes</h2>
+
+<div class="table-wrap"><table>
+<tr><th>Componente</th><th>Arquivo</th><th>Responsabilidade</th></tr>
+<tr><td><strong>Borda HTTP</strong></td><td><code>src/main.py</code></td><td>Recebe webhooks, valida, responde 200 em <200ms, despacha a task</td></tr>
+<tr><td><strong>Canais</strong></td><td><code>src/channels/</code></td><td><code>IMessagingChannel</code>: WhatsApp e Telegram; <em>parse</em> de entrada, envio de texto/botões, download de mídia, verificação de assinatura</td></tr>
+<tr><td><strong>Máquina de estados</strong></td><td><code>src/flow/</code></td><td>Fluxo da conversa (<code>states.py</code>) e handlers (<code>handlers.py</code>), com estado em Redis</td></tr>
+<tr><td><strong>OCR</strong></td><td><code>src/correction/ocr.py</code></td><td>Transcrição da foto da redação via Mistral OCR (<code>mistral-ocr-latest</code>)</td></tr>
+<tr><td><strong>Correção</strong></td><td><code>src/correction/corrector.py</code></td><td>Monta o bloco dinâmico do prompt e delega ao provedor de LLM</td></tr>
+<tr><td><strong>Provedores</strong></td><td><code>src/correction/providers/</code></td><td>Implementações plugáveis: Gemini, Claude, OpenAI, DeepSeek, Maritaca</td></tr>
+<tr><td><strong>Prompt</strong></td><td><code>src/prompts.py</code></td><td>Prompt do corretor ENEM (bloco estático + bloco dinâmico)</td></tr>
+<tr><td><strong>Rate-limit</strong></td><td><code>src/rate_limit.py</code></td><td>Limite diário de correções por aluno</td></tr>
+<tr><td><strong>Config</strong></td><td><code>src/config.py</code></td><td><code>pydantic-settings</code> — todas as variáveis de ambiente</td></tr>
+</table></div>
+
+<h3 id="interface-de-canal-agn-stica">Interface de canal agnóstica</h3>
+
+<p>Toda a lógica de fluxo opera sobre a abstração <code>IMessagingChannel</code> e a <code>InboundMessage</code> normalizada. WhatsApp e Telegram são apenas duas implementações da mesma interface (<code>send_text</code>, <code>send_buttons</code>, <code>download_media</code>, <code>parse_inbound</code>, <code>verify_signature</code>). O resultado: <strong>o mesmo fluxo conversacional roda idêntico nos dois canais</strong>, e adicionar um terceiro canal é implementar uma classe, não reescrever o fluxo.</p>
+
+<h2 id="2-4-o-fluxo-conversacional-m-quina-de-es">2.4 O fluxo conversacional (máquina de estados)</h2>
+
+<p>O estado da conversa é a <strong>única memória</strong> do sistema — não há banco. Uma chave <code>flow:{canal}:{sender}</code> guarda o JSON do fluxo com <strong>TTL de 45 minutos</strong>: fluxo abandonado evapora sozinho, junto com o texto do OCR (exigência de LGPD). Ausência de chave = <code>IDLE</code>.</p>
+
+<pre><code class="lang-text">
+Aluno                         Bot
+  │  (1º contato)              │
+  │◀── consentimento LGPD ─────┤   nada é processado antes do aceite
+  │  [Aceito]                  │
+  │  /corrigir                 │
+  │◀── "digite o tema" ────────┤   AWAITING_THEME   (tema: só texto)
+  │  tema (texto)              │
+  │◀── "textos motivadores?" ──┤   AWAITING_MOTIVATORS
+  │  textos / [Pular]          │
+  │◀── "manda a foto" ─────────┤   AWAITING_ESSAY_PHOTO
+  │  📷 foto da redação        │──▶ download → Mistral OCR (a foto morre aqui)
+  │◀── preview do OCR ─────────┤   CONFIRMING
+  │  [Editar texto]            │──▶ EDITING_TEXT (aluno ajusta a letra difícil)
+  │◀── eco p/ confirmar ───────┤
+  │  [Corrigir agora]          │──▶ LLM + Matriz de correção do ENEM
+  │◀── nota + feedback ────────┤   estado é limpo ANTES da entrega
+</code></pre>
+
+<p>Estados (<code>FlowState</code>): <code>AWAITING_THEME</code> → <code>AWAITING_MOTIVATORS</code> → <code>AWAITING_ESSAY_PHOTO</code> → <code>CONFIRMING</code> → (opcional) <code>EDITING_TEXT</code> → correção.</p>
+
+<p>Regras de projeto embutidas no fluxo:</p>
+
+<ul>
+<li><strong>OCR só na redação.</strong> Tema e textos motivadores são <strong>texto digitado</strong>; uma foto nesses passos é recusada com orientação, para não queimar créditos de OCR à toa.</li>
+<li><strong>A redação pode vir em até 3 fotos</strong> (frente/verso, duas folhas) — cada parte é transcrita e concatenada.</li>
+<li><strong>Rate-limit é consumido na correção</strong>, não no passeio pelo fluxo. Uma falha técnica na correção <strong>devolve o crédito</strong> do dia, e o estado é preservado para o aluno tentar de novo sem repetir tudo.</li>
+<li><strong>O estado morre antes da entrega.</strong> Se o envio falhar no meio dos <em>chunks</em>, o aluno recomeça limpo em vez de ficar preso num <code>CONFIRMING</code> fantasma.</li>
+</ul>
+
+<h2 id="2-5-o-motor-de-corre-o-prompt-em-dois-bl">2.5 O motor de correção: prompt em dois blocos e cache de contexto</h2>
+
+<p>O prompt (<code>src/prompts.py</code>) é dividido em duas partes para aproveitar <strong>cache de contexto</strong> e cortar custo:</p>
+
+<ul>
+<li><strong>Bloco estático (<code>ENEM_CORRECTION_SYSTEM</code>, ~6.000 tokens):</strong> a matriz de correção inteira — identidade do corretor, triagem de nota zero, as cinco competências com tabelas de pontuação, e o formato de saída para WhatsApp. É <strong>idêntico em toda chamada</strong>.</li>
+<li><strong>Bloco dinâmico (<code>ENEM_CORRECTION_INPUT</code>):</strong> apenas <strong>TEMA / TEXTOS MOTIVADORES / REDAÇÃO</strong> — a única parte que muda por correção.</li>
+</ul>
+
+<blockquote>
+<p><strong>Nota de implementação:</strong> a formatação é sempre via <code>str.format()</code>, <strong>nunca f-string</strong> — o corpo do prompt tem chaves literais (tabelas, exemplos) que um f-string tentaria avaliar como expressão.</p>
+</blockquote>
+
+<p>Cada provedor combina os dois blocos do jeito mais barato disponível:</p>
+
+<div class="table-wrap"><table>
+<tr><th>Provedor (<code>CORRECTION_PROVIDER</code>)</th><th>Cache do bloco estático</th></tr>
+<tr><td><code>gemini</code> (default)</td><td>Cache <strong>explícito</strong> (<code>client.caches.create</code>), com <em>fallback</em> para bloco inline se a criação falhar</td></tr>
+<tr><td><code>claude</code></td><td>Cache <strong>explícito</strong> (<code>cache_control</code>)</td></tr>
+<tr><td><code>openai</code>, <code>deepseek</code></td><td>Cache <strong>automático</strong> de prefixo</td></tr>
+<tr><td><code>maritaca</code></td><td>Sem cache documentado — o bloco estático é reenviado, sem desconto confirmado</td></tr>
+</table></div>
+
+<p>A troca de provedor é uma variável de ambiente (<code>CORRECTION_PROVIDER</code> + <code>CORRECTION_MODEL</code>), o que permite <strong>comparar modelos</strong> rapidamente sem tocar no código. Tanto o OCR quanto a correção usam <strong>retry com <em>backoff</em> exponencial</strong> (<code>tenacity</code>) — comum a sobrecarga (503) e limite de cota (429) em qualquer provedor.</p>
+
+<h2 id="2-6-deploy-azure-container-apps-">2.6 Deploy (Azure Container Apps)</h2>
+
+<p>O <code>docker-compose</code> é a forma canônica de rodar; para produção o alvo é o <strong>Azure Container Apps</strong>, no mesmo padrão do projeto pai:</p>
+
+<ul>
+<li><strong>1 único Container App</strong> (imagem deste Dockerfile — Redis já embutido).</li>
+<li><code>minReplicas=1</code> <strong>e</strong> <code>maxReplicas=1</code> (fixo, não escala). O Redis embutido <strong>não é compartilhável entre réplicas</strong>: rodar com mais de uma fragmentaria o rate-limit, o consentimento e o estado do fluxo. Para o volume de uma escola, uma réplica é folgado (ver <strong>Análise e Limitações</strong> e <strong>Robustez e Escala</strong>).</li>
+<li><strong>Azure Files</strong> montado em <code>/data</code> (mesmo <em>mount point</em> da <code>VOLUME</code> do Dockerfile) para o AOF do Redis sobreviver a <em>redeploy</em>/restart.</li>
+<li><strong>Segredos</strong> (tokens, chaves) via Key Vault / <em>secret refs</em> — nunca env var em texto plano no manifesto.</li>
+</ul>
+
+<hr>
+</div>
+</div>
+<div class="page-content" id="page-limitacoes">
+
+<div class="content-wrapper"><h1 id="3-an-lise-cr-tica-e-limita-es-estruturai">3. Análise Crítica e Limitações Estruturais</h1>
+
+<p>Um sistema honesto declara onde ele <strong>não</strong> é perfeito. Abaixo, as fragilidades reais do projeto, cada uma com a mitigação já implementada e o que ainda fica em aberto para uma evolução <em>Enterprise-Grade</em>.</p>
+
+<hr>
+
+<h2 id="3-1-ocr-de-manuscrito-o-limite-da-letra-">3.1 OCR de manuscrito: o limite da letra difícil</h2>
+
+<p><strong>Risco.</strong> A entrada é uma <strong>foto de redação manuscrita</strong>. Caligrafia difícil, foto tremida, sombra ou papel amassado degradam a transcrição do OCR (Mistral). Uma palavra lida errado pode virar um "desvio" que o aluno não cometeu — e uma correção baseada em texto errado é uma correção injusta.</p>
+
+<p><strong>Mitigação implementada.</strong></p>
+
+<ul class="ordered">
+<li><strong>Preview obrigatório antes de corrigir.</strong> O bot mostra a transcrição do OCR e só avança com a confirmação do aluno — que <strong>já vê a leitura da foto</strong> antes de qualquer nota.</li>
+<li><strong>Destaque das palavras de baixa confiança.</strong> O OCR é chamado com <code>confidence_scores_granularity="word"</code>, e o Mistral devolve a confiança (0–1) por palavra. As palavras abaixo de um limiar (<code>OCR_CONFIDENCE_THRESHOLD</code>, default 0,85) são mostradas no preview — as de <strong>menor confiança primeiro</strong> — direcionando a atenção do aluno aos pontos onde a leitura ficou incerta. É <strong>triagem de atenção</strong>, não veredito: confiança baixa não significa erro, apenas "vale checar". O comportamento é <strong>adaptativo</strong>: poucas palavras incertas → o bot as aponta uma a uma; muitas (letra difícil no geral) → em vez de despejar uma lista enorme, ele pede a releitura do texto inteiro e mostra apenas as mais incertas.</li>
+</ul>
+
+<blockquote>
+<p><strong>Calibração nas redações reais</strong> (6 fotos com nota conhecida): a confiança do OCR acompanha a legibilidade, que por sua vez acompanha a nota. As redações <strong>nota 1000</strong> (letra caprichada) tiveram <strong>0 a 1</strong> palavra sinalizada a 0,85; a de <strong>920</strong>, apenas <strong>2</strong>; já as de <strong>800</strong> (letra mais difícil) tiveram <strong>~50 palavras</strong> cada. O limiar de 0,85 separa os dois regimes com folga — nenhuma redação cai perto da fronteira —, o que valida a decisão de trocar de mensagem por quantidade de palavras sinalizadas.</p>
+</blockquote>
+
+<ul class="ordered">
+<li><strong>Edição manual opcional.</strong> Se a letra confundiu o OCR, o aluno toca em <em>Editar texto</em>, recebe o texto lido numa mensagem própria (fácil de copiar), ajusta o que estiver errado, e o bot <strong>ecoa a versão final</strong> para nova confirmação. Ao editar, o destaque de baixa confiança é zerado (a leitura foi conferida à mão).</li>
+<li><strong>Piso de legibilidade por foto.</strong> Cada parte precisa render um mínimo de caracteres (<code>MIN_ESSAY_CHARS</code>); abaixo disso, a foto é tratada como ilegível e recusada com orientação — em vez de mandar lixo para o LLM.</li>
+</ul>
+
+<p><strong>Em aberto.</strong> O OCR é uma <strong>transcrição fiel</strong> da foto — ele não "conserta" nem interpreta a redação. Se o aluno não revisar o preview, um erro de leitura entra na correção como se fosse do texto original. A responsabilidade pela fidelidade do texto é compartilhada com o aluno, e o produto deixa isso explícito na etapa de confirmação.</p>
+
+<h3 id="alternativa-avaliada-e-descartada-segund">Alternativa avaliada e descartada: "segundo olhar" de uma LLM multimodal</h3>
+
+<p>Antes de fixar a edição manual como a única rede de segurança, testamos se uma LLM multimodal (recebendo a <strong>foto + a transcrição do OCR + as palavras de baixa confiança</strong>) conseguiria decifrar os trechos incertos automaticamente — poupando o aluno de reler e corrigir o texto à mão. A hipótese era razoável: um modelo de visão "olhando" a imagem deveria acertar onde o OCR só viu um traço ambíguo.</p>
+
+<p><strong>Método.</strong> Um script de laboratório (<code>scripts/ocr_second_look.py</code>, fora do fluxo de produção) roda o experimento em duas versões por foto — <code>v1</code> (OCR cru) e <code>v2</code> (revisão da LLM) — para comparação lado a lado com a imagem original. Testamos três eixos, isoladamente e combinados, nas redações reais de <code>redacoes/</code>:</p>
+
+<div class="table-wrap"><table>
+<tr><th>Eixo testado</th><th>Variações</th></tr>
+<tr><td>Modelo</td><td><code>gemini-3.1-flash-lite</code>, <code>gemini-3.5-flash</code></td></tr>
+<tr><td>Modo de prompt</td><td><code>ocr-anchored</code> (revisa o texto do OCR) · <code>image-first</code> (transcreve direto da imagem, usando o OCR só como apoio)</td></tr>
+<tr><td>Resolução de imagem</td><td>padrão · <code>media_resolution=ultra</code> (mais tiles internos do Gemini) · <code>ultra</code> + upscale físico 3× (LANCZOS)</td></tr>
+</table></div>
+
+<p>Em todas as combinações, o prompt instruía explicitamente <strong>transcrição literal</strong> — preservar erros de ortografia/concordância do aluno, nunca "consertar" para a norma culta (a redação é avaliada exatamente por esses desvios, na Competência 1).</p>
+
+<p><strong>Metodologia de verificação.</strong> Comparar apenas as saídas de diferentes rodadas de LLM entre si <strong>não</strong> prova qual delas está certa — nenhuma rodada é "gabarito" só por parecer mais coerente. Por isso, as conclusões abaixo separam explicitamente o que foi <strong>conferido contra a foto original</strong> (evidência forte) do que era só divergência entre modelos (evidência fraca, tratada como pergunta em aberto, não como falha).</p>
+
+<p><strong>Confirmado contra a foto: acertos genuínos do segundo olhar.</strong> Em fotos de letra difícil, o modelo decifrou corretamente vários trechos que o OCR embaralhou — incluindo dois casos em que o OCR não só errou a palavra como <strong>mudou o sentido da frase</strong>, e a revisão corrigiu:</p>
+
+<div class="table-wrap"><table>
+<tr><th>O aluno escreveu (confirmado na foto)</th><th>O que o OCR leu (errado)</th></tr>
+<tr><td>"...além de transmitir <strong>sabedoria</strong>, evitando a desinformação..."</td><td>"...além de transmitir sobre <strong>a vida e a vida</strong>, evitando..."</td></tr>
+<tr><td>"...caso que infelizmente ainda <strong>são vistos</strong> na atualidade."</td><td>"...caso que infelizmente ainda <strong>não visto</strong> na atualidade."</td></tr>
+<tr><td><code>reibérvinho</code> → <code>ribeirinhos</code> / <code>Defreende-se</code> → <code>Depreende-se</code> / <code>se deponiram</code> → <code>se depararam</code></td><td>garbles óbvios do OCR</td></tr>
+</table></div>
+
+<p>No modo <code>image-first</code>, o segundo olhar também recuperou a divisão em parágrafos que o OCR havia achatado num bloco só.</p>
+
+<p><strong>Confirmado contra a foto: o risco que se manteve.</strong></p>
+
+<div class="table-wrap"><table>
+<tr><th>Caso</th><th>O que a foto mostra</th><th>O que aconteceu</th></tr>
+<tr><td><strong>Substituição silenciosa de um erro real</strong></td><td>O aluno escreveu "hordiena" (erro real)</td><td>Em algumas rodadas (mesmo modelo, mesmo prompt, variando só a resolução da imagem) o modelo "corrigiu" para "hodierna" — mesmo com instrução explícita para não fazer isso</td></tr>
+<tr><td><strong>Erro do OCR que soa gramatical passa despercebido</strong></td><td>O trecho correto é "são fundamentais"</td><td>O OCR leu "não fundamentam" (também gramatical) — nenhuma combinação de modelo/modo/resolução testada corrigiu isso</td></tr>
+</table></div>
+
+<p><strong>Em aberto (não verificado contra a foto).</strong> Outras divergências entre rodadas (<code>Autrorrim</code>/<code>Outrossim</code>, <code>Sob em vez</code>/<code>Sob esse viés</code>, <code>geração</code>/<code>gerenciação</code> de leis, <code>estereótipos,</code>/<code>esteriótipos</code>) apareceram ao comparar modelos e modos entre si, mas <strong>não foram conferidas contra o manuscrito</strong> — podem ser tanto erros do modelo quanto acertos que o OCR também errava. Ficam registradas como incerteza, não como falha.</p>
+
+<blockquote>
+<p><strong>O achado mais importante:</strong> aumentar a resolução da imagem (<code>ultra</code> + upscale 3×, ~9× mais pixels de entrada) <strong>não</strong> eliminou o risco confirmado — a mesma inconsistência no caso "hordiena" (preservado em algumas rodadas, normalizado em outras) apareceu em resoluções diferentes do mesmo modelo. Isso indica que a causa não é falta de detalhe visual: é variância do modelo e, possivelmente, um viés para uma leitura que "soa bem" em português — mesmo vendo a imagem com nitidez.</p>
+</blockquote>
+
+<p><strong>Decisão.</strong> O saldo do experimento é misto: o segundo olhar <strong>acertou</strong> dois trechos em que o OCR mudava o sentido da frase (evidência forte de valor real), mas também <strong>normalizou</strong> um erro real do aluno em algumas rodadas, de forma inconsistente entre execuções idênticas. Esse segundo ponto é o que desqualifica a <strong>autoaceitação</strong>: como o mesmo input pode gerar ora uma transcrição fiel, ora uma "corrigida", não há como confiar no resultado sem checar contra a foto — e checar contra a foto é exatamente o trabalho que já cabe ao aluno na edição manual. Por isso, mantivemos a integração ao fluxo de produção descartada por ora, mas o resultado positivo nos dois casos confirmados deixa em aberto uma evolução futura: usar o segundo olhar como <strong>sugestão opcional dentro da própria edição manual</strong> (ex.: "o modelo lê como X aqui — confere?"), sempre com a palavra final do aluno, nunca substituindo o texto sozinho. Os scripts (<code>scripts/ocr_calibration.py</code> e <code>scripts/ocr_second_look.py</code>) permanecem no repositório como ferramentas de laboratório documentadas — não fazem parte do fluxo do bot hoje.</p>
+
+<hr>
+
+<h2 id="3-2-a-nota-uma-estimativa-n-o-a-nota-ofi">3.2 A nota é uma estimativa, não a nota oficial</h2>
+
+<p><strong>Risco.</strong> A avaliação é feita por um <strong>LLM</strong>, não por dois corretores humanos credenciados pelo INEP (com critério de desempate), como no ENEM real. Modelos de linguagem têm <strong>variância</strong> (a mesma redação pode oscilar alguns pontos entre execuções) e podem, em casos limítrofes, <strong>superestimar</strong> (por complacência) ou <strong>subestimar</strong> uma competência.</p>
+
+<p><strong>Mitigação implementada.</strong></p>
+
+<ul class="ordered">
+<li><strong>Prompt calibrado pela matriz oficial.</strong> Cada competência tem a tabela de níveis (0/40/80/120/160/200) transcrita da Matriz de Referência; o modelo é instruído a <strong>ancorar toda nota em um nível específico</strong> e <strong>toda observação em um trecho citado</strong> — nada de "impressão solta".</li>
+<li><strong>Regras de conduta anti-inflação.</strong> O prompt proíbe explicitamente inflar nota "para não desanimar", inventar desvio inexistente, e elogiar de forma genérica sem citar o trecho.</li>
+<li><strong>Triagem de nota zero antes de tudo.</strong> Fuga total, tipo textual errado, cópia, desrespeito aos direitos humanos etc. são verificados <strong>antes</strong> da pontuação por competência, evitando notas altas em textos que o ENEM zeraria.</li>
+<li><strong>Transparência de estimativa.</strong> O feedback deixa claro que a nota é uma <strong>estimativa por IA</strong> e que a nota oficial depende de humanos.</li>
+</ul>
+
+<p><strong>Em aberto.</strong> Sem um <em>dataset</em> de redações com nota oficial para calibrar, não há como afirmar a <strong>acurácia</strong> da estimativa. Uma evolução natural é medir a concordância do modelo contra redações já corrigidas pelo INEP (ver <strong>Métricas e ROI</strong>, §8.4).</p>
+
+<hr>
+
+<h2 id="3-3-r-plica-nica-o-redis-embutido-n-o-es">3.3 Réplica única: o Redis embutido não escala horizontalmente</h2>
+
+<p><strong>Risco.</strong> Como o Redis vive <strong>dentro</strong> do contêiner, ele <strong>não é compartilhado</strong> entre réplicas. Subir <code>replicas > 1</code> fragmentaria o estado: cada réplica veria um Redis diferente, quebrando o rate-limit (o aluno burlaria o limite caindo em réplicas distintas), o consentimento e a continuidade do fluxo.</p>
+
+<p><strong>Mitigação implementada.</strong></p>
+
+<ul class="ordered">
+<li><strong>Réplica fixa em 1.</strong> O deploy usa <code>minReplicas=1</code> <strong>e</strong> <code>maxReplicas=1</code> — a arquitetura assume e documenta a restrição, em vez de deixá-la como uma armadilha silenciosa.</li>
+<li><strong>Dimensionamento adequado ao caso.</strong> Para o volume de uma escola, uma única réplica com Redis local é <strong>folgada</strong> — o gargalo real é a latência de OCR+LLM (I/O de rede), não CPU do contêiner.</li>
+</ul>
+
+<p><strong>Em aberto.</strong> Se o produto precisar escalar para muitas escolas simultâneas, o caminho é <strong>externalizar o Redis</strong> (um Redis gerenciado compartilhado) e então liberar réplicas — uma mudança contida, já que todo o estado passa por <code>src/redis_client.py</code>.</p>
+
+<hr>
+
+<h2 id="3-4-custo-por-corre-o-ocr-llm-a-cada-red">3.4 Custo por correção: OCR + LLM a cada redação</h2>
+
+<p><strong>Risco.</strong> Diferente de um serviço puramente local, <strong>cada correção consome APIs pagas</strong>: uma chamada de OCR (Mistral) por foto e uma chamada de LLM (~6.000 tokens de bloco estático + o texto da redação). Acesso aberto (qualquer número da escola) sem contenção viraria um custo aberto.</p>
+
+<p><strong>Mitigação implementada.</strong></p>
+
+<ul class="ordered">
+<li><strong>Rate-limit diário por aluno</strong> (<code>ESSAY_DAILY_LIMIT</code>, default 2) — a única contenção de custo, já que o acesso é aberto. Contado por (canal, remetente, dia), com a chave expirando sozinha em 24h.</li>
+<li><strong>Cota espiada antes do OCR.</strong> O sistema verifica a cota <strong>antes</strong> de chamar o Mistral (<code>has_quota</code>), para não gastar OCR quando a correção nem vai acontecer.</li>
+<li><strong>Cache de contexto no bloco estático.</strong> ~6.000 tokens idênticos a cada chamada são cacheados (explícito no Gemini/Claude, automático no OpenAI/DeepSeek), cortando o custo por correção.</li>
+<li><strong>Tetos de entrada.</strong> Tema, motivadores e redação têm limites de caracteres — contêm abuso/acidente (ex.: foto de um livro inteiro) sem afetar uma redação real (~2.500 caracteres).</li>
+</ul>
+
+<p><strong>Custo medido em uso real</strong> (ver <strong>Métricas e ROI</strong>, §8.3.1): OCR (Mistral) tem <em>free tier</em> generoso — só ~1% da cota mensal consumida em testes extensivos — e, acima dela, US$ 0,004/foto; o LLM (DeepSeek V4 Flash) mediu US$ 0,00375/correção. Somados, <strong>menos de 1 centavo de dólar por correção</strong> de uma foto, fora da cota gratuita de OCR. Em escala (§8.3.1, "Custo em escala") — um teto conservador que ignora o <em>free tier</em> do OCR — isso é <strong>menos de US$ 2/ano</strong> para um aluno individual e <strong>≈ US$ 21/ano</strong> para uma escola de 400 alunos com adoção parcial; considerando a cota gratuita real, a escola cai para <strong>≈ US$ 10/ano</strong>. Baixo o bastante para ser bancado do próprio bolso, sem modelo de negócio formal.</p>
+
+<p><strong>Em aberto.</strong> O custo de <strong>hospedagem em nuvem</strong> (Azure Container Apps) ainda não foi medido — falta para fechar o custo operacional total. A comparação de custo × qualidade entre os demais provedores de LLM (Gemini, Claude, OpenAI, Maritaca) também segue em aberto (a troca é uma variável de ambiente — ver <strong>Arquitetura</strong>, §2.5).</p>
+
+<hr>
+
+<h2 id="3-5-sem-hist-rico-o-pre-o-deliberado-da-">3.5 Sem histórico: o preço (deliberado) da privacidade</h2>
+
+<p><strong>Risco.</strong> Por decisão de privacidade (público menor de idade), <strong>nada persiste</strong> após a correção — não há histórico de redações do aluno. O efeito colateral é que o produto <strong>não mostra a evolução</strong> do aluno ao longo do tempo, um recurso pedagógico valioso.</p>
+
+<p><strong>Mitigação / racional.</strong></p>
+
+<ul class="ordered">
+<li><strong>É uma escolha de design, não um esquecimento.</strong> O texto do OCR vive só no estado Redis com <strong>TTL de 45 minutos</strong>; a foto é descartada logo após o OCR. Isso minimiza a superfície de dados pessoais de menores (ver <strong>Ética e LGPD</strong>).</li>
+<li><strong>O consentimento é o único dado sem TTL</strong> — e é um aceite, não conteúdo de redação.</li>
+</ul>
+
+<p><strong>Em aberto.</strong> Um histórico opcional (com consentimento específico e responsável legal, e possivelmente anonimizado/agregado) permitiria acompanhar a evolução por competência — mas só com uma base legal e um modelo de retenção bem definidos. Hoje, a ausência de histórico é o trade-off consciente que mantém o projeto no lado seguro da LGPD.</p>
+
+<hr>
+
+<h2 id="3-6-custo-de-mensageria-o-whatsapp-deixa">3.6 Custo de mensageria: o WhatsApp deixa de ser gratuito</h2>
+
+<p><strong>Risco.</strong> A partir de <strong>01/10/2026</strong>, o WhatsApp Business Platform (Meta) passa a cobrar por <strong>mensagem de serviço</strong> — a categoria de conversa usada por este bot (respostas a um contato que iniciou a interação, dentro da janela de atendimento). Até então, esse tipo de mensagem era gratuito; a mudança adiciona um <strong>custo por correção</strong> que não existia, além do já existente custo de OCR + LLM (§3.4). Para um produto de acesso aberto voltado a escolas — onde orçamento é justamente a maior restrição —, um custo por mensagem no canal mais usado é um risco real ao modelo de custo zero/baixo custo do projeto.</p>
+
+<p><strong>Mitigação implementada.</strong></p>
+
+<ul class="ordered">
+<li><strong>Telegram como canal recomendado e default.</strong> O Telegram Bot API é <strong>gratuito</strong> e sem sinal de mudança nesse sentido; <code>CHANNEL_BACKEND</code> agora tem <code>telegram</code> como valor padrão (era <code>whatsapp</code>), e o README recomenda explicitamente o Telegram como canal principal.</li>
+<li><strong>Arquitetura já é multicanal por design.</strong> Como os dois canais implementam a mesma interface (<code>IMessagingChannel</code> — ver <strong>Arquitetura</strong>, §2.3), a escolha de canal é uma decisão de configuração (variáveis de ambiente + qual webhook é registrado no provedor), não uma reescrita de código. Migrar uma implantação de WhatsApp para Telegram (ou operar as duas em paralelo, uma por escola) não exige tocar no fluxo conversacional.</li>
+<li><strong>WhatsApp continua suportado.</strong> Para instituições que já operam via WhatsApp (base de contatos existente, preferência da comunidade escolar), o canal continua funcional — a recomendação é sobre custo, não uma remoção de suporte.</li>
+</ul>
+
+<p><strong>Em aberto.</strong> O valor exato cobrado por mensagem de serviço (e se há alguma cota gratuita mensal, como o WhatsApp já pratica para outras categorias de conversa) ainda precisa ser confirmado na documentação oficial da Meta mais perto da data de vigência, para orçar o custo por correção em quem optar por manter o WhatsApp como canal.</p>
+
+<hr>
+</div>
+</div>
+<div class="page-content" id="page-stress">
+
+<div class="content-wrapper"><h1 id="testes-de-stress-pipeline-de-corre-o">Testes de Stress — Pipeline de Correção</h1>
+
+<blockquote>
+<p>⏳ <strong>Status: a medir.</strong> Esta página define o <strong>plano de testes de stress</strong> do corretor. Os números ainda não foram coletados — as tabelas trazem a estrutura de medição e ficam com valores <code>—</code> até a execução real. Serão preenchidos assim que o <em>harness</em> de carga rodar contra um ambiente de homologação.</p>
+</blockquote>
+
+<hr>
+
+<h2 id="objetivo">Objetivo</h2>
+
+<p>Diferente de um pipeline local, o gargalo aqui é <strong>I/O de rede para APIs externas</strong> (OCR e LLM), não CPU/GPU. Os testes de stress precisam responder a três perguntas:</p>
+
+<ul class="ordered">
+<li><strong>Qual é a latência real</strong> de cada etapa (download da mídia, OCR, LLM) e onde está o gargalo?</li>
+<li><strong>Como cada provedor de LLM se comporta</strong> sob a mesma redação (latência × custo × qualidade)?</li>
+<li><strong>A borda HTTP aguenta rajada</strong> de webhooks mantendo a resposta em <200ms enquanto o trabalho pesado roda em <em>background</em>?</li>
+</ul>
+
+<hr>
+
+<h2 id="componentes-a-medir">Componentes a Medir</h2>
+
+<div class="table-wrap"><table>
+<tr><th>Componente</th><th>O que medir</th><th>Payload de teste</th><th>Rodadas</th><th>Mín (s)</th><th>Méd (s)</th><th>Máx (s)</th><th>Status</th></tr>
+<tr><td><strong>Download da mídia</strong></td><td>Baixar a foto do provedor de canal</td><td>foto ~1–3 MB</td><td>—</td><td>—</td><td>—</td><td>—</td><td>⏳</td></tr>
+<tr><td><strong>OCR (Mistral)</strong></td><td>Transcrever 1 foto de redação</td><td>redação ~30 linhas</td><td>—</td><td>—</td><td>—</td><td>—</td><td>⏳</td></tr>
+<tr><td><strong>OCR (Mistral)</strong></td><td>Redação em 3 fotos (frente/verso)</td><td>3 fotos</td><td>—</td><td>—</td><td>—</td><td>—</td><td>⏳</td></tr>
+<tr><td><strong>LLM — Gemini</strong></td><td>Correção completa (estático + dinâmico)</td><td>~6.000 + ~800 tokens</td><td>—</td><td>—</td><td>—</td><td>—</td><td>⏳</td></tr>
+<tr><td><strong>LLM — Claude</strong></td><td>Correção completa</td><td>idem</td><td>—</td><td>—</td><td>—</td><td>—</td><td>⏳</td></tr>
+<tr><td><strong>LLM — OpenAI</strong></td><td>Correção completa</td><td>idem</td><td>—</td><td>—</td><td>—</td><td>—</td><td>⏳</td></tr>
+<tr><td><strong>LLM — DeepSeek</strong></td><td>Correção completa</td><td>idem</td><td>—</td><td>—</td><td>—</td><td>—</td><td>⏳</td></tr>
+<tr><td><strong>LLM — Maritaca</strong></td><td>Correção completa</td><td>idem</td><td>—</td><td>—</td><td>—</td><td>—</td><td>⏳</td></tr>
+<tr><td><strong>Borda HTTP</strong></td><td>Tempo de resposta do webhook</td><td>update mínimo</td><td>—</td><td>—</td><td>—</td><td>—</td><td>⏳</td></tr>
+<tr><td><strong>Redis</strong></td><td><code>get</code>/<code>set</code> do estado do fluxo</td><td>FlowData JSON</td><td>—</td><td>—</td><td>—</td><td>—</td><td>⏳</td></tr>
+</table></div>
+
+<hr>
+
+<h2 id="ganho-do-cache-de-contexto-a-medir-">Ganho do Cache de Contexto (a medir)</h2>
+
+<p>O bloco estático do prompt (~6.000 tokens) é reenviado a cada correção, mas é <strong>cacheável</strong>. A medição deve comparar a latência e o custo da <strong>primeira</strong> chamada (cache frio) contra as <strong>subsequentes</strong> (cache quente), por provedor.</p>
+
+<div class="table-wrap"><table>
+<tr><th>Provedor</th><th>Cache</th><th>1ª chamada (fria)</th><th>Chamadas seguintes (quente)</th><th>Redução</th></tr>
+<tr><td>Gemini</td><td>Explícito</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td>Claude</td><td>Explícito</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td>OpenAI</td><td>Automático</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td>DeepSeek</td><td>Automático</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td>Maritaca</td><td>Não documentado</td><td>—</td><td>—</td><td>—</td></tr>
+</table></div>
+
+<hr>
+
+<h2 id="teste-de-rajada-burst-na-borda-http-a-me">Teste de Rajada (Burst) na Borda HTTP (a medir)</h2>
+
+<p>Objetivo: confirmar que N webhooks simultâneos <strong>não</strong> degradam a resposta de <200ms, já que o trabalho pesado é despachado para tasks de <em>background</em>.</p>
+
+<div class="table-wrap"><table>
+<tr><th>Métrica</th><th>Valor</th></tr>
+<tr><td>Webhooks disparados em rajada</td><td>—</td></tr>
+<tr><td>Respostas dentro de 200 ms</td><td>—</td></tr>
+<tr><td>Tasks de background concluídas</td><td>—</td></tr>
+<tr><td>Degradação (última − primeira)</td><td>—</td></tr>
+</table></div>
+
+<hr>
+
+<h2 id="reflex-o-cr-tica-a-preencher-ap-s-a-cole">Reflexão Crítica (a preencher após a coleta)</h2>
+
+<p>Perguntas que a análise deverá responder, no mesmo espírito do restante da documentação:</p>
+
+<ul class="ordered">
+<li><strong>Qual é o gargalo real?</strong> Hipótese: o <strong>LLM</strong> domina o tempo de correção (segundos), seguido pelo <strong>OCR</strong>; a borda e o Redis são desprezíveis.</li>
+<li><strong>Existe correlação entre tamanho do payload e latência?</strong> Redações mais longas e mais textos motivadores aumentam o bloco dinâmico — medir o efeito.</li>
+<li><strong>Qual provedor oferece o melhor equilíbrio</strong> latência × custo × qualidade da correção?</li>
+<li><strong>A borda aguenta rajada</strong> sem violar o SLA de 200ms da Meta?</li>
+<li><strong>O sistema está pronto para o volume de uma escola?</strong> Avaliar contra a restrição de réplica única.</li>
+</ul>
+
+<blockquote>
+<p><strong>Nota metodológica:</strong> por consumir OCR e LLM pagos, os testes de stress devem rodar com um <strong>orçamento de chamadas controlado</strong> (ou em modo simulado/<em>mock</em> para as partes que não exigem a API real), respeitando o mesmo rate-limit que protege a produção.</p>
+</blockquote>
+</div>
+</div>
+<div class="page-content" id="page-robustez">
+
+<div class="content-wrapper"><h1 id="6-robustez-escalabilidade-e-boas-pr-tica">6. Robustez, Escalabilidade e Boas Práticas</h1>
+
+<p>Para um bot que atende alunos em tempo real e depende de APIs externas (canal, OCR, LLM), robustez não é enfeite: uma falha mal tratada vira um webhook em <em>loop</em> de <em>retries</em>, um crédito de correção perdido, ou uma resposta que nunca chega. Abaixo, as decisões que levam o projeto do patamar de <em>script</em> ao de serviço resiliente.</p>
+
+<hr>
+
+<h2 id="6-1-tratamento-de-erros-e-resili-ncia">6.1 Tratamento de Erros e Resiliência</h2>
+
+<p>A resiliência foi projetada em camadas, do webhook até a chamada de LLM.</p>
+
+<h3 id="como-foi-implementado">Como foi implementado</h3>
+
+<ul class="ordered">
+<li><strong>A borda nunca devolve não-2xx nas rotas de webhook.</strong> Um status ≠ 2xx faz a Meta/Telegram reenviarem o <em>update</em> em enxurrada. Por isso, assinatura inválida, payload desconhecido e até exceções não tratadas <strong>degradam para <code>200</code></strong> (e são logadas). Um <em>exception handler</em> global garante isso mesmo para erros inesperados.</li>
+<li><strong>A task de background isola exceções.</strong> Todo o processamento pesado roda numa task asyncio cujo corpo captura qualquer exceção — nenhuma escapa para derrubar o processo. Referências fortes às tasks impedem que o GC mate uma task em andamento.</li>
+<li><strong>Retry com <em>backoff</em> exponencial</strong> (<code>tenacity</code>) tanto no <strong>OCR</strong> quanto na <strong>correção</strong> — cobre sobrecarga (503) e limite de cota (429), comuns a qualquer provedor. OCR: até 3 tentativas; correção: até 4.</li>
+<li><strong>Devolução de crédito na falha técnica.</strong> O rate-limit é consumido na correção; se a chamada de LLM falhar depois de esgotar os <em>retries</em>, o crédito do dia é <strong>devolvido</strong> (<code>decr</code>) e o estado é preservado — o aluno tenta de novo sem repetir todo o fluxo.</li>
+<li><strong>Falha de OCR não queima cota.</strong> A cota é <strong>espiada</strong> (<code>has_quota</code>, sem consumir) antes de chamar o Mistral; e o rate-limit só é <strong>consumido</strong> na correção. Passear pelo fluxo é grátis.</li>
+</ul>
+
+<h3 id="justificativa-arquitetural">Justificativa Arquitetural</h3>
+
+<p>O aluno está numa conversa síncrona: ele mandou a foto e espera a nota. Uma falha silenciosa que o deixe travado num estado <code>CONFIRMING</code> fantasma é pior do que um erro claro. Por isso o estado morre <strong>antes</strong> da entrega da correção: se o envio quebrar no meio dos <em>chunks</em>, o aluno recomeça limpo em vez de ficar preso.</p>
+
+<hr>
+
+<h2 id="6-2-observabilidade-logs-estruturados">6.2 Observabilidade: logs estruturados</h2>
+
+<p>O monitoramento não depende de "olhar o terminal": a telemetria é estruturada para ingestão externa.</p>
+
+<h3 id="como-foi-implementado">Como foi implementado</h3>
+
+<ul class="ordered">
+<li><strong><code>structlog</code> com eventos nomeados.</strong> Cada passo relevante emite um evento com campos (<code>channel</code>, <code>sender</code>, <code>provider</code>, <code>model</code>, <code>chars</code>): <code>essay_corrected</code>, <code>essay_ocr_failed</code>, <code>essay_correction_failed</code>, <code>webhook_duplicate_dropped</code>, <code>webhook_signature_failed</code>, <code>flow_unhandled_exception</code>, <code>essay_flow_completed</code>.</li>
+<li><strong>Mensagens de erro truncadas.</strong> Strings de erro são cortadas (ex.: <code>[:300]</code>) para não vazar conteúdo sensível nem inflar o log.</li>
+<li><strong>Nível configurável</strong> via <code>LOG_LEVEL</code> (env), sem alteração de código.</li>
+</ul>
+
+<h3 id="justificativa-arquitetural">Justificativa Arquitetural</h3>
+
+<p>Logs em formato estruturado permitem que qualquer coletor (ELK, Datadog, Grafana Loki) faça a ingestão e construa alertas — taxa de falha de OCR, latência por provedor, volume de correções por dia — sem instrumentar o código de novo.</p>
+
+<hr>
+
+<h2 id="6-3-configura-o-via-ambiente-twelve-fact">6.3 Configuração via ambiente (Twelve-Factor)</h2>
+
+<p>Código e configuração são estritamente separados.</p>
+
+<h3 id="como-foi-implementado">Como foi implementado</h3>
+
+<ul class="ordered">
+<li><strong>Ponto único de verdade.</strong> Todas as chaves (canal, OCR, LLM), o provedor de correção, o modelo, os limites do fluxo e o TTL vivem em variáveis de ambiente, centralizadas em <code>src/config.py</code> (<code>pydantic-settings</code>) e documentadas em <code>.env.example</code>.</li>
+<li><strong>Provedor de LLM plugável sem código.</strong> <code>CORRECTION_PROVIDER</code> (<code>gemini</code> | <code>claude</code> | <code>openai</code> | <code>deepseek</code> | <code>maritaca</code>) + <code>CORRECTION_MODEL</code> trocam o motor de correção por env var — o <code>factory.py</code> resolve a implementação sob demanda.</li>
+<li><strong>Segredos fora do versionamento.</strong> <code>.env</code> é ignorado pelo Git; em produção, os segredos vêm de Key Vault / <em>secret refs</em>, nunca em texto plano no manifesto.</li>
+<li><strong>Verificação de assinatura ligada por ambiente.</strong> <code>ENVIRONMENT</code> ≠ <code>local</code> liga HMAC SHA-256 (WhatsApp) e <em>secret token</em> (Telegram); em <code>local</code>, o simulador roda sem esse atrito.</li>
+</ul>
+
+<h3 id="justificativa-arquitetural">Justificativa Arquitetural</h3>
+
+<p>A mesma imagem roda para uma escola, para um cursinho ou para o simulador de dev — muda só o <code>.env</code>. Comparar dois LLMs na mesma redação é trocar uma variável e reiniciar, não editar código.</p>
+
+<hr>
+
+<h2 id="6-4-estado-persist-ncia-e-escalabilidade">6.4 Estado, persistência e escalabilidade</h2>
+
+<h3 id="como-foi-implementado">Como foi implementado</h3>
+
+<ul class="ordered">
+<li><strong>Estado 100% em Redis, com TTL.</strong> A conversa vive em <code>flow:{canal}:{sender}</code> com TTL de 45 min; o rate-limit em <code>essay_count:{...}:{dia}</code> com TTL de 24h. Chaves com TTL fazem o sistema se <strong>auto-limpar</strong> — fluxo abandonado (e o texto do OCR junto) evapora sozinho.</li>
+<li><strong>Consentimento durável.</strong> <code>consent:{canal}:{sender}</code> é o único dado <strong>sem</strong> TTL (é um aceite, não um passo do fluxo) e sobrevive a restart via <strong>AOF</strong> do Redis em <code>/data</code> (volume).</li>
+<li><strong>Idempotência de webhook.</strong> Meta/Telegram reenviam o mesmo <em>update</em> em <em>timeout</em>/restart; uma chave de deduplicação por <code>message_id</code> descarta a repetição antes de processar.</li>
+</ul>
+
+<h3 id="o-limite-de-escala-e-o-caminho-para-supe">O limite de escala — e o caminho para superá-lo</h3>
+
+<p>O Redis é <strong>embutido no contêiner</strong>, então <strong>não é compartilhável entre réplicas</strong>. Consequência: o deploy roda com <strong>1 réplica fixa</strong> (<code>minReplicas = maxReplicas = 1</code>). Subir mais réplicas fragmentaria rate-limit, consentimento e fluxo (cada réplica veria um Redis diferente).</p>
+
+<div class="table-wrap"><table>
+<tr><th>Aspecto</th><th>Hoje (1 réplica)</th><th>Caminho para escalar</th></tr>
+<tr><td>Estado</td><td>Redis embutido no contêiner</td><td>Externalizar para um Redis gerenciado compartilhado</td></tr>
+<tr><td>Réplicas</td><td>Fixo em 1</td><td>Liberar <code>maxReplicas > 1</code> após externalizar o Redis</td></tr>
+<tr><td>Gargalo</td><td>I/O de OCR + LLM (rede), não CPU</td><td>Concorrência de tasks já é assíncrona</td></tr>
+<tr><td>Superfície de mudança</td><td>—</td><td>Contida em <code>src/redis_client.py</code> (todo acesso passa por lá)</td></tr>
+</table></div>
+
+<blockquote>
+<p><strong>Justificativa:</strong> para o volume de uma escola, uma réplica com Redis local é <strong>folgada</strong> — o custo dominante é a latência de rede das APIs, não CPU do contêiner. A restrição é <strong>documentada e assumida</strong>, não uma armadilha silenciosa; e o caminho para escalar (externalizar o Redis) é uma mudança contida, porque todo o acesso ao estado já está centralizado.</p>
+</blockquote>
+
+<hr>
+
+<h2 id="6-5-qualidade-testes-puros">6.5 Qualidade: testes puros</h2>
+
+<p>A suíte de testes unitários (<code>tests/unit/</code>) roda <strong>sem I/O</strong>: Redis <em>fake</em>, LLM e OCR <em>mockados</em>. Cobre o <strong>fluxo</strong> conversacional (transições de estado, consentimento, rate-limit, edição de texto), os <strong>canais</strong> (parse de entrada, verificação de assinatura, <em>chunking</em>) e o <strong>prompt</strong> (montagem do bloco dinâmico, tetos de entrada). Testes puros rodam rápido e não gastam OCR/LLM pagos — <code>make test</code> a qualquer momento.</p>
+</div>
+</div>
+<div class="page-content" id="page-metricas">
+
+<div class="content-wrapper"><h1 id="8-m-tricas-de-performance-confiabilidade">8. Métricas de Performance, Confiabilidade e ROI</h1>
+
+<blockquote>
+<p>Esta seção modela <strong>latência</strong>, <strong>confiabilidade</strong> e <strong>viabilidade econômica</strong> do corretor. As métricas de performance dependem de medição real (ver <strong>Testes de Stress</strong>) e estão marcadas como ⏳ <strong>a medir</strong>; a lógica de custo/ROI é apresentada como <strong>estimativa paramétrica</strong> com premissas explícitas — ajustáveis conforme o provedor e o modelo de negócio escolhidos.</p>
+</blockquote>
+
+<hr>
+
+<h2 id="8-1-lat-ncia-tempo-at-a-nota-chegar">8.1 Latência: tempo até a nota chegar</h2>
+
+<p>Ao contrário de um pipeline em lote, aqui a latência é <strong>sentida pelo aluno</strong>: ele mandou a foto e espera a correção. O tempo total decompõe-se em três chamadas de rede sequenciais.</p>
+
+<div class="table-wrap"><table>
+<tr><th>Etapa</th><th>Natureza</th><th>Latência esperada</th><th>Medido</th></tr>
+<tr><td>Download da mídia (foto)</td><td>Rede (provedor de canal)</td><td>baixa (~1 MB)</td><td>⏳</td></tr>
+<tr><td><strong>OCR (Mistral)</strong></td><td>Rede (API de visão)</td><td>segundos</td><td>⏳</td></tr>
+<tr><td><strong>LLM (correção)</strong></td><td>Rede (API de LLM)</td><td><strong>domina</strong> o tempo</td><td>⏳</td></tr>
+<tr><td>Borda + Redis</td><td>Local</td><td>desprezível</td><td>⏳</td></tr>
+</table></div>
+
+<p><strong>Hipótese de decomposição</strong> (a confirmar nos testes de stress): <strong>OCR + LLM</strong> respondem por praticamente todo o tempo até a resposta; a borda HTTP e o Redis são desprezíveis. Toda alavanca de latência está, portanto, na <strong>camada de modelos</strong> — escolha de provedor/modelo e aproveitamento de cache.</p>
+
+<blockquote>
+<p><strong>Nota de UX:</strong> o fluxo mascara a latência com sinais de progresso — mensagem de "processando", indicador de "digitando" e o <strong>preview do OCR</strong> (que já dá ao aluno algo para revisar enquanto ainda não há nota). A latência percebida é menor que a medida.</p>
+</blockquote>
+
+<hr>
+
+<h2 id="8-2-confiabilidade">8.2 Confiabilidade</h2>
+
+<p>A correção só é bem-sucedida se as três etapas (download → OCR → LLM) concluírem. O sistema <strong>falha graciosamente</strong>: retry com <em>backoff</em> em OCR e LLM, devolução de crédito na falha técnica, e estado preservado para o aluno tentar de novo.</p>
+
+<div class="table-wrap"><table>
+<tr><th>Fator de risco</th><th>Mitigação</th><th>Efeito</th></tr>
+<tr><td>Sobrecarga/cota do provedor (429/503)</td><td>Retry com <em>backoff</em> exponencial (OCR ×3, LLM ×4)</td><td>Absorve instabilidade transitória</td></tr>
+<tr><td>Falha definitiva na correção</td><td>Devolução do crédito do dia + estado preservado</td><td>Aluno não perde a cota nem recomeça o fluxo</td></tr>
+<tr><td>Webhook duplicado</td><td>Idempotência por <code>message_id</code></td><td>Não processa (nem cobra) duas vezes</td></tr>
+<tr><td>Foto ilegível</td><td>Piso de caracteres por foto + edição manual</td><td>Não manda lixo ao LLM</td></tr>
+<tr><td>Exceção inesperada</td><td><em>Exception handler</em> global → 200 + log</td><td>Não dispara <em>retries</em> da Meta</td></tr>
+</table></div>
+
+<blockquote>
+<p><strong>A medir:</strong> a <strong>taxa de sucesso por correção</strong> em regime real (concluídas ÷ tentativas) e a <strong>distribuição de falhas por etapa</strong> (download × OCR × LLM) — dados que virão da observabilidade (§6.2) e dos testes de stress.</p>
+</blockquote>
+
+<hr>
+
+<h2 id="8-3-custo-e-roi">8.3 Custo e ROI</h2>
+
+<h3 id="8-3-1-custo-por-corre-o-estrutura-">8.3.1 Custo por correção (estrutura)</h3>
+
+<p>Diferente de um projeto 100% local, <strong>cada correção tem custo marginal</strong> — duas chamadas pagas:</p>
+
+<pre><code class="lang-text">
+Custo por correção  ≈  custo_OCR(nº de fotos)  +  custo_LLM(tokens_entrada + tokens_saída)
+
+tokens_entrada  ≈  ~6.000 (bloco estático, CACHEÁVEL)  +  ~500–1.500 (tema + motivadores + redação)
+tokens_saída    ≈  a correção formatada (competências + feedback + reescrita)
+</code></pre>
+
+<p>As <strong>três alavancas</strong> que mantêm esse custo previsível:</p>
+
+<ul class="ordered">
+<li><strong>Cache de contexto</strong> no bloco estático (~6.000 tokens): cobrado uma vez por janela de cache, não a cada correção (explícito no Gemini/Claude, automático no OpenAI/DeepSeek).</li>
+<li><strong>Rate-limit diário</strong> por aluno (<code>ESSAY_DAILY_LIMIT</code>, default 2): teto de custo por usuário.</li>
+<li><strong>Cota espiada antes do OCR</strong>: não gasta Mistral quando a correção não vai acontecer.</li>
+</ul>
+
+<h4 id="custo-de-execu-o-ocr-llm-medido-n-o-esti">Custo de execução (OCR + LLM) — medido, não estimado</h4>
+
+<p>Diferente da seção anterior deste documento (que era projeção), os números abaixo vêm de <strong>uso real</strong> do projeto, e cobrem a parte do custo que independe de onde a aplicação roda (a chamada às APIs de OCR e LLM). O que falta somar é o <strong>custo de hospedagem em nuvem</strong> (Azure Container Apps — ver <strong>Arquitetura</strong>, §2.6), ainda não medido.</p>
+
+<div class="table-wrap"><table>
+<tr><th>Item</th><th>Observação</th><th>Valor</th></tr>
+<tr><td><strong>OCR (Mistral)</strong> — <em>free tier</em></td><td>Em uso real de testes (múltiplas correções), consumiu <strong>~1% da cota gratuita mensal</strong></td><td>efetivamente <strong>US$ 0</strong> dentro da cota</td></tr>
+<tr><td><strong>OCR (Mistral)</strong> — acima da cota</td><td>Preço de tabela</td><td><strong>US$ 4,00 / 1.000 páginas</strong> → <strong>US$ 0,004 / foto</strong></td></tr>
+<tr><td><strong>LLM (DeepSeek V4 Flash)</strong></td><td>Medido em uso real: US$ 0,03 para 8 correções completas (bloco estático + dinâmico)</td><td><strong>US$ 0,00375 / correção</strong></td></tr>
+</table></div>
+
+<blockquote>
+<p><strong>Nota de escopo:</strong> o valor do LLM foi medido com <code>CORRECTION_PROVIDER=deepseek</code>; o provedor default do projeto é <code>gemini</code>. Como a troca de provedor é uma variável de ambiente (ver <strong>Arquitetura</strong>, §2.5), o custo real depende de qual provedor está configurado — os demais (Gemini, Claude, OpenAI, Maritaca) ainda não foram medidos da mesma forma.</p>
+</blockquote>
+
+<p><strong>Custo total por correção</strong>, somando OCR (acima da cota gratuita) + LLM (DeepSeek):</p>
+
+<div class="table-wrap"><table>
+<tr><th>Fotos da redação</th><th>Custo OCR</th><th>Custo LLM</th><th><strong>Custo total / correção</strong></th></tr>
+<tr><td>1 foto (caso comum)</td><td>US$ 0,004</td><td>US$ 0,00375</td><td><strong>≈ US$ 0,0078</strong></td></tr>
+<tr><td>2 fotos</td><td>US$ 0,008</td><td>US$ 0,00375</td><td><strong>≈ US$ 0,0118</strong></td></tr>
+<tr><td>3 fotos (máximo)</td><td>US$ 0,012</td><td>US$ 0,00375</td><td><strong>≈ US$ 0,0158</strong></td></tr>
+</table></div>
+
+<p>Ou seja: <strong>menos de 1 centavo de dólar por correção</strong> (caso comum, 1 foto) acima da cota gratuita do OCR — e, <strong>dentro</strong> da cota gratuita (como tem sido a operação até agora), o custo por correção cai para <strong>≈ US$ 0,004</strong> (só o LLM). Em escala, isso é <strong>≈ US$ 7,80 por 1.000 correções</strong> (1 foto, fora da cota gratuita) — a referência útil para orçar qualquer volume, multiplicando pelo número de correções esperado.</p>
+
+<blockquote>
+<p>O câmbio USD→BRL não está fixado aqui de propósito: Mistral e DeepSeek cobram em dólar, e a conversão exata depende da cotação no momento da compra de créditos — para orçamento, use a cotação comercial vigente.</p>
+</blockquote>
+
+<p><strong>Em aberto.</strong> O custo de <strong>hospedagem em nuvem</strong> (Container App no Azure) ainda não foi medido — é o item que falta para fechar o custo operacional total do projeto (execução + infraestrutura). A comparação <strong>custo × qualidade</strong> entre os demais provedores de LLM (Gemini, Claude, OpenAI, Maritaca) também segue em aberto.</p>
+
+<h4 id="custo-em-escala-de-um-aluno-a-uma-escola">Custo em escala: de um aluno a uma escola inteira</h4>
+
+<p>Com o custo de execução medido (§ anterior), dá para colocar em perspectiva o que ele significa em cenários reais de uso — de um projeto pessoal a uma escola inteira. <strong>Nem todo aluno de uma turma ou escola vai efetivamente usar a ferramenta</strong> (adoção parcial é a norma em qualquer produto opcional), o que reduz ainda mais o custo agregado frente a uma conta "todos os alunos, todos os dias". As premissas abaixo são <strong>ilustrativas e ajustáveis</strong> — o objetivo é mostrar a ordem de grandeza, não cravar um número exato.</p>
+
+<div class="table-wrap"><table>
+<tr><th>Cenário</th><th>Premissa (adoção + uso)</th><th>Correções estimadas</th><th><strong>Custo total estimado</strong></th></tr>
+<tr><td><strong>Aluno individual</strong> — uso típico</td><td>1 aluno, ~3× por semana ao longo de 4 meses de preparação</td><td>~50 correções</td><td><strong>≈ US$ 0,40</strong></td></tr>
+<tr><td><strong>Aluno individual</strong> — uso máximo</td><td>1 aluno, no teto diário (<code>ESSAY_DAILY_LIMIT=2</code>) todo dia por 4 meses</td><td>~240 correções</td><td><strong>≈ US$ 1,90</strong></td></tr>
+<tr><td><strong>Uma turma</strong> (30 alunos)</td><td>~50% adotam o bot, ~20 correções/aluno ao longo do ano</td><td>~300 correções</td><td><strong>≈ US$ 2,40</strong></td></tr>
+<tr><td><strong>Uma escola</strong> (400 alunos)</td><td>~1/3 adotam o bot, ~20 correções/aluno ao longo do ano</td><td>~2.660 correções</td><td><strong>≈ US$ 21,30</strong></td></tr>
+</table></div>
+
+<blockquote>
+<p><strong>Isto é um teto, não uma média — dois fatores empurram o custo real para baixo:</strong></p>
+<p>1. <strong>A tabela acima IGNORA o <em>free tier</em> do OCR de propósito</strong> (assume que 100% das fotos são cobradas ao preço de tabela, US$ 0,004/foto). Na prática, a operação real consumiu só <strong>~1% da cota gratuita mensal da Mistral</strong> em testes extensivos (§ anterior) — enquanto a cota durar, o custo de OCR é <strong>US$ 0</strong>, e a escola de 400 alunos cai de ≈ US$ 21,30/ano para <strong>≈ US$ 10,00/ano</strong> (só o custo do LLM).</p>
+<p>2. <strong>Uso menor que a premissa reduz o custo na mesma proporção.</strong> Se a adoção real for menor que 1/3, ou os alunos corrigirem menos que 20 redações/ano, o custo cai linearmente — os números acima são o teto de um cenário de uso relativamente intenso, não o piso.</p>
+</blockquote>
+<p>></p>
+<blockquote>
+<p>Mesmo no cenário mais caro da tabela (<strong>escola inteira, ano letivo completo, adoção de 1/3, sem considerar o free tier</strong>), o custo de execução fica na casa de <strong>dezenas de dólares por ano</strong> — não milhares, não centenas. Isso muda a leitura da seção de sustentação a seguir (§8.3.3): para uso pessoal ou de uma turma, o custo é baixo o bastante para ser <strong>bancado do próprio bolso</strong> por um aluno, professor ou desenvolvedor entusiasta, sem precisar de nenhum modelo de negócio formal. Os modelos B2B/freemium/patrocínio passam a fazer sentido só na escala de <strong>múltiplas escolas simultâneas</strong>, onde a soma de correções e o custo (ainda não medido) de hospedagem em nuvem começam a pesar.</p>
+</blockquote>
+
+<h3 id="8-3-2-valor-gerado-a-l-gica-">8.3.2 Valor gerado (a lógica)</h3>
+
+<p>O valor não é "tempo de engenheiro economizado" (como num projeto de automação corporativa), e sim <strong>acesso a um recurso pedagógico escasso</strong>:</p>
+
+<ul>
+<li><strong>Para o aluno:</strong> substitui uma correção particular (que custa por redação) ou supre a <strong>ausência</strong> de qualquer correção detalhada — a um custo marginal de centavos por correção. O ganho é a <strong>evolução da nota</strong>, que se traduz em acesso a cursos mais concorridos.</li>
+<li><strong>Para o professor/escola:</strong> descarrega a correção repetitiva, liberando tempo docente para ensino e atendimento individual.</li>
+<li><strong>Para a rede pública:</strong> aproxima o feedback de quem hoje depende só da escola, reduzindo a assimetria de acesso.</li>
+</ul>
+
+<h3 id="8-3-3-modelos-de-sustenta-o-hip-teses-a-">8.3.3 Modelos de sustentação (hipóteses — a definir)</h3>
+
+<p>Como o produto atende um público sensível (menores, rede pública), os modelos abaixo são <strong>hipóteses de sustentabilidade</strong>, não decisão fechada — e, como visto acima, só se tornam necessários a partir de uma certa escala; para uso pessoal ou de uma turma, autofinanciamento é suficiente:</p>
+
+<div class="table-wrap"><table>
+<tr><th>Modelo</th><th>Como funciona</th><th>Observação</th></tr>
+<tr><td><strong>B2B — escola/cursinho</strong></td><td>Instituição contrata; alunos usam com rate-limit</td><td>Custo por correção diluído na mensalidade da instituição</td></tr>
+<tr><td><strong>Freemium</strong></td><td>N correções grátis/dia; excedente pago</td><td>O rate-limit atual (default 2/dia) já é o mecanismo</td></tr>
+<tr><td><strong>Patrocínio/edital</strong></td><td>ONG/poder público custeia o acesso gratuito</td><td>Alinhado ao impacto social (ver <strong>Ética e LGPD</strong>)</td></tr>
+</table></div>
+
+<blockquote>
+<p>⏳ <strong>A definir:</strong> a precificação depende do custo real por correção (§8.3.1) e da estratégia de distribuição. A estrutura técnica (rate-limit por usuário, custo marginal por uso) já suporta qualquer um dos três modelos sem mudança de código.</p>
+</blockquote>
+
+<hr>
+
+<h2 id="8-4-roadmap-priorizado">8.4 Roadmap Priorizado</h2>
+
+<p>Melhorias derivadas das limitações (aba <strong>Análise e Limitações</strong>) e das lacunas de medição.</p>
+
+<h3 id="prioridade-1-medir-para-decidir">Prioridade 1 — Medir para decidir</h3>
+<ul>
+<li><strong>Executar os testes de stress</strong> (aba <strong>Testes de Stress</strong>): latência e custo por etapa e por provedor.</li>
+<li><strong>Instrumentar a observabilidade</strong> para taxa de sucesso e latência em produção.</li>
+</ul>
+
+<h3 id="prioridade-2-calibrar-a-qualidade-da-cor">Prioridade 2 — Calibrar a qualidade da correção</h3>
+<ul>
+<li><strong>Dataset de calibração:</strong> medir a concordância da nota estimada contra redações com <strong>nota oficial</strong> do INEP, por competência.</li>
+<li><strong>Comparar provedores</strong> em custo × qualidade sobre o mesmo conjunto de redações.</li>
+</ul>
+
+<h3 id="prioridade-3-escala-e-produto">Prioridade 3 — Escala e produto</h3>
+<ul>
+<li><strong>Externalizar o Redis</strong> para liberar réplicas quando o volume exigir (ver §6.4).</li>
+<li><strong>Acompanhamento de evolução</strong> (opt-in, com base legal e retenção definida) — histórico por competência sem ferir a LGPD.</li>
+<li><strong>Onboarding institucional</strong> (escola/cursinho) com painel de turma para o professor.</li>
+</ul>
+
+<hr>
+
+<blockquote>
+<p><strong>Resumo executivo:</strong> o corretor troca "custo zero, latência de madrugada" (típico de automação em lote) por <strong>custo marginal por uso e latência sentida em tempo real</strong> — o que desloca o foco de otimização para a <strong>camada de modelos</strong> (provedor, modelo, cache) e para a <strong>contenção de custo</strong> (rate-limit, cache de contexto). As métricas de performance ficam pendentes de medição; a estrutura de custo e os modelos de sustentação já estão desenhados e são ajustáveis por configuração.</p>
+</blockquote>
+</div>
+</div>
+<div class="page-content" id="page-storytelling">
+
+<div class="content-wrapper">
+<style>
+.dsh-intro{color:#5b6b7b;font-size:.98em;margin:0 0 22px}
+.dsh-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:26px}
+.dsh-kpi{background:#fff;border:1px solid #e6eaef;border-top:4px solid #2c3e50;border-radius:8px;padding:16px 14px;box-shadow:0 2px 6px rgba(0,0,0,.05)}
+.dsh-kpi .v{font-size:1.7em;font-weight:800;line-height:1.05;color:#2c3e50}
+.dsh-kpi .l{color:#7f8c8d;font-size:.8em;margin-top:6px;line-height:1.3}
+.dsh-kpi.good{border-top-color:#2e7d32}.dsh-kpi.good .v{color:#2e7d32}
+.dsh-kpi.info{border-top-color:#1976D2}.dsh-kpi.info .v{color:#1976D2}
+.dsh-kpi.amber{border-top-color:#F9A825}.dsh-kpi.amber .v{color:#F9A825}
+.dsh-kpi.pend{border-top-color:#90a4ae}.dsh-kpi.pend .v{color:#607d8b;font-size:1.25em}
+.dsh-grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:26px}
+@media(max-width:760px){.dsh-grid2{grid-template-columns:1fr}}
+.dsh-card{background:#fff;border:1px solid #e6eaef;border-radius:8px;padding:20px;box-shadow:0 2px 6px rgba(0,0,0,.05)}
+.dsh-card h4{margin:0 0 4px;color:#2c3e50;font-size:1.05em}
+.dsh-card .cap{color:#7f8c8d;font-size:.8em;margin:0 0 16px}
+.dsh-bar-row{display:grid;grid-template-columns:150px 1fr 60px;align-items:center;gap:10px;margin:9px 0}
+.dsh-bar-row .nm{font-size:.84em;color:#2c3e50}
+.dsh-track{background:#eceff1;border-radius:7px;height:20px;overflow:hidden}
+.dsh-fill{height:100%;border-radius:7px}
+.dsh-bar-row .vl{text-align:right;font-size:.8em;color:#7f8c8d;font-variant-numeric:tabular-nums}
+.dsh-note{background:#f1f6fb;border-left:4px solid #1976D2;border-radius:6px;padding:12px 14px;margin-top:16px;font-size:.85em;color:#34495e}
+.dsh-pendnote{background:#f5f7f8;border-left:4px solid #90a4ae;border-radius:6px;padding:12px 14px;margin-top:16px;font-size:.85em;color:#546e7a}
+.dsh-flow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:6px}
+.dsh-step{background:#eef4fb;border:1px solid #d6e2f0;border-radius:7px;padding:9px 12px;font-size:.82em;color:#2c3e50;font-weight:600}
+.dsh-arrow{color:#9bb0c6;font-weight:800}
+.dsh-vs{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:16px;text-align:center}
+.dsh-vs .box{border-radius:8px;padding:18px}
+.dsh-vs .man{background:#fdecea}.dsh-vs .man .big{color:#D32F2F}
+.dsh-vs .auto{background:#e9f7ef}.dsh-vs .auto .big{color:#2e7d32}
+.dsh-vs .big{font-size:1.5em;font-weight:800;line-height:1.1}
+.dsh-vs .sub{font-size:.76em;color:#7f8c8d;margin-top:4px}
+.dsh-vs .arrow{font-size:1.05em;color:#c9890a;font-weight:800}
+.dsh-priv{list-style:none;padding:0;margin:6px 0 0}
+.dsh-priv li{display:flex;align-items:flex-start;gap:9px;padding:7px 0;border-bottom:1px solid #eceff1;font-size:.9em;color:#34495e}
+.dsh-priv li:last-child{border-bottom:0}
+.dsh-priv .ic{color:#2e7d32;font-weight:800}
+.dsh-highlight{background:linear-gradient(135deg,#eef5ee,#eaf2fb);border:1px solid #e6eaef;border-left:4px solid #2e7d32;border-radius:8px;padding:16px 18px;font-size:.95em;color:#34495e}
+.dsh-highlight b{color:#2c3e50}
+.dsh-tag{display:inline-block;background:#eceff1;color:#607d8b;font-size:.7em;font-weight:700;padding:2px 7px;border-radius:4px;vertical-align:middle;margin-left:8px;letter-spacing:.03em}
+</style>
+
+<h2 id="sintese-visual">Síntese Visual do Produto</h2>
+<p class="dsh-intro">O corretor transforma <b>uma foto de redação manuscrita</b> em <b>feedback por competência com trechos citados</b>, no WhatsApp/Telegram, em cerca de um minuto. Os indicadores abaixo resumem o que já está entregue; o custo de execução (OCR + LLM) já foi medido em uso real — a <b>latência</b> e o <b>custo de hospedagem em nuvem</b> seguem com o selo <span class="dsh-tag">a medir</span> até a execução dos testes de stress.</p>
+
+<div class="dsh-kpis">
+  <div class="dsh-kpi info"><div class="v">5</div><div class="l">Competências avaliadas (Matriz INEP)</div></div>
+  <div class="dsh-kpi info"><div class="v">0–1000</div><div class="l">Escala da nota estimada</div></div>
+  <div class="dsh-kpi good"><div class="v">2</div><div class="l">Canais (WhatsApp + Telegram)</div></div>
+  <div class="dsh-kpi amber"><div class="v">&lt;200ms</div><div class="l">Resposta do webhook (SLA da Meta)</div></div>
+  <div class="dsh-kpi good"><div class="v">45 min</div><div class="l">TTL do estado — nada persiste depois</div></div>
+  <div class="dsh-kpi good"><div class="v">&lt;1¢</div><div class="l">Custo de execução por correção (OCR + LLM, medido)</div></div>
+  <div class="dsh-kpi pend"><div class="v">a medir</div><div class="l">Latência e custo de hospedagem em nuvem</div></div>
+</div>
+
+<div class="dsh-grid2">
+  <div class="dsh-card">
+    <h4>Anatomia da nota</h4>
+    <p class="cap">Cinco competências, 0–200 cada, somando 1.000</p>
+    <div class="dsh-bar-row"><span class="nm">C1 — Escrita formal</span><div class="dsh-track"><div class="dsh-fill" style="width:100%;background:#1976D2"></div></div><span class="vl">0–200</span></div>
+    <div class="dsh-bar-row"><span class="nm">C2 — Tema e repertório</span><div class="dsh-track"><div class="dsh-fill" style="width:100%;background:#388E3C"></div></div><span class="vl">0–200</span></div>
+    <div class="dsh-bar-row"><span class="nm">C3 — Argumentação</span><div class="dsh-track"><div class="dsh-fill" style="width:100%;background:#F57F17"></div></div><span class="vl">0–200</span></div>
+    <div class="dsh-bar-row"><span class="nm">C4 — Coesão</span><div class="dsh-track"><div class="dsh-fill" style="width:100%;background:#7B1FA2"></div></div><span class="vl">0–200</span></div>
+    <div class="dsh-bar-row"><span class="nm">C5 — Proposta de intervenção</span><div class="dsh-track"><div class="dsh-fill" style="width:100%;background:#D32F2F"></div></div><span class="vl">0–200</span></div>
+    <div class="dsh-note">Cada observação do corretor é <b>ancorada num trecho citado</b> do próprio texto — nada de "impressão solta". A triagem de nota zero roda <b>antes</b> da pontuação.</div>
+  </div>
+  <div class="dsh-card">
+    <h4>Onde o tempo é gasto <span class="dsh-tag">hipótese · a medir</span></h4>
+    <p class="cap">Decomposição esperada da latência até a nota chegar</p>
+    <div class="dsh-bar-row"><span class="nm">LLM (correção)</span><div class="dsh-track"><div class="dsh-fill" style="width:100%;background:#607d8b"></div></div><span class="vl">domina</span></div>
+    <div class="dsh-bar-row"><span class="nm">OCR (Mistral)</span><div class="dsh-track"><div class="dsh-fill" style="width:55%;background:#90a4ae"></div></div><span class="vl">segundos</span></div>
+    <div class="dsh-bar-row"><span class="nm">Download da foto</span><div class="dsh-track"><div class="dsh-fill" style="width:14%;background:#b0bec5"></div></div><span class="vl">baixo</span></div>
+    <div class="dsh-bar-row"><span class="nm">Borda + Redis</span><div class="dsh-track"><div class="dsh-fill" style="width:4%;background:#cfd8dc"></div></div><span class="vl">~0</span></div>
+    <div class="dsh-pendnote">Hipótese: <b>OCR + LLM</b> respondem por quase todo o tempo. Toda alavanca de otimização está na <b>camada de modelos</b>. Números reais virão dos <b>Testes de Stress</b>.</div>
+  </div>
+</div>
+
+<div class="dsh-card" style="margin-bottom:26px">
+  <h4>O caminho de uma correção</h4>
+  <p class="cap">Do primeiro contato à nota — com a foto morrendo logo após o OCR</p>
+  <div class="dsh-flow">
+    <span class="dsh-step">Consentimento</span><span class="dsh-arrow">→</span>
+    <span class="dsh-step">Tema</span><span class="dsh-arrow">→</span>
+    <span class="dsh-step">Motivadores</span><span class="dsh-arrow">→</span>
+    <span class="dsh-step">📷 Foto</span><span class="dsh-arrow">→</span>
+    <span class="dsh-step">OCR + preview</span><span class="dsh-arrow">→</span>
+    <span class="dsh-step">Confirma/edita</span><span class="dsh-arrow">→</span>
+    <span class="dsh-step">Correção (LLM)</span>
+  </div>
+</div>
+
+<div class="dsh-grid2">
+  <div class="dsh-card">
+    <h4>O gargalo que o produto ataca</h4>
+    <p class="cap">O problema nunca foi escrever — foi receber correção detalhada onde o aluno realmente está</p>
+    <div class="dsh-vs">
+      <div class="box man"><div class="big">Bloqueado<br>ou digitado</div><div class="sub">professor/particular: caro e escasso · IA genérica: barrada na escola e exige digitar</div></div>
+      <div class="arrow">→</div>
+      <div class="box auto"><div class="big">~1 min<br>por foto</div><div class="sub">no papel, no WhatsApp/Telegram liberado, com a Matriz do INEP</div></div>
+    </div>
+  </div>
+  <div class="dsh-card">
+    <h4>Privacidade por design</h4>
+    <p class="cap">Minimização radical para um público menor de idade</p>
+    <ul class="dsh-priv">
+      <li><span class="ic">✓</span> A <b>foto é descartada</b> logo após o OCR — nunca é gravada</li>
+      <li><span class="ic">✓</span> O texto vive <b>45 min</b> em Redis e some sozinho (TTL)</li>
+      <li><span class="ic">✓</span> <b>Não pede o nome</b> do aluno — só o identificador do canal</li>
+      <li><span class="ic">✓</span> <b>Sem histórico</b>: nada persiste após a correção</li>
+      <li><span class="ic">✓</span> <b>Consentimento explícito</b> antes de qualquer processamento</li>
+    </ul>
+  </div>
+</div>
+
+<div class="dsh-highlight"><b>Em uma frase:</b> um corretor que transforma <b>uma foto de manuscrito</b> em <b>feedback por competência com trechos citados</b> — no WhatsApp/Telegram, sem app, com privacidade pensada para menores de idade. O núcleo está pronto; as métricas de performance são o próximo passo.</div>
+</div>
+
+<div class="content-wrapper"><h1 id="9-data-storytelling-e-s-ntese-dos-result">9. Data Storytelling e Síntese dos Resultados</h1>
+
+<blockquote>
+<p>Esta seção conta a <strong>história</strong> por trás do projeto — conectando cada decisão de engenharia ao objetivo central: <strong>transformar uma foto de redação manuscrita em um diagnóstico pedagógico acionável</strong>, no canal que o aluno já usa. O painel visual no topo desta página resume o produto; as métricas de performance nele marcadas como <em>a medir</em> serão preenchidas após os testes de stress.</p>
+</blockquote>
+
+<hr>
+
+<h2 id="9-1-a-hist-ria-do-projeto">9.1 A História do Projeto</h2>
+
+<p>Boas histórias de dados têm começo, meio e fim — e a deste projeto começa por uma assimetria: <strong>milhões de alunos escrevem redações, mas pouquíssimos recebem feedback detalhado o bastante para melhorar.</strong></p>
+
+<p><strong>O problema.</strong> A redação do ENEM vale até 1.000 pontos e é decisiva no acesso ao ensino superior. O que faz a nota subir não é escrever mais — é receber um retorno <strong>por competência, ancorado no próprio texto</strong>. Só que corrigir bem uma redação leva 15–20 minutos e exige um olho treinado na Matriz do INEP. Um professor de escola pública, com dezenas ou centenas de alunos, não tem como dar esse retorno a todos; e a correção particular, que dá, <strong>custa caro</strong>. A IA generativa reduziu o custo <em>técnico</em> de gerar uma correção — mas colar a redação num ChatGPT ou GPT de terceiros esbarra justamente onde o aluno está: a rede da escola costuma <strong>bloquear</strong> esses apps, o fluxo <strong>exige digitar</strong> (perdendo o treino manuscrito da prova real) e nada garante rigor com a matriz oficial nem cuidado com dado de menor. O gargalo, portanto, nunca foi a escrita, nem a existência de IA — é o <strong>acesso a uma correção rigorosa, no lugar certo, sem atrito</strong>.</p>
+
+<p><strong>A solução e a prova.</strong> O bot ataca exatamente esse gargalo. O aluno fotografa a redação escrita à mão — <strong>sem instalar app, sem cadastro, sem digitar</strong> — e recebe de volta a nota estimada por competência, com trechos citados e uma sugestão de reescrita, em cerca de um minuto. Por trás da simplicidade, decisões de engenharia deliberadas: a borda HTTP responde ao webhook em <strong>menos de 200ms</strong> e joga o trabalho pesado para <em>background</em> (nada de travar o SLA da Meta); o estado vive <strong>45 minutos</strong> em Redis e some sozinho; a <strong>foto é descartada</strong> logo após o OCR; e o motor de correção usa um prompt de ~6.000 tokens <strong>cacheado</strong> para conter custo. A correção não é um "chatbot que dá uma nota": é a Matriz de Referência do INEP transcrita em regras — triagem de nota zero, cinco competências com tabelas de níveis, e a exigência de <strong>citar o trecho</strong> em cada observação.</p>
+
+<p><strong>O valor e o futuro.</strong> O que este projeto entrega é <strong>acesso</strong>: um recurso pedagógico que hoje é caro e escasso, oferecido a um custo marginal de centavos por correção, no aplicativo que o aluno já tem no bolso. Para a escola, é alívio da correção repetitiva; para a rede pública, é redução de uma desigualdade que se converte diretamente em nota de vestibular. À frente, o roadmap mede o que ainda falta medir (latência e custo por provedor), calibra a nota estimada contra notas oficiais do INEP, e abre caminho para o uso institucional — sempre com a privacidade de um público menor de idade como restrição inegociável.</p>
+
+<hr>
+
+<h2 id="9-2-conex-o-entre-decis-o-hist-ria-e-obj">9.2 Conexão entre Decisão, História e Objetivo</h2>
+
+<p>Cada decisão de engenharia serve à narrativa — nenhuma existe por si só.</p>
+
+<div class="table-wrap"><table>
+<tr><th>Decisão de engenharia</th><th>O que conta na história</th><th>Objetivo conectado</th></tr>
+<tr><td>Foto do manuscrito + OCR</td><td>"Escreve à mão, como na prova — e não precisa digitar"</td><td>O1 — transcrever a redação (RF01)</td></tr>
+<tr><td>Preview + edição do OCR</td><td>"O aluno confere a leitura antes da nota; a letra difícil não injustiça"</td><td>O1 — transcrição fiel</td></tr>
+<tr><td>Prompt sobre a Matriz do INEP</td><td>"Não é um chatbot que chuta nota — é a matriz oficial em regras"</td><td>O2 — nota por competência com trechos</td></tr>
+<tr><td>Multicanal sem app</td><td>"Encontra o aluno onde ele já está"</td><td>O3 — WhatsApp + Telegram</td></tr>
+<tr><td>Foto descartada + TTL 45 min</td><td>"Privacidade por design, para um público menor de idade"</td><td>O4 — conformidade LGPD</td></tr>
+<tr><td>Rate-limit + cache de contexto</td><td>"Custo por uso previsível e contido"</td><td>O4 — controle de custo</td></tr>
+<tr><td>Borda 200ms + background</td><td>"Responde rápido, processa depois — sem quebrar o SLA da Meta"</td><td>Robustez</td></tr>
+<tr><td>Latência real por provedor</td><td>⏳ a medir</td><td>Métricas e ROI (§8.1)</td></tr>
+<tr><td>Taxa de sucesso por correção</td><td>⏳ a medir</td><td>Confiabilidade (§8.2)</td></tr>
+<tr><td>Custo por correção</td><td>⏳ a medir</td><td>ROI (§8.3)</td></tr>
+</table></div>
+
+<hr>
+
+<h2 id="9-3-o-que-j-d-para-afirmar-e-o-que-falta">9.3 O Que Já Dá Para Afirmar (e o que falta)</h2>
+
+<p><strong>Já entregue e verificável no código:</strong></p>
+
+<ul>
+<li>Fluxo conversacional completo (consentimento → tema → motivadores → foto → preview/edição → correção), com testes unitários puros.</li>
+<li>OCR da foto com preview e edição manual; redação em até 3 fotos.</li>
+<li>Correção por competência sobre a Matriz do INEP, com provedor de LLM plugável (5 opções) e cache de contexto.</li>
+<li>Conformidade de base: consentimento LGPD, descarte da foto, TTL de 45 min, sem histórico, rate-limit diário.</li>
+<li>Arquitetura mono-contêiner (app + Redis embutido), borda com resposta <200ms e processamento em <em>background</em>.</li>
+</ul>
+
+<p><strong>Pendente de medição (marcado como ⏳ ao longo da documentação):</strong></p>
+
+<ul>
+<li>Latência real ponta a ponta e por etapa (OCR, LLM).</li>
+<li>Custo efetivo por correção, por provedor.</li>
+<li>Taxa de sucesso e distribuição de falhas em regime real.</li>
+<li>Acurácia da nota estimada contra notas oficiais do INEP.</li>
+</ul>
+
+<blockquote>
+<p><strong>Em uma frase:</strong> um corretor de redação que transforma <strong>uma foto de manuscrito</strong> em <strong>feedback por competência com trechos citados</strong>, no WhatsApp/Telegram, com privacidade pensada para menores de idade — pronto no núcleo, com as métricas de performance como próximo passo.</p>
+</blockquote>
+</div>
+</div>
+<div class="page-content" id="page-etica">
+
+<div class="content-wrapper"><h1 id="10-impacto-tico-lgpd-e-ia-respons-vel">10. Impacto Ético, LGPD e IA Responsável</h1>
+
+<blockquote>
+<p>Esta seção analisa os impactos <strong>éticos, legais e sociais</strong> do corretor. Ela parte de um fato que define tudo o que vem a seguir: <strong>o público-alvo é majoritariamente menor de idade</strong> e o conteúdo tratado (uma redação pessoal) pode revelar opiniões, crenças e circunstâncias do autor. Logo, conformidade e responsabilidade não são acessórios — são requisitos de projeto. A LGPD (Lei nº 13.709/2018) tem, aliás, regra específica para o tratamento de dados de <strong>crianças e adolescentes</strong> (art. 14).</p>
+</blockquote>
+
+<hr>
+
+<h2 id="10-1-mapeamento-de-dados-pessoais-no-pip">10.1 Mapeamento de Dados Pessoais no Pipeline (Data Mapping)</h2>
+
+<p>O que o sistema realmente trata, e por quanto tempo:</p>
+
+<div class="table-wrap"><table>
+<tr><th>Dado</th><th>Onde está</th><th>É dado pessoal?</th><th>Retenção</th></tr>
+<tr><td><strong>Foto da redação</strong> (manuscrito)</td><td>Memória, durante o processamento</td><td><strong>Sim</strong> (pode conter nome, letra, conteúdo pessoal)</td><td><strong>Descartada logo após o OCR</strong> — nunca é gravada</td></tr>
+<tr><td><strong>Texto transcrito</strong> (OCR)</td><td>Estado Redis (<code>flow:...</code>)</td><td><strong>Sim</strong> (o conteúdo da redação é do titular)</td><td><strong>TTL de 45 min</strong>; some com o fim do fluxo</td></tr>
+<tr><td><strong>Identificador do remetente</strong></td><td>Chaves Redis (<code>flow:</code>, <code>consent:</code>, <code>essay_count:</code>)</td><td><strong>Sim</strong> (telefone no WhatsApp / chat_id no Telegram)</td><td>Fluxo/contador expiram; consentimento persiste</td></tr>
+<tr><td><strong>Consentimento</strong></td><td><code>consent:{canal}:{sender}</code></td><td>Vinculado ao identificador</td><td>Sem TTL (é o registro do aceite)</td></tr>
+<tr><td><strong>Tema e textos motivadores</strong></td><td>Estado Redis</td><td>Geralmente não-pessoal (dados da proposta)</td><td>TTL de 45 min</td></tr>
+<tr><td><strong>Credenciais</strong> (tokens, chaves de API)</td><td><code>.env</code> / <em>secret store</em></td><td>Segredo (exige proteção)</td><td>Fora do Git</td></tr>
+</table></div>
+
+<h3 id="-o-ponto-sens-vel-conte-do-de-uma-reda-o">⚠️ O ponto sensível: conteúdo de uma redação de menor</h3>
+
+<p>Uma redação pode revelar, no texto, <strong>opinião política, convicção religiosa, origem, circunstâncias familiares</strong> — potencialmente <strong>dados sensíveis</strong> (art. 5º, II) de um <strong>adolescente</strong>. É por isso que o projeto minimiza ao extremo a retenção: a foto morre no OCR, o texto vive 45 minutos, e <strong>nada é gravado após a correção</strong>. O sistema também <strong>não pede o nome do aluno</strong> — o identificador é o do canal, e o produto não precisa de mais nada.</p>
+
+<hr>
+
+<h2 id="10-2-aplica-o-da-lgpd-ao-projeto">10.2 Aplicação da LGPD ao Projeto</h2>
+
+<h3 id="10-2-1-pap-is-e-bases-legais">10.2.1 Papéis e bases legais</h3>
+
+<div class="table-wrap"><table>
+<tr><th>Conceito LGPD</th><th>Aplicação no projeto</th></tr>
+<tr><td><strong>Controlador</strong> (art. 5º, VI)</td><td>Quem opera o bot e decide as finalidades (o autor/instituição que oferece o serviço)</td></tr>
+<tr><td><strong>Operador</strong> (art. 5º, VII)</td><td>A infraestrutura de execução e os subprocessadores (provedores de OCR e LLM, plataforma de canal)</td></tr>
+<tr><td><strong>Titular</strong> (art. 5º, V)</td><td>O <strong>aluno</strong> (frequentemente adolescente) que envia a redação</td></tr>
+<tr><td><strong>Base legal</strong> (art. 7º / art. 14)</td><td><strong>Consentimento</strong> — coletado explicitamente antes de qualquer processamento. Para menores de 16 anos, o art. 14 exige consentimento <strong>específico e destacado, dado por um dos pais ou responsável</strong> (ver lacuna em §10.5)</td></tr>
+</table></div>
+
+<h3 id="10-2-2-princ-pios-do-art-6-autoavalia-o">10.2.2 Princípios do art. 6º — autoavaliação</h3>
+
+<div class="table-wrap"><table>
+<tr><th>Princípio</th><th>Como o projeto atende</th><th>Lacuna / ação</th></tr>
+<tr><td><strong>Finalidade</strong></td><td>Dados usados só para gerar a correção daquela redação</td><td>✅ Documentar por escrito (aviso de privacidade)</td></tr>
+<tr><td><strong>Necessidade (minimização)</strong></td><td>Não pede nome; foto descartada no OCR; texto com TTL</td><td>✅ Um dos pontos mais fortes do projeto</td></tr>
+<tr><td><strong>Livre acesso</strong></td><td>Estado é efêmero; pouco há para "acessar" depois</td><td>⚠️ Definir canal para pedidos do titular/responsável</td></tr>
+<tr><td><strong>Transparência</strong></td><td>Consentimento no 1º contato; nota rotulada como estimativa por IA</td><td>⚠️ Publicar aviso de privacidade completo</td></tr>
+<tr><td><strong>Segurança</strong> (art. 46)</td><td>Redis só em <code>127.0.0.1</code>; segredos fora do Git; HTTPS/HMAC</td><td>⚠️ Reforçar (ver §10.2.4)</td></tr>
+<tr><td><strong>Prevenção</strong></td><td>Retry, degradação graciosa, piso de legibilidade</td><td>✅</td></tr>
+<tr><td><strong>Não discriminação</strong></td><td>O sistema avalia um texto, não decide sobre a pessoa</td><td>✅ (baixo risco — ver §10.3)</td></tr>
+<tr><td><strong>Responsabilização</strong></td><td>Logs estruturados de cada correção (sem conteúdo sensível)</td><td>✅ Trilha de auditoria (ver doc 06)</td></tr>
+</table></div>
+
+<h3 id="10-2-3-direitos-dos-titulares-art-18-com">10.2.3 Direitos dos titulares (art. 18) — como atender</h3>
+
+<div class="table-wrap"><table>
+<tr><th>Direito</th><th>Implementação</th></tr>
+<tr><td>Confirmação e acesso</td><td>O estado é efêmero (TTL 45 min); após a correção, não há dado do aluno armazenado a consultar</td></tr>
+<tr><td>Eliminação</td><td><code>/cancelar</code> limpa o fluxo na hora; o TTL elimina o resto automaticamente</td></tr>
+<tr><td>Revogação do consentimento</td><td>⚠️ Implementar comando de revogação que apague a chave <code>consent:</code> (ver §10.5)</td></tr>
+<tr><td>Informação sobre compartilhamento</td><td>⚠️ Declarar no aviso de privacidade o uso de OCR e LLM de terceiros (ver §10.2.5)</td></tr>
+</table></div>
+
+<h3 id="10-2-4-seguran-a-da-informa-o-art-46-">10.2.4 Segurança da informação (art. 46)</h3>
+
+<div class="table-wrap"><table>
+<tr><th>Medida</th><th>Estado</th><th>Melhoria recomendada</th></tr>
+<tr><td>Redis não exposto</td><td>✅ Só escuta em <code>127.0.0.1</code>, dentro do contêiner</td><td>—</td></tr>
+<tr><td>Segredos fora do versionamento</td><td>✅ <code>.gitignore</code> cobre <code>.env</code>; produção via Key Vault</td><td>—</td></tr>
+<tr><td>Dados em trânsito</td><td>✅ HTTPS (APIs) + HMAC/secret na verificação de webhook</td><td>—</td></tr>
+<tr><td>Minimização em repouso</td><td>✅ Foto descartada; texto com TTL; sem histórico</td><td>—</td></tr>
+<tr><td>Verificação de assinatura</td><td>✅ Ligada quando <code>ENVIRONMENT</code> ≠ <code>local</code></td><td>Garantir que produção nunca rode como <code>local</code></td></tr>
+<tr><td>AOF do Redis (consentimento)</td><td>⚠️ Persistido em volume, sem criptografia explícita</td><td>Criptografar o volume / restringir acesso ao host</td></tr>
+</table></div>
+
+<h3 id="10-2-5-transfer-ncia-internacional-de-da">10.2.5 Transferência internacional de dados (art. 33) — o ponto que exige honestidade</h3>
+
+<p>Aqui está a <strong>diferença mais importante</strong> em relação a um projeto de IA local: <strong>este sistema envia dados a serviços de IA de terceiros, no exterior.</strong></p>
+
+<ul>
+<li>⚠️ <strong>A foto vai para o OCR (Mistral)</strong> e <strong>o texto da redação vai para o provedor de LLM</strong> (Gemini/Claude/OpenAI/DeepSeek/Maritaca, conforme configurado). Isso configura <strong>transferência internacional</strong> (art. 33) e <strong>compartilhamento com operadores/subprocessadores</strong> — e precisa ser <strong>declarado ao titular</strong> no aviso de privacidade.</li>
+<li>✅ <strong>Mitigação por minimização:</strong> a foto é <strong>descartada logo após o OCR</strong>; o texto <strong>não é persistido</strong> pelo nosso sistema após a correção; <strong>não coletamos o nome</strong> do aluno. Reduz-se ao máximo o que trafega e por quanto tempo.</li>
+<li>⚠️ <strong>Dependência das políticas dos provedores:</strong> é preciso escolher provedores com salvaguardas contratuais adequadas e, idealmente, com <strong>compromisso de não usar os dados para treinamento</strong>. Essa avaliação deve constar da documentação de conformidade.</li>
+<li>🔧 <strong>Alavanca de projeto:</strong> como o provedor é <strong>plugável por variável de ambiente</strong>, é possível selecionar (ou trocar) o provedor com base em critérios de privacidade — inclusive migrar para uma opção nacional (ex.: Maritaca) ou, no futuro, um modelo <em>self-hosted</em> para eliminar a transferência.</li>
+</ul>
+
+<blockquote>
+<p><strong>Síntese honesta:</strong> ao contrário de um pipeline 100% local, aqui a redação <strong>sai</strong> para modelos de terceiros — este é o principal ponto de exposição do projeto, e ele é declarado, não escondido. A arquitetura o <strong>mitiga</strong> por minimização radical (foto descartada, texto efêmero, sem nome) e o mantém <strong>sob controle</strong> pela troca de provedor por configuração. As lacunas remanescentes (consentimento parental do art. 14, revogação, aviso de privacidade) estão no plano de ação (§10.5).</p>
+</blockquote>
+
+<hr>
+
+<h2 id="10-3-an-lise-de-ia-respons-vel">10.3 Análise de IA Responsável</h2>
+
+<p>O sistema é de <strong>risco limitado</strong>: ele <strong>avalia um texto e sugere melhorias</strong> — não decide automaticamente sobre a vida de ninguém (não define aprovação, crédito, contratação). Ainda assim, aplicam-se princípios consagrados (OCDE, UNESCO, e o PL 2.338/2023 — Marco Legal da IA brasileiro em tramitação).</p>
+
+<div class="table-wrap"><table>
+<tr><th>Princípio</th><th>Situação no projeto</th><th>Mitigação implementada / proposta</th></tr>
+<tr><td><strong>Supervisão humana</strong></td><td>A nota é consultiva; o aluno e o professor decidem o que fazer com ela</td><td>✅ Posicionada como <em>estimativa</em>; nunca substitui a correção oficial</td></tr>
+<tr><td><strong>Transparência</strong></td><td>O aluno pode não saber que é uma correção por IA</td><td>✅ Consentimento explícito + rótulo de "estimativa por IA" no feedback</td></tr>
+<tr><td><strong>Robustez</strong></td><td>Risco de super/subestimar uma competência (variância do LLM)</td><td>✅ Prompt calibrado por níveis da matriz; ancoragem em trechos; anti-inflação (ver doc 03)</td></tr>
+<tr><td><strong>Justiça / não-discriminação</strong></td><td>Risco de viés do modelo ao avaliar temas sensíveis</td><td>⚠️ Monitorar; a proibição de "inventar desvio" e a exigência de citar trecho reduzem arbitrariedade</td></tr>
+<tr><td><strong>Privacidade desde a concepção</strong></td><td>Minimização é decisão de arquitetura</td><td>✅ Foto descartada, texto efêmero, sem nome, sem histórico</td></tr>
+<tr><td><strong>Responsabilização</strong></td><td>Preciso saber quem responde por um erro de nota</td><td>✅ Logs de auditoria; ⚠️ deixar claro que a nota <strong>não é oficial</strong></td></tr>
+</table></div>
+
+<h3 id="o-risco-mais-importante-a-nota-tratada-c">O risco mais importante: a nota tratada como verdade absoluta</h3>
+
+<p>Um aluno pode <strong>desanimar</strong> com uma nota subestimada, ou se <strong>acomodar</strong> com uma superestimada — e uma correção baseada num OCR que leu errado pode ser injusta. Por isso o produto insiste, em vários pontos, que a nota é uma <strong>estimativa</strong> (a oficial tem dois corretores humanos e desempate), mostra o <strong>preview do OCR</strong> antes de corrigir, e apresenta o feedback como <strong>orientação de estudo</strong>, não veredito. O melhor uso é <strong>com um professor no circuito</strong>, usando a estimativa como ponto de partida.</p>
+
+<hr>
+
+<h2 id="10-4-impacto-social">10.4 Impacto Social</h2>
+
+<h3 id="impactos-positivos">Impactos positivos</h3>
+<ul>
+<li><strong>Democratização do feedback:</strong> leva correção detalhada por competência a quem hoje depende só da escola ou não tem acesso a cursinho — atacando diretamente uma desigualdade que pesa no acesso ao ensino superior.</li>
+<li><strong>Baixíssimo atrito:</strong> sem app, sem cadastro, a partir de uma foto do papel — encontra o aluno no aplicativo que ele já usa.</li>
+<li><strong>Valorização do trabalho docente:</strong> descarrega a correção repetitiva, devolvendo ao professor tempo para ensino e atendimento individual.</li>
+<li><strong>Aprender com o próprio texto:</strong> ao citar trechos exatos e mostrar como reescrever, o feedback ensina — não apenas pontua.</li>
+</ul>
+
+<h3 id="riscos-sociais-e-mitiga-o">Riscos sociais e mitigação</h3>
+<div class="table-wrap"><table>
+<tr><th>Risco social</th><th>Análise</th><th>Mitigação</th></tr>
+<tr><td><strong>Excesso de confiança na IA</strong></td><td>Aluno pode tomar a nota como oficial</td><td>Rótulo de estimativa; incentivo ao uso com professor</td></tr>
+<tr><td><strong>Exclusão digital</strong></td><td>Requer smartphone e internet</td><td>Formato em canal de baixo consumo já usado por quase todos; sem app extra</td></tr>
+<tr><td><strong>Viés do modelo</strong></td><td>LLMs carregam vieses de treino</td><td>Domínio restrito (correção de texto); ancoragem em trechos; monitoramento</td></tr>
+<tr><td><strong>Dependência da ferramenta</strong></td><td>Substituir o esforço de aprender a autoavaliar</td><td>Feedback explicativo, que ensina o critério — não só entrega a nota</td></tr>
+</table></div>
+
+<hr>
+
+<h2 id="10-5-plano-de-a-o-de-conformidade-checkl">10.5 Plano de Ação de Conformidade (Checklist Acionável)</h2>
+
+<p>Itens de <strong>alta prioridade</strong> são de baixo esforço e alto retorno de conformidade — vários já têm o mecanismo técnico pronto, faltando só o <em>wiring</em> e o texto legal.</p>
+
+<div class="table-wrap"><table>
+<tr><th>#</th><th>Ação</th><th>Prioridade</th><th>Esforço</th></tr>
+<tr><td>1</td><td><strong>Consentimento parental (art. 14)</strong>: fluxo de aceite específico e destacado por responsável, para menores de 16</td><td>🔴 Alta</td><td>Médio</td></tr>
+<tr><td>2</td><td><strong>Aviso de privacidade</strong> declarando finalidade, base legal, uso de OCR/LLM de terceiros e transferência internacional</td><td>🔴 Alta</td><td>Médio</td></tr>
+<tr><td>3</td><td><strong>Comando de revogação de consentimento</strong> que apague a chave <code>consent:</code> e encerre o uso</td><td>🔴 Alta</td><td>Baixo</td></tr>
+<tr><td>4</td><td><strong>Escolha documentada de provedores</strong> com salvaguarda de privacidade e, idealmente, opt-out de treinamento</td><td>🟠 Média</td><td>Baixo</td></tr>
+<tr><td>5</td><td><strong>Rótulo permanente de "estimativa por IA"</strong> e incentivo ao uso com professor no rodapé do feedback</td><td>🟠 Média</td><td>Baixo</td></tr>
+<tr><td>6</td><td><strong>Criptografia/restrição do volume</strong> onde o AOF do Redis persiste o consentimento</td><td>🟡 Baixa</td><td>Médio</td></tr>
+<tr><td>7</td><td>Avaliar <strong>provedor nacional ou <em>self-hosted</strong></em> para eliminar a transferência internacional</td><td>🟡 Futuro</td><td>Alto</td></tr>
+</table></div>
+
+<hr>
+
+<blockquote>
+<p><strong>Conclusão da seção:</strong> O corretor nasce com uma <strong>vantagem estrutural de privacidade</strong> — minimização radical: não pede nome, descarta a foto após o OCR, mantém o texto por 45 minutos e não guarda histórico. Sua principal exposição é honesta e declarada: <strong>a redação é enviada a modelos de IA de terceiros no exterior</strong>, um ponto que a arquitetura mitiga (minimização + provedor plugável) mas não elimina. As lacunas remanescentes são pontuais e conhecidas — com destaque para o <strong>consentimento parental do art. 14</strong>, incontornável para um público de adolescentes. Eticamente, o sistema se mantém no lugar certo: <strong>uma estimativa que orienta o estudo do aluno e apoia o professor, sem jamais se apresentar como a nota oficial nem substituir o julgamento humano.</strong></p>
+</blockquote>
+</div>
+</div>
+</main>
+
+<footer class="site-footer">
+    <div class="footer-inner">
+        <div class="footer-brand">
+            <div class="fb-name">Ygor Carvalho — Engenharia de IA</div>
+            <div class="fb-desc">Corretor de redação do ENEM: bot multicanal (WhatsApp + Telegram) que transforma a foto de um manuscrito em feedback por competência com trechos citados — OCR (Mistral), LLM plugável, arquitetura mono-contêiner e privacidade por design para um público menor de idade.</div>
+            <div class="fb-stack">FastAPI · Redis · Mistral OCR · Gemini/Claude/OpenAI · WhatsApp · Telegram · 2026</div>
+        </div>
+        <div class="footer-contact">
+            <div class="fc-label">Contato</div>
+            <a href="https://github.com/ygorsmc" target="_blank" rel="noopener"><span class="fc-tick"></span>github.com/ygorsmc</a>
+            <a href="https://www.linkedin.com/in/ygorsmc/" target="_blank" rel="noopener"><span class="fc-tick"></span>linkedin.com/in/ygorsmc</a>
+            <a href="mailto:ygorsmc@hotmail.com"><span class="fc-tick"></span>ygorsmc@hotmail.com</a>
+        </div>
+    </div>
+</footer>
+
+<script>
+// Troca de abas
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const page = btn.dataset.page;
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.page-content').forEach(p => p.classList.remove('active'));
+
+        btn.classList.add('active');
+        document.getElementById('page-' + page).classList.add('active');
+
+        window.scrollTo({top: 0, behavior: 'smooth'});
+    });
+});
+
+// Smooth Scroll genérico para links do Dropdown e dos Cards
+document.querySelectorAll('.dropdown-link, .block-card').forEach(link => {
+    link.addEventListener('click', (e) => {
+        const targetAttr = link.getAttribute('href');
+        if(!targetAttr || !targetAttr.startsWith('#')) return;
+
+        e.preventDefault();
+        const targetId = targetAttr.slice(1);
+        const page = link.dataset.page;
+
+        // Se o click vier de fora da aba ativa, muda a aba
+        if(page) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.page-content').forEach(p => p.classList.remove('active'));
+            document.querySelector('.tab-btn[data-page="' + page + '"]').classList.add('active');
+            document.getElementById('page-' + page).classList.add('active');
+        }
+
+        // Esconde o dropdown clicado instantaneamente
+        const dropdown = link.closest('.tab-dropdown');
+        if(dropdown) {
+            dropdown.style.display = 'none';
+            setTimeout(() => dropdown.style.display = '', 100);
+        }
+
+        // Smooth scroll com offset do sticky nav
+        setTimeout(() => {
+            const el = document.getElementById(targetId);
+            if (el) {
+                const navHeight = document.getElementById('mainNav').offsetHeight;
+                const pos = el.getBoundingClientRect().top + window.pageYOffset - navHeight - 20;
+                window.scrollTo({top: pos, behavior: 'smooth'});
+            }
+        }, 50);
+    });
+});
+</script>
+</body>
+</html>

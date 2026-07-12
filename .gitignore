@@ -1,0 +1,27 @@
+# Ambiente e segredos
+.venv/
+.env
+
+# Caches de ferramentas
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+
+# Dados pessoais e saída de laboratório — nunca versionar (o produto é
+# LGPD-consciente: fotos reais de redação de alunos não pertencem ao git).
+redacoes/
+ocr_experiments/
+prompt_ab_results/
+
+# Ferramental de laboratório/documentação-fonte e docs de referência de
+# terceiros — ficam no disco para desenvolvimento local, mas não são parte
+# do produto publicável. O portal renderizado docs/index.html CONTINUA
+# versionado — é o deliverable; só a fonte que o gera fica de fora.
+_local/
+
+# Guia de agentes de codificação e memória entre sessões — instruções de
+# desenvolvimento local, não do produto. Precisam continuar NA RAIZ (não em
+# _local/) para o Claude Code carregá-los automaticamente.
+AGENTS.md
+CLAUDE.md
+MEMORY.md

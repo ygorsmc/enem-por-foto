@@ -1,0 +1,13 @@
+# Runtime — versões alinhadas ao projeto pai (SDKs já validados em produção).
+fastapi==0.111.0
+uvicorn==0.30.1
+httpx==0.28.1
+redis==5.0.4
+pydantic==2.13.4
+pydantic-settings==2.14.1
+structlog==24.1.0
+tenacity==8.3.0
+mistralai==2.4.12
+google-genai==1.75.0
+anthropic==0.116.0
+openai==2.44.0
