@@ -10,6 +10,8 @@ que acontecem download de mídia, OCR e LLM. Regras herdadas do pai:
     técnica na correção devolve o crédito.
 """
 
+import time
+
 import structlog
 
 from src import messages as m
@@ -183,9 +185,16 @@ async def _process_essay_photo(
     await channel.send_text(sender, m.ESSAY_PROCESSING)
     await channel.send_typing(sender)
 
+    t_task = time.perf_counter()
     try:
+        t0 = time.perf_counter()
         image_bytes = await channel.download_media(media_id)
+        download_ms = round((time.perf_counter() - t0) * 1000)
+        photo_bytes = len(image_bytes)
+
+        t0 = time.perf_counter()
         result = await ocr_image(image_bytes)
+        ocr_ms = round((time.perf_counter() - t0) * 1000)
     except Exception as e:
         logger.error("essay_ocr_failed", channel=ch, error=str(e)[:300])
         await channel.send_text(sender, m.ESSAY_OCR_FAILED)
@@ -204,6 +213,17 @@ async def _process_essay_photo(
     flow.flagged_words = _merge_flagged(flow.flagged_words, result.low_confidence_words)
     flow.state = FlowState.CONFIRMING
     await save_flow(ch, sender, flow)
+
+    task_ms = round((time.perf_counter() - t_task) * 1000)
+    logger.info(
+        "essay_photo_timing",
+        channel=ch,
+        photo_bytes=photo_bytes,
+        download_ms=download_ms,
+        ocr_ms=ocr_ms,
+        overhead_ms=task_ms - download_ms - ocr_ms,
+        task_ms=task_ms,
+    )
 
     preview = flow.essay_text[: settings.OCR_PREVIEW_MAX_CHARS]
     preview_msg = m.OCR_PREVIEW.format(ocr_text=preview)
@@ -325,8 +345,11 @@ async def _run_correction(channel: IMessagingChannel, sender: str, flow: FlowDat
     await channel.send_text(sender, m.CORRECTING)
     await channel.send_typing(sender)
 
+    t_task = time.perf_counter()
     try:
+        t0 = time.perf_counter()
         feedback = await correct_essay(flow.theme, flow.motivators_text, flow.essay_text)
+        llm_ms = round((time.perf_counter() - t0) * 1000)
     except Exception as e:
         logger.error("essay_correction_failed", channel=ch, error=str(e)[:300])
         redis = await get_redis()
@@ -339,4 +362,11 @@ async def _run_correction(channel: IMessagingChannel, sender: str, flow: FlowDat
     await clear_flow(ch, sender)
     await channel.send_text(sender, feedback + m.CORRECTION_FOOTER)
     await channel.send_buttons(sender, "Quer corrigir outra redação?", [m.BTN_START])
-    logger.info("essay_flow_completed", channel=ch)
+    task_ms = round((time.perf_counter() - t_task) * 1000)
+    logger.info(
+        "essay_flow_completed",
+        channel=ch,
+        llm_ms=llm_ms,
+        overhead_ms=task_ms - llm_ms,
+        task_ms=task_ms,
+    )

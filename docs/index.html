@@ -267,7 +267,7 @@ footer.site-footer{background:#2A2018;color:#C4B6A0;margin-top:64px;border-top:2
 <a href="#componentes-a-medir" class="dropdown-link" data-page="stress">Componentes a Medir</a>
 <a href="#ganho-do-cache-de-contexto-a-medir-" class="dropdown-link" data-page="stress">Ganho do Cache de Contexto (a medir)</a>
 <a href="#teste-de-rajada-burst-na-borda-http-a-me" class="dropdown-link" data-page="stress">Teste de Rajada (Burst) na Borda HTTP (a medir)</a>
-<a href="#reflex-o-cr-tica-a-preencher-ap-s-a-cole" class="dropdown-link" data-page="stress">Reflexão Crítica (a preencher após a coleta)</a>
+<a href="#reflex-o-cr-tica" class="dropdown-link" data-page="stress">Reflexão Crítica</a>
 </div>
     </div>
 
@@ -1235,7 +1235,7 @@ Aluno                         Bot
 <div class="content-wrapper"><h1 id="testes-de-stress-pipeline-de-corre-o">Testes de Stress — Pipeline de Correção</h1>
 
 <blockquote>
-<p>⏳ <strong>Status: a medir.</strong> Esta página define o <strong>plano de testes de stress</strong> do corretor. Os números ainda não foram coletados — as tabelas trazem a estrutura de medição e ficam com valores <code>—</code> até a execução real. Serão preenchidos assim que o <em>harness</em> de carga rodar contra um ambiente de homologação.</p>
+<p>🔬 <strong>Status: piloto local rodado, teste em nuvem pendente.</strong> Um piloto local (n=5, via Telegram + túnel ngrok, DeepSeek V4 Flash, <code>CORRECTION_EFFORT=max</code>) já preencheu a decomposição de latência por etapa — ver tabela abaixo. As linhas ainda com <code>—</code>/⏳ (outros provedores, outros efforts, rajada na borda, cache de contexto) esperam um <em>harness</em> de carga contra um ambiente de homologação em nuvem.</p>
 </blockquote>
 
 <hr>
@@ -1254,19 +1254,27 @@ Aluno                         Bot
 
 <h2 id="componentes-a-medir">Componentes a Medir</h2>
 
+<p>Piloto local instrumentado em <code>src/flow/handlers.py</code> (<code>time.perf_counter()</code> nos pontos de download/OCR/LLM, logado via <code>structlog</code> como <code>essay_photo_timing</code> e <code>essay_flow_completed</code>) — canal Telegram real, túnel ngrok, container Docker local (não nuvem).</p>
+
 <div class="table-wrap"><table>
 <tr><th>Componente</th><th>O que medir</th><th>Payload de teste</th><th>Rodadas</th><th>Mín (s)</th><th>Méd (s)</th><th>Máx (s)</th><th>Status</th></tr>
-<tr><td><strong>Download da mídia</strong></td><td>Baixar a foto do provedor de canal</td><td>foto ~1–3 MB</td><td>—</td><td>—</td><td>—</td><td>—</td><td>⏳</td></tr>
-<tr><td><strong>OCR (Mistral)</strong></td><td>Transcrever 1 foto de redação</td><td>redação ~30 linhas</td><td>—</td><td>—</td><td>—</td><td>—</td><td>⏳</td></tr>
+<tr><td><strong>Download da mídia</strong></td><td>Baixar a foto do provedor de canal</td><td>foto real, 90–212 KB</td><td>5</td><td>1,49</td><td>2,21</td><td>3,03</td><td>✅</td></tr>
+<tr><td><strong>OCR (Mistral)</strong></td><td>Transcrever 1 foto de redação</td><td>redação real, foto única</td><td>5</td><td>1,38</td><td>1,70</td><td>1,97</td><td>✅</td></tr>
 <tr><td><strong>OCR (Mistral)</strong></td><td>Redação em 3 fotos (frente/verso)</td><td>3 fotos</td><td>—</td><td>—</td><td>—</td><td>—</td><td>⏳</td></tr>
+<tr><td><strong>LLM — DeepSeek</strong></td><td>Correção completa, <code>CORRECTION_EFFORT=max</code></td><td>~6.000 + ~800 tokens</td><td>5</td><td>83,00</td><td>92,00</td><td>98,98</td><td>✅</td></tr>
+<tr><td><strong>LLM — DeepSeek</strong></td><td>Correção completa, outros efforts (<code>high</code>/<code>medium</code>/<code>low</code>)</td><td>idem</td><td>—</td><td>—</td><td>—</td><td>—</td><td>⏳</td></tr>
 <tr><td><strong>LLM — Gemini</strong></td><td>Correção completa (estático + dinâmico)</td><td>~6.000 + ~800 tokens</td><td>—</td><td>—</td><td>—</td><td>—</td><td>⏳</td></tr>
 <tr><td><strong>LLM — Claude</strong></td><td>Correção completa</td><td>idem</td><td>—</td><td>—</td><td>—</td><td>—</td><td>⏳</td></tr>
 <tr><td><strong>LLM — OpenAI</strong></td><td>Correção completa</td><td>idem</td><td>—</td><td>—</td><td>—</td><td>—</td><td>⏳</td></tr>
-<tr><td><strong>LLM — DeepSeek</strong></td><td>Correção completa</td><td>idem</td><td>—</td><td>—</td><td>—</td><td>—</td><td>⏳</td></tr>
 <tr><td><strong>LLM — Maritaca</strong></td><td>Correção completa</td><td>idem</td><td>—</td><td>—</td><td>—</td><td>—</td><td>⏳</td></tr>
-<tr><td><strong>Borda HTTP</strong></td><td>Tempo de resposta do webhook</td><td>update mínimo</td><td>—</td><td>—</td><td>—</td><td>—</td><td>⏳</td></tr>
-<tr><td><strong>Redis</strong></td><td><code>get</code>/<code>set</code> do estado do fluxo</td><td>FlowData JSON</td><td>—</td><td>—</td><td>—</td><td>—</td><td>⏳</td></tr>
+<tr><td><strong>Borda HTTP</strong></td><td>Tempo de resposta do webhook (<200ms, SLA da Meta)</td><td>update mínimo</td><td>—</td><td>—</td><td>—</td><td>—</td><td>⏳</td></tr>
+<tr><td><strong>Redis</strong></td><td><code>get</code>/<code>set</code> do estado do fluxo, isolado</td><td>FlowData JSON</td><td>—</td><td>—</td><td>—</td><td>—</td><td>⏳</td></tr>
+<tr><td><strong>Overhead por tarefa</strong> (Redis+borda+envio, combinado)</td><td><code>task_ms − download_ms − ocr_ms</code> (etapa foto) / <code>task_ms − llm_ms</code> (etapa correção) — não isola Redis de borda de envio de mensagem, só confirma que a soma é pequena</td><td>—</td><td>5+5</td><td>~0 (foto) / 2,34 (correção)</td><td>~0 (foto) / 3,09 (correção)</td><td>~0 (foto) / 4,40 (correção)</td><td>✅</td></tr>
 </table></div>
+
+<blockquote>
+<p><strong>Nota de escopo:</strong> "Overhead por tarefa" é uma medição <strong>combinada</strong> (Redis + despacho da task + chamadas de envio de mensagem ao canal) — confirma que a soma desses três é pequena frente ao LLM, mas não isola quanto é Redis puro vs. borda pura vs. envio. Isolar cada um exigiria instrumentação mais fina, não feita ainda.</p>
+</blockquote>
 
 <hr>
 
@@ -1299,16 +1307,16 @@ Aluno                         Bot
 
 <hr>
 
-<h2 id="reflex-o-cr-tica-a-preencher-ap-s-a-cole">Reflexão Crítica (a preencher após a coleta)</h2>
+<h2 id="reflex-o-cr-tica">Reflexão Crítica</h2>
 
-<p>Perguntas que a análise deverá responder, no mesmo espírito do restante da documentação:</p>
+<p>Perguntas que a análise deve responder, no mesmo espírito do restante da documentação — cinco ainda abertas, uma já respondida com dado real:</p>
 
 <ul class="ordered">
-<li><strong>Qual é o gargalo real?</strong> Hipótese: o <strong>LLM</strong> domina o tempo de correção (segundos), seguido pelo <strong>OCR</strong>; a borda e o Redis são desprezíveis.</li>
-<li><strong>Existe correlação entre tamanho do payload e latência?</strong> Redações mais longas e mais textos motivadores aumentam o bloco dinâmico — medir o efeito.</li>
-<li><strong>Qual provedor oferece o melhor equilíbrio</strong> latência × custo × qualidade da correção?</li>
-<li><strong>A borda aguenta rajada</strong> sem violar o SLA de 200ms da Meta?</li>
-<li><strong>O sistema está pronto para o volume de uma escola?</strong> Avaliar contra a restrição de réplica única.</li>
+<li><strong>Qual é o gargalo real? ✅ Respondida.</strong> Não é "OCR + LLM" como hipótese original — é o <strong>LLM sozinho</strong>: ~93% do tempo total (92s médios de correção contra 3,9s médios de foto). OCR (1,7s) e download (2,2s) são rápidos; é a geração do LLM que domina, de forma bem mais extrema do que a hipótese inicial previa. Borda e Redis são de fato desprezíveis (ver "Overhead por tarefa" na tabela acima).</li>
+<li><strong>Existe correlação entre tamanho do payload e latência?</strong> Não isolado ainda — o piloto variou o tamanho da foto (90–212 KB) sem controle experimental rígido; a correlação com <code>download_ms</code> não foi testada estatisticamente (n=5 é pouco para isso). Para o bloco dinâmico do prompt (tema+motivadores+redação) × <code>llm_ms</code>, não há dados pareados ainda.</li>
+<li><strong>Qual provedor/configuração oferece o melhor equilíbrio latência × custo × qualidade?</strong> Parcialmente respondida, mas só para DeepSeek: <code>CORRECTION_EFFORT</code> por si só já muda drasticamente a <strong>qualidade</strong> da nota entre <code>max</code> e <code>high</code> (ver <strong>Métricas e ROI</strong>, §8.2) — falta medir o lado da <strong>latência</strong> nesses mesmos efforts, e comparar contra outros provedores (Gemini, Claude, OpenAI, Maritaca) na mesma redação.</li>
+<li><strong>A borda aguenta rajada</strong> sem violar o SLA de 200ms da Meta? Não testado — nenhum teste de carga/concorrência rodou ainda.</li>
+<li><strong>O sistema está pronto para o volume de uma escola?</strong> Parcialmente informado: sabemos agora que cada correção individual consome ~99s de processamento assíncrono (majoritariamente LLM, não CPU/rede do próprio contêiner) — como o gargalo é I/O externo, não recursos locais, várias correções simultâneas não deveriam competir por CPU/memória da réplica única. Mas isso é inferência da arquitetura, não medição de rajada real.</li>
 </ul>
 
 <blockquote>
@@ -1419,28 +1427,34 @@ Aluno                         Bot
 <div class="content-wrapper"><h1 id="8-m-tricas-de-performance-confiabilidade">8. Métricas de Performance, Confiabilidade e ROI</h1>
 
 <blockquote>
-<p>Esta seção modela <strong>latência</strong>, <strong>acurácia</strong>, <strong>confiabilidade</strong> e <strong>viabilidade econômica</strong> do corretor. Latência e confiabilidade em regime real dependem dos testes de stress (ver <strong>Testes de Stress</strong>) e seguem marcadas como ⏳ <strong>a medir</strong>; custo e acurácia já têm uma primeira medição real (§8.2 e §8.4.1) — a acurácia como piloto, não como número fechado; a lógica de ROI segue como <strong>estimativa paramétrica</strong> com premissas explícitas.</p>
+<p>Esta seção modela <strong>latência</strong>, <strong>acurácia</strong>, <strong>confiabilidade</strong> e <strong>viabilidade econômica</strong> do corretor. Latência (§8.1), acurácia (§8.2) e custo (§8.4.1) já têm uma primeira medição real — todas como piloto local, não como número fechado de regime de produção. Confiabilidade em regime real (taxa de sucesso, distribuição de falhas) ainda depende dos testes de stress em nuvem (ver <strong>Testes de Stress</strong>) e segue marcada como ⏳ <strong>a medir</strong>; a lógica de ROI segue como <strong>estimativa paramétrica</strong> com premissas explícitas.</p>
 </blockquote>
 
 <hr>
 
 <h2 id="8-1-lat-ncia-tempo-at-a-nota-chegar">8.1 Latência: tempo até a nota chegar</h2>
 
-<p>Ao contrário de um pipeline em lote, aqui a latência é <strong>sentida pelo aluno</strong>: ele mandou a foto e espera a correção. O tempo total decompõe-se em três chamadas de rede sequenciais.</p>
+<p>Ao contrário de um pipeline em lote, aqui a latência é <strong>sentida pelo aluno</strong>: ele mandou a foto e espera a correção. O tempo total decompõe-se em duas etapas assíncronas — cada uma disparada por um webhook (foto recebida; botão "Corrigir agora" clicado) — e só o processamento <strong>dentro</strong> de cada etapa é medido: o tempo que o aluno leva digitando o tema ou decidindo se confirma fica de fora por construção (<code>src/flow/handlers.py</code>, instrumentado com <code>time.perf_counter()</code> nos pontos de download/OCR/LLM).</p>
+
+<p><strong>Medido — piloto local (n=5, Telegram, DeepSeek V4 Flash, <code>CORRECTION_EFFORT=max</code>):</strong></p>
 
 <div class="table-wrap"><table>
-<tr><th>Etapa</th><th>Natureza</th><th>Latência esperada</th><th>Medido</th></tr>
-<tr><td>Download da mídia (foto)</td><td>Rede (provedor de canal)</td><td>baixa (~1 MB)</td><td>⏳</td></tr>
-<tr><td><strong>OCR (Mistral)</strong></td><td>Rede (API de visão)</td><td>segundos</td><td>⏳</td></tr>
-<tr><td><strong>LLM (correção)</strong></td><td>Rede (API de LLM)</td><td><strong>domina</strong> o tempo</td><td>⏳</td></tr>
-<tr><td>Borda + Redis</td><td>Local</td><td>desprezível</td><td>⏳</td></tr>
+<tr><th>Etapa</th><th>Natureza</th><th>Mín</th><th>Méd</th><th>Máx</th></tr>
+<tr><td>Download da mídia (foto)</td><td>Rede (provedor de canal)</td><td>1,49s</td><td>2,21s</td><td>3,03s</td></tr>
+<tr><td><strong>OCR (Mistral)</strong></td><td>Rede (API de visão)</td><td>1,38s</td><td>1,70s</td><td>1,97s</td></tr>
+<tr><td>Overhead etapa foto (Redis + borda)</td><td>Local</td><td>~0s</td><td>~0s</td><td>~0s</td></tr>
+<tr><td><strong>LLM (correção)</strong></td><td>Rede (API de LLM)</td><td>83,00s</td><td>92,00s</td><td>98,98s</td></tr>
+<tr><td>Overhead etapa correção (Redis + borda + envio)</td><td>Local</td><td>2,34s</td><td>3,09s</td><td>4,40s</td></tr>
+<tr><td><strong>Total combinado</strong> (foto + correção)</td><td>—</td><td>89,02s</td><td><strong>99,00s</strong></td><td>105,16s</td></tr>
 </table></div>
 
-<p><strong>Hipótese de decomposição</strong> (a confirmar nos testes de stress): <strong>OCR + LLM</strong> respondem por praticamente todo o tempo até a resposta; a borda HTTP e o Redis são desprezíveis. Toda alavanca de latência está, portanto, na <strong>camada de modelos</strong> — escolha de provedor/modelo e aproveitamento de cache.</p>
+<p><strong>A hipótese se confirma, com folga — e de forma mais extrema do que o previsto.</strong> O LLM sozinho responde por <strong>~93% do tempo total</strong>. O overhead de infra é desprezível na etapa da foto (~0s) e pequeno mesmo na etapa da correção (2-4s, ~3% do total) — o "borda + Redis desprezível" está bem confirmado. Toda alavanca de latência real está, portanto, na <strong>camada de modelos</strong> — e dentro dela, <code>CORRECTION_EFFORT</code> (ver §8.2) já se mostrou uma variável de peso: os ~92s médios acima são específicos do effort <code>max</code>. Não medimos a latência com <code>high</code>/<code>medium</code>/<code>low</code> ainda — a comparação <code>high</code> feita até agora foi só de <strong>qualidade</strong> da correção (§8.2), não de tempo.</p>
 
 <blockquote>
-<p><strong>Nota de UX:</strong> o fluxo mascara a latência com sinais de progresso — mensagem de "processando", indicador de "digitando" e o <strong>preview do OCR</strong> (que já dá ao aluno algo para revisar enquanto ainda não há nota). A latência percebida é menor que a medida.</p>
+<p><strong>Nota de UX:</strong> o fluxo mascara a latência com sinais de progresso — mensagem de "processando", indicador de "digitando" e o <strong>preview do OCR</strong> (que já dá ao aluno algo para revisar enquanto ainda não há nota). A latência percebida é menor que a medida — mas quase 100 segundos de espera na correção é tempo real, não só percepção, e vale considerar ao escolher o effort de produção.</p>
 </blockquote>
+
+<p><strong>Em aberto.</strong> Amostra pequena (n=5), um provedor só (DeepSeek), ambiente local — não nuvem — e um único valor de <code>CORRECTION_EFFORT</code>. Ver <strong>Testes de Stress</strong> para a tabela completa e o que falta medir (outros provedores, outros efforts, teste de rajada, cache de contexto).</p>
 
 <hr>
 
@@ -1456,7 +1470,7 @@ Aluno                         Bot
 <p><strong>Fonte:</strong> Essay-BR — github.com/lplnufpi/essay-br (licença MIT, Laboratório de Processamento de Linguagem Natural, UFPI).</p>
 </blockquote>
 
-<p><strong>Metodologia do piloto.</strong> 30 redações sorteadas aleatoriamente (seed fixa) do subconjunto do corpus com nota > 0 (exclui ~1,4% do corpus com todas as competências zeradas — provável triagem de nota zero, um teste diferente de "acurácia"). Cada uma passou pelo caminho de correção real (<code>src/correction/factory.get_corrector</code>) com o <strong>prompt de produção sem variantes</strong> (<code>src/prompts.py</code>) — só o texto de entrada muda: tema e proposta do Essay-BR no lugar da foto transcrita por OCR. Provedor: DeepSeek V4 Flash, o mesmo já medido em custo (§8.4.1).</p>
+<p><strong>Metodologia do piloto.</strong> 30 redações sorteadas aleatoriamente (seed fixa) do subconjunto do corpus com nota > 0 (exclui ~1,4% do corpus com todas as competências zeradas — provável triagem de nota zero, um teste diferente de "acurácia"). Cada uma passou pelo caminho de correção real (<code>src/correction/factory.get_corrector</code>) com o <strong>prompt de produção sem variantes</strong> (<code>src/prompts.py</code>) — só o texto de entrada muda: tema e proposta do Essay-BR no lugar da foto transcrita por OCR. Provedor: DeepSeek V4 Flash com <code>CORRECTION_EFFORT=max</code>, o mesmo já medido em custo (§8.4.1).</p>
 
 <div class="table-wrap"><table>
 <tr><th>Métrica</th><th>Valor</th></tr>
@@ -1482,7 +1496,20 @@ Aluno                         Bot
 <li><strong>Comparação contra um avaliador único</strong>, não o consenso de dois corretores do INEP — o Essay-BR é um proxy, nunca o gabarito oficial.</li>
 </ul>
 
-<p><strong>Em aberto.</strong> Escalar a amostra (100+) e repetir com outro provedor (<code>--provider gemini</code>) fecharia uma leitura mais robusta — ver Roadmap, §8.5.</p>
+<p><strong>Sensibilidade ao <code>CORRECTION_EFFORT</code>: <code>max</code> vs. <code>high</code>, mesmas 30 redações.</strong> O piloto foi repetido inteiro com <code>CORRECTION_EFFORT=high</code> (era <code>max</code>), mesma seed — garantindo comparação pareada, essay a essay:</p>
+
+<div class="table-wrap"><table>
+<tr><th>Métrica</th><th><code>max</code></th><th><code>high</code></th><th>Δ</th></tr>
+<tr><td>MAE geral</td><td>129,3</td><td>162,7</td><td>+33,4</td></tr>
+<tr><td>Viés médio</td><td>-1,3 (neutro)</td><td>-64,0 (subestima)</td><td>—</td></tr>
+<tr><td>MAE C1 / C2 / C3 / C4 / C5</td><td>30,7 / 27,6 / 35,9 / 29,3 / 45,3</td><td>32,9 / 26,4 / 27,4 / 33,6 / 49,3</td><td>misto</td></tr>
+</table></div>
+
+<p>Não é ruído: comparando as 30 redações par a par (mesmo texto, effort diferente), <code>high</code> deu nota em média <strong>62,7 pontos mais baixa</strong> que <code>max</code> na mesma redação — e a diferença <strong>persiste em -61,4 pontos mesmo excluindo os dois maiores outliers</strong>, ou seja, é uma tendência ampla, não dois casos isolados puxando a média. Os dois outliers mais extremos foram <strong>triagens de nota zero que só aconteceram no <code>high</code></strong> (as mesmas redações tinham nota normal — 240 e 400 — no <code>max</code>): uma por fuga total ao tema, outra por cópia de texto motivador, ambas com trechos do próprio texto citados corretamente na justificativa — não parecem alucinação, mas um julgamento mais rigoroso na aplicação da triagem.</p>
+
+<p><strong>Não dá para saber se <code>high</code> está mais certo ou mais errado.</strong> <code>max</code> estava melhor calibrado <em>contra este proxy específico</em> (viés ≈ 0); isso não prova que <code>max</code> é mais correto em termos absolutos, só que combinou melhor com as notas do Essay-BR nesta amostra. A mesma limitação epistêmica do restante desta seção se aplica: <code>high</code> pode estar sendo mais rigoroso do que um corretor humano exigente seria (o que aproximaria da realidade), ou superpunindo (o que afastaria) — sem um terceiro corretor de referência, não dá para desempatar. Na prática, <code>CORRECTION_EFFORT</code> se mostrou um eixo de calibração de comportamento tão relevante quanto a escolha de provedor, e também afeta a latência (ver §8.1) — vale documentar qual valor está em produção e por quê, não só qual é mais rápido.</p>
+
+<p><strong>Em aberto.</strong> Escalar a amostra (100+), repetir com outro provedor (<code>--provider gemini</code>) e testar os efforts intermediários (<code>medium</code>, <code>low</code>) fecharia uma leitura mais robusta — ver Roadmap, §8.5.</p>
 
 <hr>
 
@@ -1613,14 +1640,16 @@ tokens_saída    ≈  a correção formatada (competências + feedback + reescri
 
 <h3 id="prioridade-1-medir-para-decidir">Prioridade 1 — Medir para decidir</h3>
 <ul>
-<li><strong>Executar os testes de stress</strong> (aba <strong>Testes de Stress</strong>): latência e custo por etapa e por provedor.</li>
-<li><strong>Instrumentar a observabilidade</strong> para taxa de sucesso e latência em produção.</li>
+<li><strong>Executar os testes de stress em nuvem</strong> (aba <strong>Testes de Stress</strong>): confirmar o piloto local (§8.1) em produção, com mais provedores e volumes de rajada.</li>
+<li><strong>Medir a latência por <code>CORRECTION_EFFORT</code></strong> (<code>max</code>/<code>high</code>/<code>medium</code>/<code>low</code>) — hoje só <code>max</code> foi medido (§8.1); a comparação de qualidade entre <code>max</code>/<code>high</code> (§8.2) já mostra que o effort muda comportamento, falta o lado do tempo.</li>
+<li><strong>Instrumentar a observabilidade</strong> para taxa de sucesso em produção.</li>
 </ul>
 
 <h3 id="prioridade-2-calibrar-a-qualidade-da-cor">Prioridade 2 — Calibrar a qualidade da correção</h3>
 <ul>
 <li><strong>Ampliar o piloto de acurácia</strong> (§8.2): de n=30 para 100+ redações do Essay-BR, para uma leitura estatística mais robusta.</li>
 <li><strong>Repetir a medição com outro provedor</strong> (<code>--provider gemini</code>) — o piloto atual usou só DeepSeek; comparar custo × qualidade sobre o mesmo conjunto de redações.</li>
+<li><strong>Testar os efforts intermediários</strong> (<code>medium</code>, <code>low</code>) — já sabemos que <code>max</code> e <code>high</code> produzem notas bem diferentes na mesma redação; falta mapear o espectro completo.</li>
 </ul>
 
 <h3 id="prioridade-3-escala-e-produto">Prioridade 3 — Escala e produto</h3>
@@ -1633,7 +1662,7 @@ tokens_saída    ≈  a correção formatada (competências + feedback + reescri
 <hr>
 
 <blockquote>
-<p><strong>Resumo executivo:</strong> o corretor troca "custo zero, latência de madrugada" (típico de automação em lote) por <strong>custo marginal por uso e latência sentida em tempo real</strong> — o que desloca o foco de otimização para a <strong>camada de modelos</strong> (provedor, modelo, cache) e para a <strong>contenção de custo</strong> (rate-limit, cache de contexto). Custo e acurácia da nota já têm uma primeira medição real (piloto, no caso da acurácia); latência e taxa de sucesso em regime real seguem pendentes de medição. A estrutura de custo e os modelos de sustentação já estão desenhados e são ajustáveis por configuração.</p>
+<p><strong>Resumo executivo:</strong> o corretor troca "custo zero, latência de madrugada" (típico de automação em lote) por <strong>custo marginal por uso e latência sentida em tempo real</strong> — o que desloca o foco de otimização para a <strong>camada de modelos</strong> (provedor, modelo, effort, cache) e para a <strong>contenção de custo</strong> (rate-limit, cache de contexto). Custo, latência e acurácia da nota já têm uma primeira medição real (todas como piloto local); a mesma variável (<code>CORRECTION_EFFORT</code>) que domina a latência (§8.1) também muda o comportamento da nota (§8.2) — não é só um botão de "mais rápido". Taxa de sucesso em regime real e testes em nuvem seguem pendentes de medição.</p>
 </blockquote>
 </div>
 </div>
@@ -1772,7 +1801,7 @@ tokens_saída    ≈  a correção formatada (competências + feedback + reescri
 
 <p><strong>A solução e a prova.</strong> O bot ataca exatamente esse gargalo. O aluno fotografa a redação escrita à mão — <strong>sem instalar app, sem cadastro, sem digitar</strong> — e recebe de volta a nota estimada por competência, com trechos citados e uma sugestão de reescrita, em cerca de um minuto. Por trás da simplicidade, decisões de engenharia deliberadas: a borda HTTP responde ao webhook em <strong>menos de 200ms</strong> e joga o trabalho pesado para <em>background</em> (nada de travar o SLA da Meta); o estado vive <strong>45 minutos</strong> em Redis e some sozinho; a <strong>foto é descartada</strong> logo após o OCR; e o motor de correção usa um prompt de ~6.000 tokens <strong>cacheado</strong> para conter custo. A correção não é um "chatbot que dá uma nota": é a Matriz de Referência do INEP transcrita em regras — triagem de nota zero, cinco competências com tabelas de níveis, e a exigência de <strong>citar o trecho</strong> em cada observação.</p>
 
-<p><strong>O valor e o futuro.</strong> O que este projeto entrega é <strong>acesso</strong>: um recurso pedagógico que hoje é caro e escasso, oferecido a um custo marginal de centavos por correção, no aplicativo que o aluno já tem no bolso. Para a escola, é alívio da correção repetitiva; para a rede pública, é redução de uma desigualdade que se converte diretamente em nota de vestibular. À frente, o roadmap mede o que ainda falta medir (latência em regime real), amplia o piloto de acurácia da nota já rodado contra o Essay-BR (o INEP nunca publica o texto das redações, só a nota — medir "contra o oficial" não é viável para nenhum projeto), e abre caminho para o uso institucional — sempre com a privacidade de um público menor de idade como restrição inegociável.</p>
+<p><strong>O valor e o futuro.</strong> O que este projeto entrega é <strong>acesso</strong>: um recurso pedagógico que hoje é caro e escasso, oferecido a um custo marginal de centavos por correção, no aplicativo que o aluno já tem no bolso. Para a escola, é alívio da correção repetitiva; para a rede pública, é redução de uma desigualdade que se converte diretamente em nota de vestibular. À frente, o roadmap confirma em nuvem o piloto local de latência (hoje: ~99s médios até a nota chegar, ~93% disso só na chamada ao LLM), amplia o piloto de acurácia da nota já rodado contra o Essay-BR (o INEP nunca publica o texto das redações, só a nota — medir "contra o oficial" não é viável para nenhum projeto), e abre caminho para o uso institucional — sempre com a privacidade de um público menor de idade como restrição inegociável.</p>
 
 <hr>
 
@@ -1789,7 +1818,7 @@ tokens_saída    ≈  a correção formatada (competências + feedback + reescri
 <tr><td>Foto descartada + TTL 45 min</td><td>"Privacidade por design, para um público menor de idade"</td><td>O4 — conformidade LGPD</td></tr>
 <tr><td>Rate-limit + cache de contexto</td><td>"Custo por uso previsível e contido"</td><td>O4 — controle de custo</td></tr>
 <tr><td>Borda 200ms + background</td><td>"Responde rápido, processa depois — sem quebrar o SLA da Meta"</td><td>Robustez</td></tr>
-<tr><td>Latência real por provedor</td><td>⏳ a medir</td><td>Métricas e ROI (§8.1)</td></tr>
+<tr><td>Latência real por etapa</td><td>✅ piloto medido (n=5, DeepSeek)</td><td>Métricas e ROI (§8.1)</td></tr>
 <tr><td>Acurácia da nota por competência</td><td>✅ piloto medido (n=30)</td><td>Métricas e ROI (§8.2)</td></tr>
 <tr><td>Taxa de sucesso por correção</td><td>⏳ a medir</td><td>Confiabilidade (§8.3)</td></tr>
 <tr><td>Custo por correção</td><td>✅ medido (DeepSeek)</td><td>ROI (§8.4)</td></tr>
@@ -1808,16 +1837,17 @@ tokens_saída    ≈  a correção formatada (competências + feedback + reescri
 <li>Conformidade de base: consentimento LGPD, descarte da foto, TTL de 45 min, sem histórico, rate-limit diário.</li>
 <li>Arquitetura mono-contêiner (app + Redis embutido), borda com resposta <200ms e processamento em <em>background</em>.</li>
 <li><strong>Custo efetivo por correção</strong> medido em uso real (DeepSeek V4 Flash) — ver Métricas e ROI, §8.4.1.</li>
-<li><strong>Acurácia da nota</strong> — piloto medido (30 redações do Essay-BR, MAE 129,3 pontos, viés praticamente neutro) — ver Métricas e ROI, §8.2. Não é a nota oficial do INEP (que não publica o texto das redações), e a amostra ainda é pequena para fechar o número.</li>
+<li><strong>Acurácia da nota</strong> — piloto medido (30 redações do Essay-BR, MAE 129,3 pontos, viés praticamente neutro com <code>CORRECTION_EFFORT=max</code>) — ver Métricas e ROI, §8.2. Não é a nota oficial do INEP (que não publica o texto das redações), e a amostra ainda é pequena para fechar o número. Repetir com <code>CORRECTION_EFFORT=high</code> mudou bastante a nota (MAE subiu para 162,7, viés para -64) — o effort não é só uma perilha de velocidade, muda o comportamento do corretor.</li>
+<li><strong>Latência por etapa</strong> — piloto local medido (n=5, Telegram): ~99s médios até a nota chegar, dos quais <strong>~93% é só a chamada ao LLM</strong> (~92s) — download+OCR somam só ~4s. Confirma com folga a hipótese de que o gargalo é a camada de modelos, não a infraestrutura — ver Métricas e ROI, §8.1.</li>
 </ul>
 
 <p><strong>Pendente de medição (marcado como ⏳ ao longo da documentação):</strong></p>
 
 <ul>
-<li>Latência real ponta a ponta e por etapa (OCR, LLM).</li>
+<li>Confirmar a latência em ambiente de nuvem (o piloto acima rodou local, via túnel).</li>
 <li>Taxa de sucesso e distribuição de falhas em regime real.</li>
-<li>Custo por correção nos demais provedores (só DeepSeek medido até aqui).</li>
-<li>Amostra maior e outro provedor no piloto de acurácia (hoje n=30, só DeepSeek).</li>
+<li>Latência e custo por correção nos demais provedores e nos demais efforts (<code>high</code>/<code>medium</code>/<code>low</code>) — só DeepSeek/<code>max</code> medido em latência até aqui.</li>
+<li>Amostra maior no piloto de acurácia (hoje n=30 por effort, só DeepSeek).</li>
 </ul>
 
 <blockquote>
