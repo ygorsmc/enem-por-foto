@@ -294,12 +294,13 @@ footer.site-footer{background:#2A2018;color:#C4B6A0;margin-top:64px;border-top:2
         <button class="tab-btn" data-page="metricas">Métricas e ROI</button>
         <div class="tab-dropdown">
 <a href="#8-1-lat-ncia-tempo-at-a-nota-chegar" class="dropdown-link" data-page="metricas">8.1 Latência: tempo até a nota chegar</a>
-<a href="#8-2-confiabilidade" class="dropdown-link" data-page="metricas">8.2 Confiabilidade</a>
-<a href="#8-3-custo-e-roi" class="dropdown-link" data-page="metricas">8.3 Custo e ROI</a>
-<a href="#8-3-1-custo-por-corre-o-estrutura-" class="dropdown-link" data-page="metricas">8.3.1 Custo por correção (estrutura)</a>
-<a href="#8-3-2-valor-gerado-a-l-gica-" class="dropdown-link" data-page="metricas">8.3.2 Valor gerado (a lógica)</a>
-<a href="#8-3-3-modelos-de-sustenta-o-hip-teses-a-" class="dropdown-link" data-page="metricas">8.3.3 Modelos de sustentação (hipóteses — a definir)</a>
-<a href="#8-4-roadmap-priorizado" class="dropdown-link" data-page="metricas">8.4 Roadmap Priorizado</a>
+<a href="#8-2-acur-cia-da-nota-estimada-medido-con" class="dropdown-link" data-page="metricas">8.2 Acurácia da nota estimada — medido contra o Essay-BR</a>
+<a href="#8-3-confiabilidade" class="dropdown-link" data-page="metricas">8.3 Confiabilidade</a>
+<a href="#8-4-custo-e-roi" class="dropdown-link" data-page="metricas">8.4 Custo e ROI</a>
+<a href="#8-4-1-custo-por-corre-o-estrutura-" class="dropdown-link" data-page="metricas">8.4.1 Custo por correção (estrutura)</a>
+<a href="#8-4-2-valor-gerado-a-l-gica-" class="dropdown-link" data-page="metricas">8.4.2 Valor gerado (a lógica)</a>
+<a href="#8-4-3-modelos-de-sustenta-o-hip-teses-a-" class="dropdown-link" data-page="metricas">8.4.3 Modelos de sustentação (hipóteses — a definir)</a>
+<a href="#8-5-roadmap-priorizado" class="dropdown-link" data-page="metricas">8.5 Roadmap Priorizado</a>
 <a href="#prioridade-1-medir-para-decidir" class="dropdown-link" data-page="metricas">Prioridade 1 — Medir para decidir</a>
 <a href="#prioridade-2-calibrar-a-qualidade-da-cor" class="dropdown-link" data-page="metricas">Prioridade 2 — Calibrar a qualidade da correção</a>
 <a href="#prioridade-3-escala-e-produto" class="dropdown-link" data-page="metricas">Prioridade 3 — Escala e produto</a>
@@ -1157,7 +1158,9 @@ Aluno                         Bot
 <li><strong>Transparência de estimativa.</strong> O feedback deixa claro que a nota é uma <strong>estimativa por IA</strong> e que a nota oficial depende de humanos.</li>
 </ul>
 
-<p><strong>Em aberto.</strong> Sem um <em>dataset</em> de redações com nota oficial para calibrar, não há como afirmar a <strong>acurácia</strong> da estimativa. Uma evolução natural é medir a concordância do modelo contra redações já corrigidas pelo INEP (ver <strong>Métricas e ROI</strong>, §8.4).</p>
+<p><strong>Medido (piloto) — deixou de ser um vazio total de dados.</strong> Como o INEP nunca publica o texto das redações (só a nota), medir "vs. nota oficial" é inviável para qualquer projeto. O proxy mais próximo é o corpus público <strong>Essay-BR</strong> (redações reais corrigidas segundo os critérios do ENEM). Duas medições independentes convergiram para o mesmo intervalo: um teste interno menor (5 redações de nota conhecida) mediu <strong>MAE de 120,0 pontos</strong> para este prompt; um piloto maior (30 redações do Essay-BR) mediu <strong>MAE de 129,3 pontos</strong> e <strong>viés médio de -1,3</strong> (praticamente neutro — a favor das regras anti-inflação acima). Detalhes completos, metodologia e limitações em <strong>Métricas e ROI</strong>, §8.2.</p>
+
+<p><strong>Em aberto.</strong> A amostra do piloto (n=30) ainda é pequena para uma leitura estatística apertada, e não há como descartar que o LLM tenha visto o corpus Essay-BR (público desde 2021) durante o treino. Ampliar a amostra e repetir com outro provedor é o próximo passo natural (ver <strong>Métricas e ROI</strong>, §8.5).</p>
 
 <hr>
 
@@ -1189,7 +1192,7 @@ Aluno                         Bot
 <li><strong>Tetos de entrada.</strong> Tema, motivadores e redação têm limites de caracteres — contêm abuso/acidente (ex.: foto de um livro inteiro) sem afetar uma redação real (~2.500 caracteres).</li>
 </ul>
 
-<p><strong>Custo medido em uso real</strong> (ver <strong>Métricas e ROI</strong>, §8.3.1): OCR (Mistral) tem <em>free tier</em> generoso — só ~1% da cota mensal consumida em testes extensivos — e, acima dela, US$ 0,004/foto; o LLM (DeepSeek V4 Flash) mediu US$ 0,00375/correção. Somados, <strong>menos de 1 centavo de dólar por correção</strong> de uma foto, fora da cota gratuita de OCR. Em escala (§8.3.1, "Custo em escala") — um teto conservador que ignora o <em>free tier</em> do OCR — isso é <strong>menos de US$ 2/ano</strong> para um aluno individual e <strong>≈ US$ 21/ano</strong> para uma escola de 400 alunos com adoção parcial; considerando a cota gratuita real, a escola cai para <strong>≈ US$ 10/ano</strong>. Baixo o bastante para ser bancado do próprio bolso, sem modelo de negócio formal.</p>
+<p><strong>Custo medido em uso real</strong> (ver <strong>Métricas e ROI</strong>, §8.4.1): OCR (Mistral) tem <em>free tier</em> generoso — só ~1% da cota mensal consumida em testes extensivos — e, acima dela, US$ 0,004/foto; o LLM (DeepSeek V4 Flash) mediu US$ 0,00375/correção. Somados, <strong>menos de 1 centavo de dólar por correção</strong> de uma foto, fora da cota gratuita de OCR. Em escala (§8.4.1, "Custo em escala") — um teto conservador que ignora o <em>free tier</em> do OCR — isso é <strong>menos de US$ 2/ano</strong> para um aluno individual e <strong>≈ US$ 21/ano</strong> para uma escola de 400 alunos com adoção parcial; considerando a cota gratuita real, a escola cai para <strong>≈ US$ 10/ano</strong>. Baixo o bastante para ser bancado do próprio bolso, sem modelo de negócio formal.</p>
 
 <p><strong>Em aberto.</strong> O custo de <strong>hospedagem em nuvem</strong> (Azure Container Apps) ainda não foi medido — falta para fechar o custo operacional total. A comparação de custo × qualidade entre os demais provedores de LLM (Gemini, Claude, OpenAI, Maritaca) também segue em aberto (a troca é uma variável de ambiente — ver <strong>Arquitetura</strong>, §2.5).</p>
 
@@ -1416,7 +1419,7 @@ Aluno                         Bot
 <div class="content-wrapper"><h1 id="8-m-tricas-de-performance-confiabilidade">8. Métricas de Performance, Confiabilidade e ROI</h1>
 
 <blockquote>
-<p>Esta seção modela <strong>latência</strong>, <strong>confiabilidade</strong> e <strong>viabilidade econômica</strong> do corretor. As métricas de performance dependem de medição real (ver <strong>Testes de Stress</strong>) e estão marcadas como ⏳ <strong>a medir</strong>; a lógica de custo/ROI é apresentada como <strong>estimativa paramétrica</strong> com premissas explícitas — ajustáveis conforme o provedor e o modelo de negócio escolhidos.</p>
+<p>Esta seção modela <strong>latência</strong>, <strong>acurácia</strong>, <strong>confiabilidade</strong> e <strong>viabilidade econômica</strong> do corretor. Latência e confiabilidade em regime real dependem dos testes de stress (ver <strong>Testes de Stress</strong>) e seguem marcadas como ⏳ <strong>a medir</strong>; custo e acurácia já têm uma primeira medição real (§8.2 e §8.4.1) — a acurácia como piloto, não como número fechado; a lógica de ROI segue como <strong>estimativa paramétrica</strong> com premissas explícitas.</p>
 </blockquote>
 
 <hr>
@@ -1441,7 +1444,49 @@ Aluno                         Bot
 
 <hr>
 
-<h2 id="8-2-confiabilidade">8.2 Confiabilidade</h2>
+<h2 id="8-2-acur-cia-da-nota-estimada-medido-con">8.2 Acurácia da nota estimada — medido contra o Essay-BR</h2>
+
+<p>Diferente do restante desta seção, a acurácia da nota <strong>já tem uma primeira medição real</strong> — não fica mais em aberto no sentido de "zero dados", ainda que a amostra atual seja um piloto, não uma medição definitiva.</p>
+
+<p><strong>Por que não dá para medir contra a nota oficial do INEP.</strong> O INEP publica a nota da redação de cada participante nos microdados oficiais, mas <strong>nunca o texto do manuscrito</strong> — por privacidade, a redação em si não é disponibilizada. Sem o texto, não há como alimentar o corretor: não existe caminho para medir "vs. nota oficial do INEP", nem para este projeto, nem para nenhum outro.</p>
+
+<p>O proxy público mais próximo é o <strong>Essay-BR</strong>: ~6.500 redações reais de estudantes brasileiros, corrigidas por especialistas seguindo os critérios do ENEM — na mesma escala oficial (0/40/80/120/160/200 por competência, 0–1.000 no total), sem conversão necessária. Não é a nota oficial (o INEP usa dois corretores humanos, com um terceiro em caso de forte discordância — ver nota de contexto abaixo); é uma aproximação séria, com texto real e nota por competência.</p>
+
+<blockquote>
+<p><strong>Fonte:</strong> Essay-BR — github.com/lplnufpi/essay-br (licença MIT, Laboratório de Processamento de Linguagem Natural, UFPI).</p>
+</blockquote>
+
+<p><strong>Metodologia do piloto.</strong> 30 redações sorteadas aleatoriamente (seed fixa) do subconjunto do corpus com nota > 0 (exclui ~1,4% do corpus com todas as competências zeradas — provável triagem de nota zero, um teste diferente de "acurácia"). Cada uma passou pelo caminho de correção real (<code>src/correction/factory.get_corrector</code>) com o <strong>prompt de produção sem variantes</strong> (<code>src/prompts.py</code>) — só o texto de entrada muda: tema e proposta do Essay-BR no lugar da foto transcrita por OCR. Provedor: DeepSeek V4 Flash, o mesmo já medido em custo (§8.4.1).</p>
+
+<div class="table-wrap"><table>
+<tr><th>Métrica</th><th>Valor</th></tr>
+<tr><td>MAE geral (erro médio absoluto vs. nota do corpus)</td><td><strong>129,3 pontos</strong> (escala 0–1.000)</td></tr>
+<tr><td>Viés médio (estimado − corpus)</td><td><strong>-1,3 pontos</strong> — praticamente neutro</td></tr>
+<tr><td>MAE por competência</td><td>C1: 30,7 · C2: 27,6 · C3: 35,9 · C4: 29,3 · <strong>C5: 45,3</strong></td></tr>
+</table></div>
+
+<p>O <strong>viés próximo de zero</strong> é o achado mais importante: o corretor não infla nem deflaciona a nota sistematicamente — evidência a favor das regras anti-inflação do prompt (ver <strong>Análise e Limitações</strong>, §3.2). <strong>C5 (proposta de intervenção)</strong> concentra o maior erro médio, consistente com ser a competência mais subjetiva de avaliar, mesmo entre corretores humanos.</p>
+
+<blockquote>
+<p><strong>Ponto de referência, não prova de equivalência.</strong> O próprio material do Essay-BR descreve que, no processo oficial do ENEM, dois corretores humanos podem divergir em até <strong>80 pontos por competência</strong> antes de um terceiro avaliador ser acionado. Todas as médias de erro por competência acima (27–45) ficam abaixo desse limiar — o que não significa que o corretor "iguala" um humano (a comparação aqui é contra um único avaliador do Essay-BR, não dois corretores do INEP em consenso), mas mostra que o erro medido está na mesma ordem de grandeza da variância que o próprio sistema oficial trata como aceitável.</p>
+</blockquote>
+
+<p><strong>Consistência com uma medição anterior e independente.</strong> O teste A/B do prompt (ver <strong>Análise e Limitações</strong>, §3.2 — n=5, redações de nota conhecida) havia medido MAE de 120,0 pontos para este mesmo prompt de produção — muito próximo dos 129,3 medidos aqui, em corpus e metodologia diferentes. Duas medições convergindo para o mesmo intervalo (~120–130) é evidência de que o número é estável, não um acidente de amostra pequena.</p>
+
+<p><strong>Limitações do piloto — honestas, não descartáveis:</strong></p>
+
+<ul class="ordered">
+<li><strong>Amostra pequena (n=30).</strong> Suficiente para uma primeira leitura, não para afirmar acurácia com confiança estatística apertada.</li>
+<li><strong>Risco de vazamento de dado.</strong> O Essay-BR é público desde 2021 — não há garantia de que o LLM usado nunca "viu" pares redação↔nota desse corpus durante o treino. Se houver, o MAE medido fica artificialmente bom; não é possível descartar essa hipótese sem um corpus inédito.</li>
+<li><strong>Qualidade de dado da fonte, não do corretor.</strong> 12,2% do corpus (52 de 151 temas, concentrados num lote específico de ids) tem o texto do tema sem nenhuma acentuação — bug de origem no Essay-BR, não introduzido por este projeto. Não afeta o texto da redação em si, só o enunciado do tema em parte dos casos; 4 das 30 redações da amostra foram afetadas, sem um padrão claro de piorar o erro.</li>
+<li><strong>Comparação contra um avaliador único</strong>, não o consenso de dois corretores do INEP — o Essay-BR é um proxy, nunca o gabarito oficial.</li>
+</ul>
+
+<p><strong>Em aberto.</strong> Escalar a amostra (100+) e repetir com outro provedor (<code>--provider gemini</code>) fecharia uma leitura mais robusta — ver Roadmap, §8.5.</p>
+
+<hr>
+
+<h2 id="8-3-confiabilidade">8.3 Confiabilidade</h2>
 
 <p>A correção só é bem-sucedida se as três etapas (download → OCR → LLM) concluírem. O sistema <strong>falha graciosamente</strong>: retry com <em>backoff</em> em OCR e LLM, devolução de crédito na falha técnica, e estado preservado para o aluno tentar de novo.</p>
 
@@ -1460,9 +1505,9 @@ Aluno                         Bot
 
 <hr>
 
-<h2 id="8-3-custo-e-roi">8.3 Custo e ROI</h2>
+<h2 id="8-4-custo-e-roi">8.4 Custo e ROI</h2>
 
-<h3 id="8-3-1-custo-por-corre-o-estrutura-">8.3.1 Custo por correção (estrutura)</h3>
+<h3 id="8-4-1-custo-por-corre-o-estrutura-">8.4.1 Custo por correção (estrutura)</h3>
 
 <p>Diferente de um projeto 100% local, <strong>cada correção tem custo marginal</strong> — duas chamadas pagas:</p>
 
@@ -1532,10 +1577,10 @@ tokens_saída    ≈  a correção formatada (competências + feedback + reescri
 </blockquote>
 <p>></p>
 <blockquote>
-<p>Mesmo no cenário mais caro da tabela (<strong>escola inteira, ano letivo completo, adoção de 1/3, sem considerar o free tier</strong>), o custo de execução fica na casa de <strong>dezenas de dólares por ano</strong> — não milhares, não centenas. Isso muda a leitura da seção de sustentação a seguir (§8.3.3): para uso pessoal ou de uma turma, o custo é baixo o bastante para ser <strong>bancado do próprio bolso</strong> por um aluno, professor ou desenvolvedor entusiasta, sem precisar de nenhum modelo de negócio formal. Os modelos B2B/freemium/patrocínio passam a fazer sentido só na escala de <strong>múltiplas escolas simultâneas</strong>, onde a soma de correções e o custo (ainda não medido) de hospedagem em nuvem começam a pesar.</p>
+<p>Mesmo no cenário mais caro da tabela (<strong>escola inteira, ano letivo completo, adoção de 1/3, sem considerar o free tier</strong>), o custo de execução fica na casa de <strong>dezenas de dólares por ano</strong> — não milhares, não centenas. Isso muda a leitura da seção de sustentação a seguir (§8.4.3): para uso pessoal ou de uma turma, o custo é baixo o bastante para ser <strong>bancado do próprio bolso</strong> por um aluno, professor ou desenvolvedor entusiasta, sem precisar de nenhum modelo de negócio formal. Os modelos B2B/freemium/patrocínio passam a fazer sentido só na escala de <strong>múltiplas escolas simultâneas</strong>, onde a soma de correções e o custo (ainda não medido) de hospedagem em nuvem começam a pesar.</p>
 </blockquote>
 
-<h3 id="8-3-2-valor-gerado-a-l-gica-">8.3.2 Valor gerado (a lógica)</h3>
+<h3 id="8-4-2-valor-gerado-a-l-gica-">8.4.2 Valor gerado (a lógica)</h3>
 
 <p>O valor não é "tempo de engenheiro economizado" (como num projeto de automação corporativa), e sim <strong>acesso a um recurso pedagógico escasso</strong>:</p>
 
@@ -1545,7 +1590,7 @@ tokens_saída    ≈  a correção formatada (competências + feedback + reescri
 <li><strong>Para a rede pública:</strong> aproxima o feedback de quem hoje depende só da escola, reduzindo a assimetria de acesso.</li>
 </ul>
 
-<h3 id="8-3-3-modelos-de-sustenta-o-hip-teses-a-">8.3.3 Modelos de sustentação (hipóteses — a definir)</h3>
+<h3 id="8-4-3-modelos-de-sustenta-o-hip-teses-a-">8.4.3 Modelos de sustentação (hipóteses — a definir)</h3>
 
 <p>Como o produto atende um público sensível (menores, rede pública), os modelos abaixo são <strong>hipóteses de sustentabilidade</strong>, não decisão fechada — e, como visto acima, só se tornam necessários a partir de uma certa escala; para uso pessoal ou de uma turma, autofinanciamento é suficiente:</p>
 
@@ -1557,12 +1602,12 @@ tokens_saída    ≈  a correção formatada (competências + feedback + reescri
 </table></div>
 
 <blockquote>
-<p>⏳ <strong>A definir:</strong> a precificação depende do custo real por correção (§8.3.1) e da estratégia de distribuição. A estrutura técnica (rate-limit por usuário, custo marginal por uso) já suporta qualquer um dos três modelos sem mudança de código.</p>
+<p>⏳ <strong>A definir:</strong> a precificação depende do custo real por correção (§8.4.1) e da estratégia de distribuição. A estrutura técnica (rate-limit por usuário, custo marginal por uso) já suporta qualquer um dos três modelos sem mudança de código.</p>
 </blockquote>
 
 <hr>
 
-<h2 id="8-4-roadmap-priorizado">8.4 Roadmap Priorizado</h2>
+<h2 id="8-5-roadmap-priorizado">8.5 Roadmap Priorizado</h2>
 
 <p>Melhorias derivadas das limitações (aba <strong>Análise e Limitações</strong>) e das lacunas de medição.</p>
 
@@ -1574,8 +1619,8 @@ tokens_saída    ≈  a correção formatada (competências + feedback + reescri
 
 <h3 id="prioridade-2-calibrar-a-qualidade-da-cor">Prioridade 2 — Calibrar a qualidade da correção</h3>
 <ul>
-<li><strong>Dataset de calibração:</strong> medir a concordância da nota estimada contra redações com <strong>nota oficial</strong> do INEP, por competência.</li>
-<li><strong>Comparar provedores</strong> em custo × qualidade sobre o mesmo conjunto de redações.</li>
+<li><strong>Ampliar o piloto de acurácia</strong> (§8.2): de n=30 para 100+ redações do Essay-BR, para uma leitura estatística mais robusta.</li>
+<li><strong>Repetir a medição com outro provedor</strong> (<code>--provider gemini</code>) — o piloto atual usou só DeepSeek; comparar custo × qualidade sobre o mesmo conjunto de redações.</li>
 </ul>
 
 <h3 id="prioridade-3-escala-e-produto">Prioridade 3 — Escala e produto</h3>
@@ -1588,7 +1633,7 @@ tokens_saída    ≈  a correção formatada (competências + feedback + reescri
 <hr>
 
 <blockquote>
-<p><strong>Resumo executivo:</strong> o corretor troca "custo zero, latência de madrugada" (típico de automação em lote) por <strong>custo marginal por uso e latência sentida em tempo real</strong> — o que desloca o foco de otimização para a <strong>camada de modelos</strong> (provedor, modelo, cache) e para a <strong>contenção de custo</strong> (rate-limit, cache de contexto). As métricas de performance ficam pendentes de medição; a estrutura de custo e os modelos de sustentação já estão desenhados e são ajustáveis por configuração.</p>
+<p><strong>Resumo executivo:</strong> o corretor troca "custo zero, latência de madrugada" (típico de automação em lote) por <strong>custo marginal por uso e latência sentida em tempo real</strong> — o que desloca o foco de otimização para a <strong>camada de modelos</strong> (provedor, modelo, cache) e para a <strong>contenção de custo</strong> (rate-limit, cache de contexto). Custo e acurácia da nota já têm uma primeira medição real (piloto, no caso da acurácia); latência e taxa de sucesso em regime real seguem pendentes de medição. A estrutura de custo e os modelos de sustentação já estão desenhados e são ajustáveis por configuração.</p>
 </blockquote>
 </div>
 </div>
@@ -1727,7 +1772,7 @@ tokens_saída    ≈  a correção formatada (competências + feedback + reescri
 
 <p><strong>A solução e a prova.</strong> O bot ataca exatamente esse gargalo. O aluno fotografa a redação escrita à mão — <strong>sem instalar app, sem cadastro, sem digitar</strong> — e recebe de volta a nota estimada por competência, com trechos citados e uma sugestão de reescrita, em cerca de um minuto. Por trás da simplicidade, decisões de engenharia deliberadas: a borda HTTP responde ao webhook em <strong>menos de 200ms</strong> e joga o trabalho pesado para <em>background</em> (nada de travar o SLA da Meta); o estado vive <strong>45 minutos</strong> em Redis e some sozinho; a <strong>foto é descartada</strong> logo após o OCR; e o motor de correção usa um prompt de ~6.000 tokens <strong>cacheado</strong> para conter custo. A correção não é um "chatbot que dá uma nota": é a Matriz de Referência do INEP transcrita em regras — triagem de nota zero, cinco competências com tabelas de níveis, e a exigência de <strong>citar o trecho</strong> em cada observação.</p>
 
-<p><strong>O valor e o futuro.</strong> O que este projeto entrega é <strong>acesso</strong>: um recurso pedagógico que hoje é caro e escasso, oferecido a um custo marginal de centavos por correção, no aplicativo que o aluno já tem no bolso. Para a escola, é alívio da correção repetitiva; para a rede pública, é redução de uma desigualdade que se converte diretamente em nota de vestibular. À frente, o roadmap mede o que ainda falta medir (latência e custo por provedor), calibra a nota estimada contra notas oficiais do INEP, e abre caminho para o uso institucional — sempre com a privacidade de um público menor de idade como restrição inegociável.</p>
+<p><strong>O valor e o futuro.</strong> O que este projeto entrega é <strong>acesso</strong>: um recurso pedagógico que hoje é caro e escasso, oferecido a um custo marginal de centavos por correção, no aplicativo que o aluno já tem no bolso. Para a escola, é alívio da correção repetitiva; para a rede pública, é redução de uma desigualdade que se converte diretamente em nota de vestibular. À frente, o roadmap mede o que ainda falta medir (latência em regime real), amplia o piloto de acurácia da nota já rodado contra o Essay-BR (o INEP nunca publica o texto das redações, só a nota — medir "contra o oficial" não é viável para nenhum projeto), e abre caminho para o uso institucional — sempre com a privacidade de um público menor de idade como restrição inegociável.</p>
 
 <hr>
 
@@ -1745,8 +1790,9 @@ tokens_saída    ≈  a correção formatada (competências + feedback + reescri
 <tr><td>Rate-limit + cache de contexto</td><td>"Custo por uso previsível e contido"</td><td>O4 — controle de custo</td></tr>
 <tr><td>Borda 200ms + background</td><td>"Responde rápido, processa depois — sem quebrar o SLA da Meta"</td><td>Robustez</td></tr>
 <tr><td>Latência real por provedor</td><td>⏳ a medir</td><td>Métricas e ROI (§8.1)</td></tr>
-<tr><td>Taxa de sucesso por correção</td><td>⏳ a medir</td><td>Confiabilidade (§8.2)</td></tr>
-<tr><td>Custo por correção</td><td>⏳ a medir</td><td>ROI (§8.3)</td></tr>
+<tr><td>Acurácia da nota por competência</td><td>✅ piloto medido (n=30)</td><td>Métricas e ROI (§8.2)</td></tr>
+<tr><td>Taxa de sucesso por correção</td><td>⏳ a medir</td><td>Confiabilidade (§8.3)</td></tr>
+<tr><td>Custo por correção</td><td>✅ medido (DeepSeek)</td><td>ROI (§8.4)</td></tr>
 </table></div>
 
 <hr>
@@ -1761,15 +1807,17 @@ tokens_saída    ≈  a correção formatada (competências + feedback + reescri
 <li>Correção por competência sobre a Matriz do INEP, com provedor de LLM plugável (5 opções) e cache de contexto.</li>
 <li>Conformidade de base: consentimento LGPD, descarte da foto, TTL de 45 min, sem histórico, rate-limit diário.</li>
 <li>Arquitetura mono-contêiner (app + Redis embutido), borda com resposta <200ms e processamento em <em>background</em>.</li>
+<li><strong>Custo efetivo por correção</strong> medido em uso real (DeepSeek V4 Flash) — ver Métricas e ROI, §8.4.1.</li>
+<li><strong>Acurácia da nota</strong> — piloto medido (30 redações do Essay-BR, MAE 129,3 pontos, viés praticamente neutro) — ver Métricas e ROI, §8.2. Não é a nota oficial do INEP (que não publica o texto das redações), e a amostra ainda é pequena para fechar o número.</li>
 </ul>
 
 <p><strong>Pendente de medição (marcado como ⏳ ao longo da documentação):</strong></p>
 
 <ul>
 <li>Latência real ponta a ponta e por etapa (OCR, LLM).</li>
-<li>Custo efetivo por correção, por provedor.</li>
 <li>Taxa de sucesso e distribuição de falhas em regime real.</li>
-<li>Acurácia da nota estimada contra notas oficiais do INEP.</li>
+<li>Custo por correção nos demais provedores (só DeepSeek medido até aqui).</li>
+<li>Amostra maior e outro provedor no piloto de acurácia (hoje n=30, só DeepSeek).</li>
 </ul>
 
 <blockquote>

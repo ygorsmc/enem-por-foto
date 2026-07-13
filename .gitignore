@@ -13,6 +13,12 @@ redacoes/
 ocr_experiments/
 prompt_ab_results/
 
+# Corpus Essay-BR (MIT, github.com/lplnufpi/essay-br) usado para medir
+# acurácia da nota estimada — dataset de terceiro, baixado sob demanda, não
+# faz sentido versionar 13MB de CSV. Ver _local/scripts/essay_br_eval.py.
+essay_br/
+essay_br_results/
+
 # Ferramental de laboratório/documentação-fonte e docs de referência de
 # terceiros — ficam no disco para desenvolvimento local, mas não são parte
 # do produto publicável. O portal renderizado docs/index.html CONTINUA
