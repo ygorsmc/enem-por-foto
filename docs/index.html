@@ -266,7 +266,7 @@ footer.site-footer{background:#2A2018;color:#C4B6A0;margin-top:64px;border-top:2
 <a href="#objetivo" class="dropdown-link" data-page="stress">Objetivo</a>
 <a href="#componentes-a-medir" class="dropdown-link" data-page="stress">Componentes a Medir</a>
 <a href="#ganho-do-cache-de-contexto-medido-deepse" class="dropdown-link" data-page="stress">Ganho do Cache de Contexto (medido — DeepSeek)</a>
-<a href="#teste-de-rajada-burst-na-borda-http-a-me" class="dropdown-link" data-page="stress">Teste de Rajada (Burst) na Borda HTTP (a medir)</a>
+<a href="#teste-de-rajada-burst-na-borda-http-medi" class="dropdown-link" data-page="stress">Teste de Rajada (Burst) na Borda HTTP — medido (piloto local)</a>
 <a href="#reflex-o-cr-tica" class="dropdown-link" data-page="stress">Reflexão Crítica</a>
 </div>
     </div>
@@ -1234,7 +1234,7 @@ Aluno                         Bot
 <div class="content-wrapper"><h1 id="testes-de-stress-pipeline-de-corre-o">Testes de Stress — Pipeline de Correção</h1>
 
 <blockquote>
-<p>🔬 <strong>Status: piloto local rodado, teste em nuvem pendente.</strong> Um piloto local (n=5, via Telegram + túnel ngrok, DeepSeek V4 Flash, <code>CORRECTION_EFFORT=max</code>) já preencheu a decomposição de latência por etapa — ver tabela abaixo. O que falta medir é a <strong>rajada na borda HTTP</strong> e o <strong>ganho do cache de contexto</strong>; comparar outros provedores/efforts saiu de escopo por decisão de custo × qualidade (DeepSeek/<code>max</code> adotado — ver <strong>Métricas e ROI</strong>, §8.2 e §8.4.1), não por falta de medição.</p>
+<p>🔬 <strong>Status: pilotos locais rodados, teste em nuvem pendente.</strong> Latência por etapa (n=5, Telegram + túnel ngrok, DeepSeek V4 Flash, <code>CORRECTION_EFFORT=max</code>), ganho do cache (agregado real do DeepSeek) e <strong>rajada na borda HTTP</strong> (até 100 webhooks concorrentes) já foram medidos localmente — ver seções abaixo. O que resta é rodar o mesmo em <strong>ambiente de nuvem</strong> (Azure) para confirmar os números em produção. Comparar outros provedores/efforts saiu de escopo por decisão de custo × qualidade (DeepSeek/<code>max</code> adotado — ver <strong>Métricas e ROI</strong>, §8.2 e §8.4.1), não por falta de medição.</p>
 </blockquote>
 
 <hr>
@@ -1295,30 +1295,51 @@ Aluno                         Bot
 
 <hr>
 
-<h2 id="teste-de-rajada-burst-na-borda-http-a-me">Teste de Rajada (Burst) na Borda HTTP (a medir)</h2>
+<h2 id="teste-de-rajada-burst-na-borda-http-medi">Teste de Rajada (Burst) na Borda HTTP — medido (piloto local)</h2>
 
-<p>Objetivo: confirmar que N webhooks simultâneos <strong>não</strong> degradam a resposta de <200ms, já que o trabalho pesado é despachado para tasks de <em>background</em>.</p>
+<p>Objetivo: confirmar que N webhooks simultâneos não quebram a resposta <200ms, já que o trabalho pesado é despachado para tasks de <em>background</em>.</p>
+
+<p><strong>Método.</strong> <code>_local/scripts/burst_test.py</code> dispara N POSTs concorrentes direto no container local (<code>127.0.0.1:8000</code>, sem o túnel ngrok no meio) com updates de <strong>texto</strong> (zero OCR/LLM — o trabalho de background é o fluxo de consentimento) e <code>chat_id</code> inválido (nenhuma mensagem chega a alguém real). Container com <strong>um worker Uvicorn</strong> (default — um event loop só).</p>
 
 <div class="table-wrap"><table>
-<tr><th>Métrica</th><th>Valor</th></tr>
-<tr><td>Webhooks disparados em rajada</td><td>—</td></tr>
-<tr><td>Respostas dentro de 200 ms</td><td>—</td></tr>
-<tr><td>Tasks de background concluídas</td><td>—</td></tr>
-<tr><td>Degradação (última − primeira)</td><td>—</td></tr>
+<tr><th>N simultâneo</th><th>HTTP 200</th><th><200ms</th><th>Edge p50</th><th>Edge p95</th><th>Edge máx</th></tr>
+<tr><td>10</td><td>10/10</td><td><strong>10/10</strong></td><td>54ms</td><td>78ms</td><td>78ms</td></tr>
+<tr><td>20</td><td>20/20</td><td><strong>20/20</strong></td><td>58ms</td><td>119ms</td><td>125ms</td></tr>
+<tr><td>50</td><td>50/50</td><td>30/50</td><td>127ms</td><td>393ms</td><td>410ms</td></tr>
+<tr><td>100</td><td>100/100</td><td>24/100</td><td>408ms</td><td>830ms</td><td>989ms</td></tr>
 </table></div>
+
+<p><strong>O invariante crítico se manteve em 100% dos casos: toda requisição retornou 200</strong> — nunca um 4xx/5xx que dispararia retry-storm da Meta/Telegram (invariante 2). O SLA <em>soft</em> de <200ms, por outro lado, segura até ~20 concorrentes e começa a ceder a partir de 50.</p>
+
+<p><strong>Diagnóstico: a culpa é da contenção no event loop, não do edge.</strong> Repetindo a rajada com todos os updates deduplicando (mesmo <code>message_id</code> → nenhuma task de background é enfileirada, flag <code>--same-id</code>), o edge sozinho fica plano mesmo em N=100:</p>
+
+<div class="table-wrap"><table>
+<tr><th>N simultâneo (sem background)</th><th><200ms</th><th>Edge p95</th><th>Edge máx</th></tr>
+<tr><td>50</td><td><strong>50/50</strong></td><td>134ms</td><td>135ms</td></tr>
+<tr><td>100</td><td><strong>100/100</strong></td><td>130ms</td><td>137ms</td></tr>
+</table></div>
+
+<p>Ou seja: <strong>parsear + validar assinatura + checar idempotência no Redis + enfileirar + responder 200 escala tranquilo</strong> (100 concorrentes a p95 130ms). Quem empurra a latência pra cima são as <strong>tasks de background rodando no mesmo event loop</strong> (worker único): sob dezenas delas simultâneas, as respostas do edge esperam atrás das continuações das tasks.</p>
+
+<p><strong>Ressalvas honestas:</strong></p>
+<ul class="ordered">
+<li><strong>O background do teste não é o de produção.</strong> Aqui as tasks fazem consentimento + um envio que falha rápido; em produção fazem OCR/LLM, que ficam <em>segundos</em> aguardando rede (cedem o loop mais), mas também vivem muito mais tempo. O teste caracteriza o <strong>padrão</strong> de contenção do loop, não prevê o número exato de produção.</li>
+<li><strong>50–100 webhooks <em>simultâneos</em> é muito além do realista</strong> para um bot único de baixo volume: as mensagens chegam pingadas conforme os alunos escrevem, não em lote. Na faixa realista (≤20 concorrentes) o SLA segura com folga.</li>
+<li><strong>Alavanca, se um dia importar:</strong> <code>uvicorn --workers N</code> no mesmo container — todos os workers falam com o mesmo Redis embutido (localhost), então <strong>não fere o invariante de réplica única</strong> (worker ≠ réplica). Alternativamente, mover o trabalho pesado para um processo/fila separada.</li>
+</ul>
 
 <hr>
 
 <h2 id="reflex-o-cr-tica">Reflexão Crítica</h2>
 
-<p>Perguntas que a análise deve responder, no mesmo espírito do restante da documentação — cinco ainda abertas, uma já respondida com dado real:</p>
+<p>Perguntas que a análise deve responder, no mesmo espírito do restante da documentação — a maioria já respondida com dado real; sobra o que só a nuvem fecha:</p>
 
 <ul class="ordered">
 <li><strong>Qual é o gargalo real? ✅ Respondida.</strong> Não é "OCR + LLM" como hipótese original — é o <strong>LLM sozinho</strong>: ~93% do tempo total (92s médios de correção contra 3,9s médios de foto). OCR (1,7s) e download (2,2s) são rápidos; é a geração do LLM que domina, de forma bem mais extrema do que a hipótese inicial previa. Borda e Redis são de fato desprezíveis (ver "Overhead por tarefa" na tabela acima).</li>
 <li><strong>Existe correlação entre tamanho do payload e latência?</strong> Não isolado ainda — o piloto variou o tamanho da foto (90–212 KB) sem controle experimental rígido; a correlação com <code>download_ms</code> não foi testada estatisticamente (n=5 é pouco para isso). Para o bloco dinâmico do prompt (tema+motivadores+redação) × <code>llm_ms</code>, não há dados pareados ainda.</li>
 <li><strong>Qual provedor/configuração oferece o melhor equilíbrio latência × custo × qualidade? ✅ Decidida (por custo × qualidade, não por varredura exaustiva).</strong> A configuração adotada é <strong>DeepSeek V4 Flash + <code>CORRECTION_EFFORT=max</code></strong>. Comparar outros provedores foi descartado por custo — o Gemini 3 Flash sai a ~R$ 0,31/redação contra o custo marginal do DeepSeek (§8.4.1), sem indício de ganho de qualidade que justifique. Reduzir o effort para <code>high</code> já <em>piorou</em> o alinhamento com o proxy de acurácia (§8.2) — e não há nível abaixo de <code>high</code> no DeepSeek (<code>low</code>/<code>medium</code> mapeiam para <code>high</code>), então os dois efforts efetivos já foram os dois comparados. Não é uma varredura de todos os provedores, mas o espaço de effort do DeepSeek está completo — é uma decisão de engenharia informada pelos pilotos de custo e qualidade.</li>
-<li><strong>A borda aguenta rajada</strong> sem violar o SLA de 200ms da Meta? Não testado — nenhum teste de carga/concorrência rodou ainda.</li>
-<li><strong>O sistema está pronto para o volume de uma escola?</strong> Parcialmente informado: sabemos agora que cada correção individual consome ~99s de processamento assíncrono (majoritariamente LLM, não CPU/rede do próprio contêiner) — como o gargalo é I/O externo, não recursos locais, várias correções simultâneas não deveriam competir por CPU/memória da réplica única. Mas isso é inferência da arquitetura, não medição de rajada real.</li>
+<li><strong>A borda aguenta rajada sem violar o SLA de 200ms? ✅ Testada (piloto local).</strong> O <strong>edge sozinho</strong> aguenta 100 webhooks concorrentes a p95 130ms; o que degrada sob rajada agressiva (≥50) é a <strong>contenção das tasks de background no worker único</strong>, não o edge. E o invariante que mais importa se manteve: <strong>toda requisição retornou 200</strong> em todas as rajadas (sem retry-storm). Na faixa realista (≤20 concorrentes) o SLA segura. Ver seção "Teste de Rajada" acima.</li>
+<li><strong>O sistema está pronto para o volume de uma escola? Parcialmente.</strong> Cada correção consome ~99s de processamento assíncrono (majoritariamente LLM, I/O externo — não CPU/rede do contêiner). A rajada mostrou que o <strong>edge</strong> não é o gargalo (escala a 100 concorrentes); o limite prático é quantas tasks pesadas (OCR/LLM) o worker único sustenta em paralelo sem degradar o tempo de resposta — mensurável de verdade só sob carga de produção em nuvem, com a alavanca <code>--workers</code>/fila à mão se precisar.</li>
 </ul>
 
 <blockquote>
@@ -1456,7 +1477,7 @@ Aluno                         Bot
 <p><strong>Nota de UX:</strong> o fluxo mascara a latência com sinais de progresso — mensagem de "processando", indicador de "digitando" e o <strong>preview do OCR</strong> (que já dá ao aluno algo para revisar enquanto ainda não há nota). A latência percebida é menor que a medida — mas quase 100 segundos de espera na correção é tempo real, não só percepção, e vale considerar ao escolher o effort de produção.</p>
 </blockquote>
 
-<p><strong>Em aberto.</strong> Amostra pequena (n=5), um provedor só (DeepSeek), ambiente local — não nuvem — e um único valor de <code>CORRECTION_EFFORT</code>. Ver <strong>Testes de Stress</strong> para a tabela completa e o que falta medir (outros provedores, outros efforts, teste de rajada, cache de contexto).</p>
+<p><strong>Em aberto.</strong> Amostra pequena (n=5) e ambiente local — não nuvem. O que já foi medido localmente (decomposição de latência, <strong>rajada na borda</strong> até 100 concorrentes, ganho do cache) está em <strong>Testes de Stress</strong>; o que falta é confirmar tudo em <strong>ambiente de nuvem</strong> (Azure). A rajada, aliás, mostrou que o edge não é o gargalo — ele escala a 100 requisições concorrentes; o limite é a contenção das tasks de background no worker único (ver <strong>Testes de Stress</strong>, seção Rajada).</p>
 
 <hr>
 
@@ -1640,7 +1661,7 @@ tokens_saída    ≈  a correção formatada (competências + feedback + reescri
 
 <h3 id="prioridade-1-medir-para-decidir">Prioridade 1 — Medir para decidir</h3>
 <ul>
-<li><strong>Executar os testes de stress em nuvem</strong> (aba <strong>Testes de Stress</strong>): confirmar o piloto local de latência (§8.1) em produção e rodar o teste de rajada na borda HTTP.</li>
+<li><strong>Confirmar os pilotos locais em nuvem</strong> (aba <strong>Testes de Stress</strong>): latência, rajada na borda e cache já foram medidos localmente; falta repetir em produção (Azure) — inclusive testar o efeito de <code>uvicorn --workers</code> na contenção de background que a rajada expôs.</li>
 <li><strong>Instrumentar a observabilidade</strong> para a taxa de sucesso em regime real (§8.3) — o único número de confiabilidade que ainda falta, já que o piloto informal de 20+ correções sem falha não substitui uma medição com N grande.</li>
 </ul>
 
@@ -1835,6 +1856,7 @@ tokens_saída    ≈  a correção formatada (competências + feedback + reescri
 <li><strong>Custo efetivo por correção</strong> medido em uso real (DeepSeek V4 Flash) — ver Métricas e ROI, §8.4.1.</li>
 <li><strong>Acurácia da nota</strong> — piloto medido (30 redações do Essay-BR, MAE 129,3 pontos, viés praticamente neutro com <code>CORRECTION_EFFORT=max</code>) — ver Métricas e ROI, §8.2. Não é a nota oficial do INEP (que não publica o texto das redações), e a amostra ainda é pequena para fechar o número. Repetir com <code>CORRECTION_EFFORT=high</code> mudou bastante a nota (MAE subiu para 162,7, viés para -64) — o effort não é só um botão de velocidade, muda o comportamento do corretor.</li>
 <li><strong>Latência por etapa</strong> — piloto local medido (n=5, Telegram): ~99s médios até a nota chegar, dos quais <strong>~93% é só a chamada ao LLM</strong> (~92s) — download+OCR somam só ~4s. Confirma com folga a hipótese de que o gargalo é a camada de modelos, não a infraestrutura — ver Métricas e ROI, §8.1.</li>
+<li><strong>Rajada na borda</strong> — piloto local medido (até 100 webhooks concorrentes): o edge escala (<strong>100 concorrentes a p95 130ms</strong>) e <strong>toda requisição retorna 200</strong> (sem retry-storm); na faixa realista (≤20 concorrentes) o <200ms segura. Sob rajada agressiva (≥50), o que degrada é a contenção das tasks de background no worker único, não o edge — ver Testes de Stress.</li>
 </ul>
 
 <p><strong>Pendente de medição (marcado como ⏳ ao longo da documentação):</strong></p>
