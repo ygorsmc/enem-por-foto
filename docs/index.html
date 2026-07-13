@@ -265,7 +265,7 @@ footer.site-footer{background:#2A2018;color:#C4B6A0;margin-top:64px;border-top:2
         <div class="tab-dropdown">
 <a href="#objetivo" class="dropdown-link" data-page="stress">Objetivo</a>
 <a href="#componentes-a-medir" class="dropdown-link" data-page="stress">Componentes a Medir</a>
-<a href="#ganho-do-cache-de-contexto-a-medir-" class="dropdown-link" data-page="stress">Ganho do Cache de Contexto (a medir)</a>
+<a href="#ganho-do-cache-de-contexto-medido-deepse" class="dropdown-link" data-page="stress">Ganho do Cache de Contexto (medido — DeepSeek)</a>
 <a href="#teste-de-rajada-burst-na-borda-http-a-me" class="dropdown-link" data-page="stress">Teste de Rajada (Burst) na Borda HTTP (a medir)</a>
 <a href="#reflex-o-cr-tica" class="dropdown-link" data-page="stress">Reflexão Crítica</a>
 </div>
@@ -299,11 +299,10 @@ footer.site-footer{background:#2A2018;color:#C4B6A0;margin-top:64px;border-top:2
 <a href="#8-4-custo-e-roi" class="dropdown-link" data-page="metricas">8.4 Custo e ROI</a>
 <a href="#8-4-1-custo-por-corre-o-estrutura-" class="dropdown-link" data-page="metricas">8.4.1 Custo por correção (estrutura)</a>
 <a href="#8-4-2-valor-gerado-a-l-gica-" class="dropdown-link" data-page="metricas">8.4.2 Valor gerado (a lógica)</a>
-<a href="#8-4-3-modelos-de-sustenta-o-hip-teses-a-" class="dropdown-link" data-page="metricas">8.4.3 Modelos de sustentação (hipóteses — a definir)</a>
+<a href="#8-4-3-por-que-isto-n-o-precisa-ser-um-pr" class="dropdown-link" data-page="metricas">8.4.3 Por que isto não precisa ser um produto pago</a>
 <a href="#8-5-roadmap-priorizado" class="dropdown-link" data-page="metricas">8.5 Roadmap Priorizado</a>
 <a href="#prioridade-1-medir-para-decidir" class="dropdown-link" data-page="metricas">Prioridade 1 — Medir para decidir</a>
-<a href="#prioridade-2-calibrar-a-qualidade-da-cor" class="dropdown-link" data-page="metricas">Prioridade 2 — Calibrar a qualidade da correção</a>
-<a href="#prioridade-3-escala-e-produto" class="dropdown-link" data-page="metricas">Prioridade 3 — Escala e produto</a>
+<a href="#prioridade-2-escala-e-produto" class="dropdown-link" data-page="metricas">Prioridade 2 — Escala e produto</a>
 </div>
     </div>
 
@@ -382,7 +381,7 @@ Aluno                    Bot
 <li><strong>Mono-container</strong>: FastAPI + Redis no MESMO contêiner. O <code>entrypoint.sh</code> sobe o <code>redis-server</code> (só em <code>127.0.0.1</code>, nunca exposto fora do contêiner), espera o PING responder e só então executa o <code>uvicorn</code>. Um único deploy, sem Redis gerenciado à parte.</li>
 <li><strong>Estado 100% em Redis</strong> (sem banco relacional): máquina de estados da conversa (TTL 45 min), consentimento LGPD, rate-limit diário e idempotência de webhook. O AOF em <code>/data</code> (volume) sobrevive a restart do contêiner.</li>
 <li><strong>Réplica única, sempre</strong>: como o Redis vive dentro do contêiner, ele não é compartilhado entre réplicas — <code>replicas > 1</code> fragmentaria rate-limit, consentimento e estado de fluxo (cada réplica veria um Redis diferente). Mantenha 1 réplica (folgado para o tráfego de uma escola).</li>
-<li><strong>Correção plugável</strong>: o provedor do LLM troca por env var (<code>CORRECTION_PROVIDER</code>: <code>gemini</code> | <code>claude</code> | <code>openai</code> | <code>deepseek</code> | <code>maritaca</code>; <code>CORRECTION_MODEL</code> define o modelo dentro dele — default <code>gemini</code> / <code>gemini-3.5-flash</code>), o que permite comparar modelos rápido. O prompt é dividido em bloco estático (matriz, ~6.000 tokens) + bloco dinâmico (tema/motivadores/redação) para aproveitar cache de contexto — explícito no Gemini e no Claude, automático no OpenAI/DeepSeek (a Maritaca não documenta cache; o bloco estático é reenviado sem desconto confirmado).</li>
+<li><strong>Correção plugável</strong>: o provedor do LLM troca por env var (<code>CORRECTION_PROVIDER</code>: <code>gemini</code> | <code>claude</code> | <code>openai</code> | <code>deepseek</code> | <code>maritaca</code>; <code>CORRECTION_MODEL</code> define o modelo dentro dele — default <code>deepseek</code> / <code>deepseek-v4-flash</code>, adotado por custo × qualidade), o que permite comparar modelos rápido. O prompt é dividido em bloco estático (matriz, ~6.000 tokens) + bloco dinâmico (tema/motivadores/redação) para aproveitar cache de contexto — explícito no Gemini e no Claude, automático no OpenAI/DeepSeek (a Maritaca não documenta cache; o bloco estático é reenviado sem desconto confirmado).</li>
 </ul>
 
 <h3 id="por-que-mensageria-e-n-o-um-app-de-ia">Por que mensageria, e não um app de IA</h3>
@@ -1025,7 +1024,7 @@ Aluno                         Bot
 
 <ul>
 <li><strong>OCR só na redação.</strong> Tema e textos motivadores são <strong>texto digitado</strong>; uma foto nesses passos é recusada com orientação, para não queimar créditos de OCR à toa.</li>
-<li><strong>A redação pode vir em até 3 fotos</strong> (frente/verso, duas folhas) — cada parte é transcrita e concatenada.</li>
+<li><strong>A redação pode vir em até 2 fotos</strong> (frente/verso) — cada parte é transcrita e concatenada. O texto definitivo do ENEM tem 30 linhas numa face só e cabe em uma foto; a segunda existe para o aluno que treina em folha comum (letra maior, verso da folha).</li>
 <li><strong>Rate-limit é consumido na correção</strong>, não no passeio pelo fluxo. Uma falha técnica na correção <strong>devolve o crédito</strong> do dia, e o estado é preservado para o aluno tentar de novo sem repetir tudo.</li>
 <li><strong>O estado morre antes da entrega.</strong> Se o envio falhar no meio dos <em>chunks</em>, o aluno recomeça limpo em vez de ficar preso num <code>CONFIRMING</code> fantasma.</li>
 </ul>
@@ -1047,9 +1046,9 @@ Aluno                         Bot
 
 <div class="table-wrap"><table>
 <tr><th>Provedor (<code>CORRECTION_PROVIDER</code>)</th><th>Cache do bloco estático</th></tr>
-<tr><td><code>gemini</code> (default)</td><td>Cache <strong>explícito</strong> (<code>client.caches.create</code>), com <em>fallback</em> para bloco inline se a criação falhar</td></tr>
+<tr><td><code>gemini</code></td><td>Cache <strong>explícito</strong> (<code>client.caches.create</code>), com <em>fallback</em> para bloco inline se a criação falhar</td></tr>
 <tr><td><code>claude</code></td><td>Cache <strong>explícito</strong> (<code>cache_control</code>)</td></tr>
-<tr><td><code>openai</code>, <code>deepseek</code></td><td>Cache <strong>automático</strong> de prefixo</td></tr>
+<tr><td><code>openai</code>, <code>deepseek</code> (default)</td><td>Cache <strong>automático</strong> de prefixo</td></tr>
 <tr><td><code>maritaca</code></td><td>Sem cache documentado — o bloco estático é reenviado, sem desconto confirmado</td></tr>
 </table></div>
 
@@ -1235,7 +1234,7 @@ Aluno                         Bot
 <div class="content-wrapper"><h1 id="testes-de-stress-pipeline-de-corre-o">Testes de Stress — Pipeline de Correção</h1>
 
 <blockquote>
-<p>🔬 <strong>Status: piloto local rodado, teste em nuvem pendente.</strong> Um piloto local (n=5, via Telegram + túnel ngrok, DeepSeek V4 Flash, <code>CORRECTION_EFFORT=max</code>) já preencheu a decomposição de latência por etapa — ver tabela abaixo. As linhas ainda com <code>—</code>/⏳ (outros provedores, outros efforts, rajada na borda, cache de contexto) esperam um <em>harness</em> de carga contra um ambiente de homologação em nuvem.</p>
+<p>🔬 <strong>Status: piloto local rodado, teste em nuvem pendente.</strong> Um piloto local (n=5, via Telegram + túnel ngrok, DeepSeek V4 Flash, <code>CORRECTION_EFFORT=max</code>) já preencheu a decomposição de latência por etapa — ver tabela abaixo. O que falta medir é a <strong>rajada na borda HTTP</strong> e o <strong>ganho do cache de contexto</strong>; comparar outros provedores/efforts saiu de escopo por decisão de custo × qualidade (DeepSeek/<code>max</code> adotado — ver <strong>Métricas e ROI</strong>, §8.2 e §8.4.1), não por falta de medição.</p>
 </blockquote>
 
 <hr>
@@ -1260,15 +1259,12 @@ Aluno                         Bot
 <tr><th>Componente</th><th>O que medir</th><th>Payload de teste</th><th>Rodadas</th><th>Mín (s)</th><th>Méd (s)</th><th>Máx (s)</th><th>Status</th></tr>
 <tr><td><strong>Download da mídia</strong></td><td>Baixar a foto do provedor de canal</td><td>foto real, 90–212 KB</td><td>5</td><td>1,49</td><td>2,21</td><td>3,03</td><td>✅</td></tr>
 <tr><td><strong>OCR (Mistral)</strong></td><td>Transcrever 1 foto de redação</td><td>redação real, foto única</td><td>5</td><td>1,38</td><td>1,70</td><td>1,97</td><td>✅</td></tr>
-<tr><td><strong>OCR (Mistral)</strong></td><td>Redação em 3 fotos (frente/verso)</td><td>3 fotos</td><td>—</td><td>—</td><td>—</td><td>—</td><td>⏳</td></tr>
+<tr><td><strong>OCR (Mistral)</strong></td><td>Redação em 2 fotos (frente/verso)</td><td>2 fotos</td><td>—</td><td>—</td><td>—</td><td>—</td><td>➖ fora do caso ideal</td></tr>
 <tr><td><strong>LLM — DeepSeek</strong></td><td>Correção completa, <code>CORRECTION_EFFORT=max</code></td><td>~6.000 + ~800 tokens</td><td>5</td><td>83,00</td><td>92,00</td><td>98,98</td><td>✅</td></tr>
-<tr><td><strong>LLM — DeepSeek</strong></td><td>Correção completa, outros efforts (<code>high</code>/<code>medium</code>/<code>low</code>)</td><td>idem</td><td>—</td><td>—</td><td>—</td><td>—</td><td>⏳</td></tr>
-<tr><td><strong>LLM — Gemini</strong></td><td>Correção completa (estático + dinâmico)</td><td>~6.000 + ~800 tokens</td><td>—</td><td>—</td><td>—</td><td>—</td><td>⏳</td></tr>
-<tr><td><strong>LLM — Claude</strong></td><td>Correção completa</td><td>idem</td><td>—</td><td>—</td><td>—</td><td>—</td><td>⏳</td></tr>
-<tr><td><strong>LLM — OpenAI</strong></td><td>Correção completa</td><td>idem</td><td>—</td><td>—</td><td>—</td><td>—</td><td>⏳</td></tr>
-<tr><td><strong>LLM — Maritaca</strong></td><td>Correção completa</td><td>idem</td><td>—</td><td>—</td><td>—</td><td>—</td><td>⏳</td></tr>
+<tr><td><strong>LLM — DeepSeek</strong></td><td>Correção com <code>CORRECTION_EFFORT=high</code></td><td>idem</td><td>—</td><td>—</td><td>—</td><td>—</td><td>⏳ latência não cronometrada (só qualidade, §8.2)</td></tr>
+<tr><td><strong>LLM — outros provedores</strong></td><td>Gemini / Claude / OpenAI / Maritaca</td><td>~6.000 + ~800 tokens</td><td>—</td><td>—</td><td>—</td><td>—</td><td>➖ fora de escopo (custo, §8.4.1)</td></tr>
 <tr><td><strong>Borda HTTP</strong></td><td>Tempo de resposta do webhook (<200ms, SLA da Meta)</td><td>update mínimo</td><td>—</td><td>—</td><td>—</td><td>—</td><td>⏳</td></tr>
-<tr><td><strong>Redis</strong></td><td><code>get</code>/<code>set</code> do estado do fluxo, isolado</td><td>FlowData JSON</td><td>—</td><td>—</td><td>—</td><td>—</td><td>⏳</td></tr>
+<tr><td><strong>Redis</strong></td><td><code>get</code>/<code>set</code> do estado, isolado</td><td>FlowData JSON</td><td>—</td><td>—</td><td>—</td><td>—</td><td>➖ coberto pelo overhead combinado</td></tr>
 <tr><td><strong>Overhead por tarefa</strong> (Redis+borda+envio, combinado)</td><td><code>task_ms − download_ms − ocr_ms</code> (etapa foto) / <code>task_ms − llm_ms</code> (etapa correção) — não isola Redis de borda de envio de mensagem, só confirma que a soma é pequena</td><td>—</td><td>5+5</td><td>~0 (foto) / 2,34 (correção)</td><td>~0 (foto) / 3,09 (correção)</td><td>~0 (foto) / 4,40 (correção)</td><td>✅</td></tr>
 </table></div>
 
@@ -1278,18 +1274,24 @@ Aluno                         Bot
 
 <hr>
 
-<h2 id="ganho-do-cache-de-contexto-a-medir-">Ganho do Cache de Contexto (a medir)</h2>
+<h2 id="ganho-do-cache-de-contexto-medido-deepse">Ganho do Cache de Contexto (medido — DeepSeek)</h2>
 
-<p>O bloco estático do prompt (~6.000 tokens) é reenviado a cada correção, mas é <strong>cacheável</strong>. A medição deve comparar a latência e o custo da <strong>primeira</strong> chamada (cache frio) contra as <strong>subsequentes</strong> (cache quente), por provedor.</p>
+<p>O bloco estático do prompt (~6.000 tokens) é reenviado a cada correção, mas é <strong>cacheável</strong>. O painel de uso do DeepSeek separa quantos tokens de entrada bateram no cache — e o agregado real do período de testes confirma que a alavanca funciona:</p>
 
 <div class="table-wrap"><table>
-<tr><th>Provedor</th><th>Cache</th><th>1ª chamada (fria)</th><th>Chamadas seguintes (quente)</th><th>Redução</th></tr>
-<tr><td>Gemini</td><td>Explícito</td><td>—</td><td>—</td><td>—</td></tr>
-<tr><td>Claude</td><td>Explícito</td><td>—</td><td>—</td><td>—</td></tr>
-<tr><td>OpenAI</td><td>Automático</td><td>—</td><td>—</td><td>—</td></tr>
-<tr><td>DeepSeek</td><td>Automático</td><td>—</td><td>—</td><td>—</td></tr>
-<tr><td>Maritaca</td><td>Não documentado</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><th>Tipo de token</th><th>Quantidade</th><th>Fatia</th></tr>
+<tr><td>Input — <strong>cache hit</strong></td><td>200.960</td><td><strong>75% do input</strong></td></tr>
+<tr><td>Input — cache miss</td><td>67.168</td><td>25% do input</td></tr>
+<tr><td>Output (gerado)</td><td>401.863</td><td>—</td></tr>
 </table></div>
+
+<p><strong>Três de cada quatro tokens de entrada vieram do cache.</strong> É a confirmação direta de que o bloco estático de ~6.000 tokens não é recobrado a cada correção — exatamente o que a alavanca de custo nº 1 (<strong>Métricas e ROI</strong>, §8.4.1) previa. Como o DeepSeek cobra o token de <em>cache hit</em> por uma fração do preço do <em>cache miss</em>, isso derruba a maior parte do custo de <strong>entrada</strong>.</p>
+
+<p><strong>Nuance honesta: o gargalo de custo é a saída, não a entrada.</strong> Os 401.863 tokens de <em>output</em> superam os 268.128 de input somados — e, como o token de saída é o mais caro da tabela do DeepSeek, é ele que domina o custo por correção. O cache faz seu trabalho (75% de acerto no input), mas a alavanca de custo que ainda sobra para explorar é o <strong>tamanho da resposta gerada</strong> (competências + feedback + reescrita), não o input já cacheado.</p>
+
+<blockquote>
+<p><strong>Ainda não isolado:</strong> a comparação por-chamada (1ª fria vs. subsequentes quentes) não foi feita — o número acima é o <strong>agregado real</strong> do DeepSeek em uso, suficiente para confirmar que o cache opera, não para um teste controlado frio-vs-quente. Os demais provedores (Gemini/Claude/OpenAI) não foram medidos porque saíram de escopo (DeepSeek adotado — §8.4.1).</p>
+</blockquote>
 
 <hr>
 
@@ -1314,7 +1316,7 @@ Aluno                         Bot
 <ul class="ordered">
 <li><strong>Qual é o gargalo real? ✅ Respondida.</strong> Não é "OCR + LLM" como hipótese original — é o <strong>LLM sozinho</strong>: ~93% do tempo total (92s médios de correção contra 3,9s médios de foto). OCR (1,7s) e download (2,2s) são rápidos; é a geração do LLM que domina, de forma bem mais extrema do que a hipótese inicial previa. Borda e Redis são de fato desprezíveis (ver "Overhead por tarefa" na tabela acima).</li>
 <li><strong>Existe correlação entre tamanho do payload e latência?</strong> Não isolado ainda — o piloto variou o tamanho da foto (90–212 KB) sem controle experimental rígido; a correlação com <code>download_ms</code> não foi testada estatisticamente (n=5 é pouco para isso). Para o bloco dinâmico do prompt (tema+motivadores+redação) × <code>llm_ms</code>, não há dados pareados ainda.</li>
-<li><strong>Qual provedor/configuração oferece o melhor equilíbrio latência × custo × qualidade?</strong> Parcialmente respondida, mas só para DeepSeek: <code>CORRECTION_EFFORT</code> por si só já muda drasticamente a <strong>qualidade</strong> da nota entre <code>max</code> e <code>high</code> (ver <strong>Métricas e ROI</strong>, §8.2) — falta medir o lado da <strong>latência</strong> nesses mesmos efforts, e comparar contra outros provedores (Gemini, Claude, OpenAI, Maritaca) na mesma redação.</li>
+<li><strong>Qual provedor/configuração oferece o melhor equilíbrio latência × custo × qualidade? ✅ Decidida (por custo × qualidade, não por varredura exaustiva).</strong> A configuração adotada é <strong>DeepSeek V4 Flash + <code>CORRECTION_EFFORT=max</code></strong>. Comparar outros provedores foi descartado por custo — o Gemini 3 Flash sai a ~R$ 0,31/redação contra o custo marginal do DeepSeek (§8.4.1), sem indício de ganho de qualidade que justifique. Reduzir o effort para <code>high</code> já <em>piorou</em> o alinhamento com o proxy de acurácia (§8.2) — e não há nível abaixo de <code>high</code> no DeepSeek (<code>low</code>/<code>medium</code> mapeiam para <code>high</code>), então os dois efforts efetivos já foram os dois comparados. Não é uma varredura de todos os provedores, mas o espaço de effort do DeepSeek está completo — é uma decisão de engenharia informada pelos pilotos de custo e qualidade.</li>
 <li><strong>A borda aguenta rajada</strong> sem violar o SLA de 200ms da Meta? Não testado — nenhum teste de carga/concorrência rodou ainda.</li>
 <li><strong>O sistema está pronto para o volume de uma escola?</strong> Parcialmente informado: sabemos agora que cada correção individual consome ~99s de processamento assíncrono (majoritariamente LLM, não CPU/rede do próprio contêiner) — como o gargalo é I/O externo, não recursos locais, várias correções simultâneas não deveriam competir por CPU/memória da réplica única. Mas isso é inferência da arquitetura, não medição de rajada real.</li>
 </ul>
@@ -1509,7 +1511,7 @@ Aluno                         Bot
 
 <p><strong>Não dá para saber se <code>high</code> está mais certo ou mais errado.</strong> <code>max</code> estava melhor calibrado <em>contra este proxy específico</em> (viés ≈ 0); isso não prova que <code>max</code> é mais correto em termos absolutos, só que combinou melhor com as notas do Essay-BR nesta amostra. A mesma limitação epistêmica do restante desta seção se aplica: <code>high</code> pode estar sendo mais rigoroso do que um corretor humano exigente seria (o que aproximaria da realidade), ou superpunindo (o que afastaria) — sem um terceiro corretor de referência, não dá para desempatar. Na prática, <code>CORRECTION_EFFORT</code> se mostrou um eixo de calibração de comportamento tão relevante quanto a escolha de provedor, e também afeta a latência (ver §8.1) — vale documentar qual valor está em produção e por quê, não só qual é mais rápido.</p>
 
-<p><strong>Em aberto.</strong> Escalar a amostra (100+), repetir com outro provedor (<code>--provider gemini</code>) e testar os efforts intermediários (<code>medium</code>, <code>low</code>) fecharia uma leitura mais robusta — ver Roadmap, §8.5.</p>
+<p><strong>Por que a amostra fica em n=30 (decisão, não pendência).</strong> Ampliar para 100+ apertaria o intervalo de confiança, mas o MAE de ~130 pontos no <code>max</code> já é <strong>aceitável para o propósito do produto</strong> — a própria correção oficial do ENEM admite divergência entre dois avaliadores humanos, e uma nota <em>estimada</em> nunca prometeu equivalência exata (ver <strong>Análise e Limitações</strong>, §3.2). Também não repetimos com <strong>outro provedor</strong>: o Gemini 3 Flash custa ~R$ 0,31/redação contra o custo marginal do DeepSeek (§8.4.1) — a diferença de preço não se justifica para um ganho de qualidade que o piloto não sugere existir. E não há <strong>effort intermediário</strong> a testar no DeepSeek: a API expõe só dois níveis efetivos, <code>high</code> e <code>max</code> (<code>low</code>/<code>medium</code> são mapeados para <code>high</code> internamente) — ou seja, o espectro completo de effort do DeepSeek já foi coberto pelos dois pilotos, não é uma varredura pela metade. Em resumo: <code>DeepSeek</code> + <code>CORRECTION_EFFORT=max</code> é a configuração adotada, e ampliar a amostra ou trocar de provedor foram <strong>avaliados e descartados por custo/benefício</strong>, não deixados pendentes.</p>
 
 <hr>
 
@@ -1526,8 +1528,10 @@ Aluno                         Bot
 <tr><td>Exceção inesperada</td><td><em>Exception handler</em> global → 200 + log</td><td>Não dispara <em>retries</em> da Meta</td></tr>
 </table></div>
 
+<p><strong>Piloto informal.</strong> Ao longo do desenvolvimento, <strong>mais de 20 correções reais</strong> (Telegram, DeepSeek) rodaram de ponta a ponta <strong>sem nenhuma falha</strong> — as três etapas concluíram e a nota chegou em todas. É um sinal encorajador de que o caminho feliz é estável, mas <strong>não é uma taxa de confiabilidade</strong>: a amostra é pequena, sem controle sobre fatores externos (instabilidade momentânea de OCR/LLM, cota, rede) que só aparecem em regime de volume e ao longo do tempo. Os retries com <em>backoff</em> existem justamente para absorver esses eventos raros, que o piloto pequeno não teve a chance de provocar.</p>
+
 <blockquote>
-<p><strong>A medir:</strong> a <strong>taxa de sucesso por correção</strong> em regime real (concluídas ÷ tentativas) e a <strong>distribuição de falhas por etapa</strong> (download × OCR × LLM) — dados que virão da observabilidade (§6.2) e dos testes de stress.</p>
+<p><strong>A medir:</strong> a <strong>taxa de sucesso por correção</strong> em regime real (concluídas ÷ tentativas, com N grande) e a <strong>distribuição de falhas por etapa</strong> (download × OCR × LLM) — dados que virão da observabilidade (§6.2) e dos testes de stress. Um piloto de 20+ correções sem falha não substitui isso.</p>
 </blockquote>
 
 <hr>
@@ -1548,7 +1552,7 @@ tokens_saída    ≈  a correção formatada (competências + feedback + reescri
 <p>As <strong>três alavancas</strong> que mantêm esse custo previsível:</p>
 
 <ul class="ordered">
-<li><strong>Cache de contexto</strong> no bloco estático (~6.000 tokens): cobrado uma vez por janela de cache, não a cada correção (explícito no Gemini/Claude, automático no OpenAI/DeepSeek).</li>
+<li><strong>Cache de contexto</strong> no bloco estático (~6.000 tokens): cobrado uma vez por janela de cache, não a cada correção (explícito no Gemini/Claude, automático no OpenAI/DeepSeek). <strong>Medido:</strong> 75% dos tokens de entrada vieram do cache no uso real com DeepSeek (ver <strong>Testes de Stress</strong>) — a alavanca funciona; a ressalva é que o custo por correção acaba dominado pela <strong>saída</strong>, não pela entrada já cacheada.</li>
 <li><strong>Rate-limit diário</strong> por aluno (<code>ESSAY_DAILY_LIMIT</code>, default 2): teto de custo por usuário.</li>
 <li><strong>Cota espiada antes do OCR</strong>: não gasta Mistral quando a correção não vai acontecer.</li>
 </ul>
@@ -1565,7 +1569,7 @@ tokens_saída    ≈  a correção formatada (competências + feedback + reescri
 </table></div>
 
 <blockquote>
-<p><strong>Nota de escopo:</strong> o valor do LLM foi medido com <code>CORRECTION_PROVIDER=deepseek</code>; o provedor default do projeto é <code>gemini</code>. Como a troca de provedor é uma variável de ambiente (ver <strong>Arquitetura</strong>, §2.5), o custo real depende de qual provedor está configurado — os demais (Gemini, Claude, OpenAI, Maritaca) ainda não foram medidos da mesma forma.</p>
+<p><strong>Nota de escopo:</strong> o valor do LLM foi medido com <code>CORRECTION_PROVIDER=deepseek</code> — que é também o provedor <strong>adotado como default</strong> do projeto, justamente por esse custo. A troca de provedor é uma variável de ambiente (ver <strong>Arquitetura</strong>, §2.5); os demais (Gemini, Claude, OpenAI, Maritaca) não foram medidos porque o custo do DeepSeek já resolve o requisito — o Gemini 3 Flash, por exemplo, sai a ~R$ 0,31/redação, ordens de grandeza acima.</p>
 </blockquote>
 
 <p><strong>Custo total por correção</strong>, somando OCR (acima da cota gratuita) + LLM (DeepSeek):</p>
@@ -1573,8 +1577,7 @@ tokens_saída    ≈  a correção formatada (competências + feedback + reescri
 <div class="table-wrap"><table>
 <tr><th>Fotos da redação</th><th>Custo OCR</th><th>Custo LLM</th><th><strong>Custo total / correção</strong></th></tr>
 <tr><td>1 foto (caso comum)</td><td>US$ 0,004</td><td>US$ 0,00375</td><td><strong>≈ US$ 0,0078</strong></td></tr>
-<tr><td>2 fotos</td><td>US$ 0,008</td><td>US$ 0,00375</td><td><strong>≈ US$ 0,0118</strong></td></tr>
-<tr><td>3 fotos (máximo)</td><td>US$ 0,012</td><td>US$ 0,00375</td><td><strong>≈ US$ 0,0158</strong></td></tr>
+<tr><td>2 fotos (máximo)</td><td>US$ 0,008</td><td>US$ 0,00375</td><td><strong>≈ US$ 0,0118</strong></td></tr>
 </table></div>
 
 <p>Ou seja: <strong>menos de 1 centavo de dólar por correção</strong> (caso comum, 1 foto) acima da cota gratuita do OCR — e, <strong>dentro</strong> da cota gratuita (como tem sido a operação até agora), o custo por correção cai para <strong>≈ US$ 0,004</strong> (só o LLM). Em escala, isso é <strong>≈ US$ 7,80 por 1.000 correções</strong> (1 foto, fora da cota gratuita) — a referência útil para orçar qualquer volume, multiplicando pelo número de correções esperado.</p>
@@ -1604,7 +1607,7 @@ tokens_saída    ≈  a correção formatada (competências + feedback + reescri
 </blockquote>
 <p>></p>
 <blockquote>
-<p>Mesmo no cenário mais caro da tabela (<strong>escola inteira, ano letivo completo, adoção de 1/3, sem considerar o free tier</strong>), o custo de execução fica na casa de <strong>dezenas de dólares por ano</strong> — não milhares, não centenas. Isso muda a leitura da seção de sustentação a seguir (§8.4.3): para uso pessoal ou de uma turma, o custo é baixo o bastante para ser <strong>bancado do próprio bolso</strong> por um aluno, professor ou desenvolvedor entusiasta, sem precisar de nenhum modelo de negócio formal. Os modelos B2B/freemium/patrocínio passam a fazer sentido só na escala de <strong>múltiplas escolas simultâneas</strong>, onde a soma de correções e o custo (ainda não medido) de hospedagem em nuvem começam a pesar.</p>
+<p>Mesmo no cenário mais caro da tabela (<strong>escola inteira, ano letivo completo, adoção de 1/3, sem considerar o free tier</strong>), o custo de execução fica na casa de <strong>dezenas de dólares por ano</strong> — não milhares, não centenas. Isso muda a leitura da seção a seguir (§8.4.3): para uso pessoal, de turma ou de escola, o custo é baixo o bastante para ser <strong>bancado do próprio bolso</strong> por um aluno, professor ou desenvolvedor entusiasta, sem precisar de nenhum modelo de negócio. Só na escala de <strong>múltiplas escolas simultâneas</strong> — onde a soma de correções e o custo (ainda não medido) de hospedagem em nuvem começam a pesar — um custeio institucional passaria a fazer sentido, e como viabilização de acesso, não como fim comercial.</p>
 </blockquote>
 
 <h3 id="8-4-2-valor-gerado-a-l-gica-">8.4.2 Valor gerado (a lógica)</h3>
@@ -1617,20 +1620,17 @@ tokens_saída    ≈  a correção formatada (competências + feedback + reescri
 <li><strong>Para a rede pública:</strong> aproxima o feedback de quem hoje depende só da escola, reduzindo a assimetria de acesso.</li>
 </ul>
 
-<h3 id="8-4-3-modelos-de-sustenta-o-hip-teses-a-">8.4.3 Modelos de sustentação (hipóteses — a definir)</h3>
+<h3 id="8-4-3-por-que-isto-n-o-precisa-ser-um-pr">8.4.3 Por que isto não precisa ser um produto pago</h3>
 
-<p>Como o produto atende um público sensível (menores, rede pública), os modelos abaixo são <strong>hipóteses de sustentabilidade</strong>, não decisão fechada — e, como visto acima, só se tornam necessários a partir de uma certa escala; para uso pessoal ou de uma turma, autofinanciamento é suficiente:</p>
+<p>Existe correção de redação por IA de graça — colar o texto num ChatGPT gratuito faz isso. Então <em>"quem pagaria por isto?"</em> é a pergunta errada: a resposta honesta é <strong>provavelmente ninguém</strong>, e tudo bem. O valor deste projeto não está em cobrar pelo que a IA genérica já faz de graça, e sim em <strong>entregar isso onde a IA genérica não chega</strong>:</p>
 
-<div class="table-wrap"><table>
-<tr><th>Modelo</th><th>Como funciona</th><th>Observação</th></tr>
-<tr><td><strong>B2B — escola/cursinho</strong></td><td>Instituição contrata; alunos usam com rate-limit</td><td>Custo por correção diluído na mensalidade da instituição</td></tr>
-<tr><td><strong>Freemium</strong></td><td>N correções grátis/dia; excedente pago</td><td>O rate-limit atual (default 2/dia) já é o mecanismo</td></tr>
-<tr><td><strong>Patrocínio/edital</strong></td><td>ONG/poder público custeia o acesso gratuito</td><td>Alinhado ao impacto social (ver <strong>Ética e LGPD</strong>)</td></tr>
-</table></div>
+<ul>
+<li><strong>Sem app, sem login, sem digitar.</strong> A rede da escola costuma bloquear o ChatGPT; aqui o aluno usa o WhatsApp/Telegram que já tem, fotografa o manuscrito e não redigita nada — preservando o treino da letra à mão da prova real.</li>
+<li><strong>Rigor da matriz, não "dar uma nota".</strong> A correção segue a Matriz do INEP transcrita em regras (triagem de zero, cinco competências, trecho citado), não um chute genérico de chatbot.</li>
+<li><strong>Privacidade pensada para menor de idade.</strong> Foto descartada após o OCR, sem histórico, TTL curto — cuidado que uma conversa avulsa num chatbot genérico não oferece.</li>
+</ul>
 
-<blockquote>
-<p>⏳ <strong>A definir:</strong> a precificação depende do custo real por correção (§8.4.1) e da estratégia de distribuição. A estrutura técnica (rate-limit por usuário, custo marginal por uso) já suporta qualquer um dos três modelos sem mudança de código.</p>
-</blockquote>
+<p><strong>O enquadramento honesto é portfólio + acesso, não receita.</strong> Como o custo de execução é de centavos (§8.4.1) e fica em dezenas de dólares por ano mesmo para uma escola inteira, um projeto assim se sustenta <strong>do próprio bolso</strong> em escala pessoal, de turma ou de escola — não precisa de modelo de negócio para existir e cumprir seu propósito social e demonstrar competência técnica. Se um dia escalasse para muitas escolas ao mesmo tempo, aí a conta de nuvem (ainda não medida) pesaria, e um custeio institucional — convênio com rede pública, patrocínio de edital — faria sentido <strong>como viabilização de acesso, não como fim comercial</strong>. Vender assinatura contra um ChatGPT gratuito não é a estratégia; fingir que seria só enfraqueceria a análise honesta que o resto desta seção construiu.</p>
 
 <hr>
 
@@ -1640,24 +1640,20 @@ tokens_saída    ≈  a correção formatada (competências + feedback + reescri
 
 <h3 id="prioridade-1-medir-para-decidir">Prioridade 1 — Medir para decidir</h3>
 <ul>
-<li><strong>Executar os testes de stress em nuvem</strong> (aba <strong>Testes de Stress</strong>): confirmar o piloto local (§8.1) em produção, com mais provedores e volumes de rajada.</li>
-<li><strong>Medir a latência por <code>CORRECTION_EFFORT</code></strong> (<code>max</code>/<code>high</code>/<code>medium</code>/<code>low</code>) — hoje só <code>max</code> foi medido (§8.1); a comparação de qualidade entre <code>max</code>/<code>high</code> (§8.2) já mostra que o effort muda comportamento, falta o lado do tempo.</li>
-<li><strong>Instrumentar a observabilidade</strong> para taxa de sucesso em produção.</li>
+<li><strong>Executar os testes de stress em nuvem</strong> (aba <strong>Testes de Stress</strong>): confirmar o piloto local de latência (§8.1) em produção e rodar o teste de rajada na borda HTTP.</li>
+<li><strong>Instrumentar a observabilidade</strong> para a taxa de sucesso em regime real (§8.3) — o único número de confiabilidade que ainda falta, já que o piloto informal de 20+ correções sem falha não substitui uma medição com N grande.</li>
 </ul>
 
-<h3 id="prioridade-2-calibrar-a-qualidade-da-cor">Prioridade 2 — Calibrar a qualidade da correção</h3>
-<ul>
-<li><strong>Ampliar o piloto de acurácia</strong> (§8.2): de n=30 para 100+ redações do Essay-BR, para uma leitura estatística mais robusta.</li>
-<li><strong>Repetir a medição com outro provedor</strong> (<code>--provider gemini</code>) — o piloto atual usou só DeepSeek; comparar custo × qualidade sobre o mesmo conjunto de redações.</li>
-<li><strong>Testar os efforts intermediários</strong> (<code>medium</code>, <code>low</code>) — já sabemos que <code>max</code> e <code>high</code> produzem notas bem diferentes na mesma redação; falta mapear o espectro completo.</li>
-</ul>
-
-<h3 id="prioridade-3-escala-e-produto">Prioridade 3 — Escala e produto</h3>
+<h3 id="prioridade-2-escala-e-produto">Prioridade 2 — Escala e produto</h3>
 <ul>
 <li><strong>Externalizar o Redis</strong> para liberar réplicas quando o volume exigir (ver §6.4).</li>
 <li><strong>Acompanhamento de evolução</strong> (opt-in, com base legal e retenção definida) — histórico por competência sem ferir a LGPD.</li>
 <li><strong>Onboarding institucional</strong> (escola/cursinho) com painel de turma para o professor.</li>
 </ul>
+
+<blockquote>
+<p><strong>Fora do roadmap (decisões tomadas, não pendências):</strong> ampliar a amostra de acurácia além de n=30 e medir outros provedores de LLM (Gemini/Claude/OpenAI/Maritaca) foram <strong>avaliados e descartados</strong> — <code>DeepSeek</code> + <code>CORRECTION_EFFORT=max</code> é a configuração adotada por custo × qualidade (ver §8.2 e §8.4.1). Os efforts de DeepSeek (<code>high</code> e <code>max</code>, os dois únicos efetivos) já foram os dois comparados. Não são lacunas de medição em aberto.</p>
+</blockquote>
 
 <hr>
 
@@ -1801,7 +1797,7 @@ tokens_saída    ≈  a correção formatada (competências + feedback + reescri
 
 <p><strong>A solução e a prova.</strong> O bot ataca exatamente esse gargalo. O aluno fotografa a redação escrita à mão — <strong>sem instalar app, sem cadastro, sem digitar</strong> — e recebe de volta a nota estimada por competência, com trechos citados e uma sugestão de reescrita, em cerca de um minuto. Por trás da simplicidade, decisões de engenharia deliberadas: a borda HTTP responde ao webhook em <strong>menos de 200ms</strong> e joga o trabalho pesado para <em>background</em> (nada de travar o SLA da Meta); o estado vive <strong>45 minutos</strong> em Redis e some sozinho; a <strong>foto é descartada</strong> logo após o OCR; e o motor de correção usa um prompt de ~6.000 tokens <strong>cacheado</strong> para conter custo. A correção não é um "chatbot que dá uma nota": é a Matriz de Referência do INEP transcrita em regras — triagem de nota zero, cinco competências com tabelas de níveis, e a exigência de <strong>citar o trecho</strong> em cada observação.</p>
 
-<p><strong>O valor e o futuro.</strong> O que este projeto entrega é <strong>acesso</strong>: um recurso pedagógico que hoje é caro e escasso, oferecido a um custo marginal de centavos por correção, no aplicativo que o aluno já tem no bolso. Para a escola, é alívio da correção repetitiva; para a rede pública, é redução de uma desigualdade que se converte diretamente em nota de vestibular. À frente, o roadmap confirma em nuvem o piloto local de latência (hoje: ~99s médios até a nota chegar, ~93% disso só na chamada ao LLM), amplia o piloto de acurácia da nota já rodado contra o Essay-BR (o INEP nunca publica o texto das redações, só a nota — medir "contra o oficial" não é viável para nenhum projeto), e abre caminho para o uso institucional — sempre com a privacidade de um público menor de idade como restrição inegociável.</p>
+<p><strong>O valor e o futuro.</strong> O que este projeto entrega é <strong>acesso</strong>: um recurso pedagógico que hoje é caro e escasso, oferecido a um custo marginal de centavos por correção, no aplicativo que o aluno já tem no bolso. Para a escola, é alívio da correção repetitiva; para a rede pública, é redução de uma desigualdade que se converte diretamente em nota de vestibular. À frente, o roadmap confirma em nuvem o piloto local de latência (hoje: ~99s médios até a nota chegar, ~93% disso só na chamada ao LLM) e instrumenta a observabilidade para a taxa de sucesso em regime real; a acurácia da nota já foi validada num piloto contra o Essay-BR (o INEP nunca publica o texto das redações, só a nota — medir "contra o oficial" não é viável para nenhum projeto). E o enquadramento é honesto: contra um ChatGPT gratuito, o valor não é cobrar pela correção, e sim <strong>entregá-la onde a IA genérica não chega</strong> — sem app, sobre o manuscrito, com o rigor da matriz e privacidade de menor de idade. É portfólio e acesso, não receita.</p>
 
 <hr>
 
@@ -1820,7 +1816,7 @@ tokens_saída    ≈  a correção formatada (competências + feedback + reescri
 <tr><td>Borda 200ms + background</td><td>"Responde rápido, processa depois — sem quebrar o SLA da Meta"</td><td>Robustez</td></tr>
 <tr><td>Latência real por etapa</td><td>✅ piloto medido (n=5, DeepSeek)</td><td>Métricas e ROI (§8.1)</td></tr>
 <tr><td>Acurácia da nota por competência</td><td>✅ piloto medido (n=30)</td><td>Métricas e ROI (§8.2)</td></tr>
-<tr><td>Taxa de sucesso por correção</td><td>⏳ a medir</td><td>Confiabilidade (§8.3)</td></tr>
+<tr><td>Taxa de sucesso por correção</td><td>🔬 20+ sem falha (informal); taxa real ⏳</td><td>Confiabilidade (§8.3)</td></tr>
 <tr><td>Custo por correção</td><td>✅ medido (DeepSeek)</td><td>ROI (§8.4)</td></tr>
 </table></div>
 
@@ -1832,12 +1828,12 @@ tokens_saída    ≈  a correção formatada (competências + feedback + reescri
 
 <ul>
 <li>Fluxo conversacional completo (consentimento → tema → motivadores → foto → preview/edição → correção), com testes unitários puros.</li>
-<li>OCR da foto com preview e edição manual; redação em até 3 fotos.</li>
+<li>OCR da foto com preview e edição manual; redação em até 2 fotos (frente/verso).</li>
 <li>Correção por competência sobre a Matriz do INEP, com provedor de LLM plugável (5 opções) e cache de contexto.</li>
 <li>Conformidade de base: consentimento LGPD, descarte da foto, TTL de 45 min, sem histórico, rate-limit diário.</li>
 <li>Arquitetura mono-contêiner (app + Redis embutido), borda com resposta <200ms e processamento em <em>background</em>.</li>
 <li><strong>Custo efetivo por correção</strong> medido em uso real (DeepSeek V4 Flash) — ver Métricas e ROI, §8.4.1.</li>
-<li><strong>Acurácia da nota</strong> — piloto medido (30 redações do Essay-BR, MAE 129,3 pontos, viés praticamente neutro com <code>CORRECTION_EFFORT=max</code>) — ver Métricas e ROI, §8.2. Não é a nota oficial do INEP (que não publica o texto das redações), e a amostra ainda é pequena para fechar o número. Repetir com <code>CORRECTION_EFFORT=high</code> mudou bastante a nota (MAE subiu para 162,7, viés para -64) — o effort não é só uma perilha de velocidade, muda o comportamento do corretor.</li>
+<li><strong>Acurácia da nota</strong> — piloto medido (30 redações do Essay-BR, MAE 129,3 pontos, viés praticamente neutro com <code>CORRECTION_EFFORT=max</code>) — ver Métricas e ROI, §8.2. Não é a nota oficial do INEP (que não publica o texto das redações), e a amostra ainda é pequena para fechar o número. Repetir com <code>CORRECTION_EFFORT=high</code> mudou bastante a nota (MAE subiu para 162,7, viés para -64) — o effort não é só um botão de velocidade, muda o comportamento do corretor.</li>
 <li><strong>Latência por etapa</strong> — piloto local medido (n=5, Telegram): ~99s médios até a nota chegar, dos quais <strong>~93% é só a chamada ao LLM</strong> (~92s) — download+OCR somam só ~4s. Confirma com folga a hipótese de que o gargalo é a camada de modelos, não a infraestrutura — ver Métricas e ROI, §8.1.</li>
 </ul>
 
@@ -1845,10 +1841,13 @@ tokens_saída    ≈  a correção formatada (competências + feedback + reescri
 
 <ul>
 <li>Confirmar a latência em ambiente de nuvem (o piloto acima rodou local, via túnel).</li>
-<li>Taxa de sucesso e distribuição de falhas em regime real.</li>
-<li>Latência e custo por correção nos demais provedores e nos demais efforts (<code>high</code>/<code>medium</code>/<code>low</code>) — só DeepSeek/<code>max</code> medido em latência até aqui.</li>
-<li>Amostra maior no piloto de acurácia (hoje n=30 por effort, só DeepSeek).</li>
+<li>Taxa de sucesso e distribuição de falhas em regime real — o caminho feliz rodou 20+ vezes sem falha em testes, mas isso não é uma taxa de confiabilidade com N grande (ver Métricas e ROI, §8.3).</li>
+<li>Custo de hospedagem em nuvem (Azure Container Apps) — só o custo de execução OCR+LLM foi medido (§8.4.1).</li>
 </ul>
+
+<blockquote>
+<p>Ampliar a amostra de acurácia, testar outros provedores de LLM e varrer os efforts intermediários <strong>não</strong> estão nesta lista: foram avaliados e descartados por custo × qualidade (DeepSeek/<code>max</code> adotado), não são pendências — ver Métricas e ROI, §8.2 e §8.5.</p>
+</blockquote>
 
 <blockquote>
 <p><strong>Em uma frase:</strong> um corretor de redação que transforma <strong>uma foto de manuscrito</strong> em <strong>feedback por competência com trechos citados</strong>, no WhatsApp/Telegram, com privacidade pensada para menores de idade — pronto no núcleo, com as métricas de performance como próximo passo.</p>

@@ -31,9 +31,9 @@ class Settings(BaseSettings):
 
     # OCR (Mistral) e correção (provedor plugável — ver src/correction/factory.py)
     MISTRAL_API_KEY: str = Field(default="")
-    CORRECTION_PROVIDER: str = Field(default="gemini")  # gemini | claude | openai | deepseek | maritaca
-    CORRECTION_MODEL: str = Field(default="gemini-3.5-flash")  # nome do modelo NO provedor acima
-    CORRECTION_EFFORT: str = Field(default="high")  # claude e deepseek: low | medium | high | max
+    CORRECTION_PROVIDER: str = Field(default="deepseek")  # gemini | claude | openai | deepseek | maritaca
+    CORRECTION_MODEL: str = Field(default="deepseek-v4-flash")  # nome do modelo NO provedor acima
+    CORRECTION_EFFORT: str = Field(default="max")  # claude e deepseek: low | medium | high | max
     GOOGLE_API_KEY: str = Field(default="")
     ANTHROPIC_API_KEY: str = Field(default="")
     OPENAI_API_KEY: str = Field(default="")
@@ -43,7 +43,7 @@ class Settings(BaseSettings):
     # Limites do fluxo
     ESSAY_DAILY_LIMIT: int = Field(default=2)     # correções/aluno/dia (fluxo caro)
     MIN_ESSAY_CHARS: int = Field(default=120)     # OCR abaixo disso = foto ilegível
-    MAX_ESSAY_PHOTOS: int = Field(default=3)      # partes de foto por redação
+    MAX_ESSAY_PHOTOS: int = Field(default=2)      # partes de foto por redação (frente/verso)
     FLOW_TTL_SECONDS: int = Field(default=2700)   # 45 min para concluir o fluxo
     OCR_PREVIEW_MAX_CHARS: int = Field(default=3000)
     # Palavra do OCR abaixo deste score (0-1) entra na lista de "conferir" do preview.

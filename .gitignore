@@ -6,6 +6,7 @@
 __pycache__/
 .pytest_cache/
 .ruff_cache/
+.claude/
 
 # Dados pessoais e saída de laboratório — nunca versionar (o produto é
 # LGPD-consciente: fotos reais de redação de alunos não pertencem ao git).
