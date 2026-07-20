@@ -10,23 +10,41 @@ Invariantes herdados do projeto pai:
 
 import asyncio
 import logging
+from contextlib import asynccontextmanager
 
 import structlog
 from fastapi import FastAPI, HTTPException, Request, Response
 
 from src.channels.factory import get_channel
 from src.config import settings
-from src.flow.handlers import handle_message
 from src.redis_client import is_duplicate_message
+from src.tasks import submit_job, worker_loop
 
 logger = structlog.get_logger(__name__)
 
-app = FastAPI(title="Corretor ENEM", docs_url=None, redoc_url=None)
-
-# Referências fortes: sem isso o GC pode matar uma task em andamento.
-_background_tasks: set[asyncio.Task] = set()
-
 _VALID_CHANNELS = ("whatsapp", "telegram")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """No backend "azure", roda o worker que drena a fila junto com o processo
+    do webhook (mesmo contêiner: HTTP recebe + worker drena). O KEDA azure-queue
+    scaler mantém a réplica viva enquanto a fila tem mensagem e escala pra zero
+    quando ociosa. O backend "memory" não tem worker (tasks rodam em processo),
+    então isso é um no-op nesse caso."""
+    worker: asyncio.Task | None = None
+    if settings.QUEUE_BACKEND == "azure":
+        worker = asyncio.create_task(worker_loop())
+    yield
+    if worker is not None:
+        worker.cancel()
+        try:
+            await worker
+        except asyncio.CancelledError:
+            pass
+
+
+app = FastAPI(title="Corretor ENEM", docs_url=None, redoc_url=None, lifespan=lifespan)
 
 
 def _setup_logging() -> None:
@@ -45,19 +63,6 @@ def _resolve_channel(channel_name: str):
     if channel_name not in _VALID_CHANNELS:
         raise HTTPException(status_code=404)
     return get_channel(channel_name)
-
-
-async def _process(channel, msg) -> None:
-    """Corpo da task de background — nenhuma exceção escapa (fluxo isolado)."""
-    try:
-        await handle_message(channel, msg)
-    except Exception as e:
-        logger.error(
-            "flow_unhandled_exception",
-            channel=channel.channel_name,
-            sender=msg.sender_id,
-            error=str(e)[:300],
-        )
 
 
 @app.get("/v1/webhook/{channel_name}")
@@ -85,9 +90,9 @@ async def receive_webhook(channel_name: str, request: Request):
         logger.info("webhook_duplicate_dropped", channel=channel_name, message_id=msg.message_id)
         return Response(status_code=200)
 
-    task = asyncio.create_task(_process(channel, msg))
-    _background_tasks.add(task)
-    task.add_done_callback(_background_tasks.discard)
+    # Despacha para o backend de processamento (task em processo ou Azure Queue)
+    # e responde na hora — o handler nunca pode rodar OCR/LLM (SLA de 200ms da Meta).
+    await submit_job(channel_name, msg)
 
     return Response(status_code=200)
 

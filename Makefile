@@ -8,7 +8,7 @@ RUFF := .venv/bin/ruff
 
 .DEFAULT_GOAL := help
 
-.PHONY: help setup up dev down logs simulate test lint fmt redis-dev tunnel tunnel-stop clean
+.PHONY: help setup up dev down logs simulate test lint fmt redis-dev tunnel tunnel-stop clean deploy
 
 # Porta HTTP do app (usada pelo alvo tunnel).
 PORT := 8000
@@ -66,6 +66,10 @@ redis-dev: ## Sobe um redis avulso só pro dev sem docker compose
 
 simulate: ## Roda o REPL de conversa (OCR + correção reais; precisa do redis-dev)
 	$(PY) -m scripts.simulate
+
+# ── Deploy (Azure Container Apps, scale-to-zero) ─────────────────────────────
+deploy: ## Deploy scale-to-zero no Azure (precisa de 'az login' + deploy/.env.deploy)
+	./deploy/deploy.sh
 
 # ── Qualidade ───────────────────────────────────────────────────────────────
 test: ## Roda os testes unitários (puros, sem I/O)

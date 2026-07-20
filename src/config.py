@@ -18,6 +18,22 @@ class Settings(BaseSettings):
 
     REDIS_URL: str = Field(default="redis://localhost:6379/0")
 
+    # Backend de despacho de job: como o webhook entrega o trabalho ao passo OCR+LLM.
+    #   "memory" (default): asyncio.create_task no mesmo processo — o modo mono-
+    #     contêiner clássico (minReplicas=1). Usado por dev, simulador e testes.
+    #   "azure": enfileira numa Azure Storage Queue drenada por um worker. É isso
+    #     que permite o Azure Container Apps escalar pra ZERO com um KEDA
+    #     azure-queue scaler. EXIGE Redis externo (Upstash). Ver deploy/README.md.
+    QUEUE_BACKEND: str = Field(default="memory")  # memory | azure
+    AZURE_STORAGE_CONNECTION_STRING: str = Field(default="")
+    ESSAY_QUEUE_NAME: str = Field(default="essay-jobs")
+    # Precisa exceder o pior caso de processamento (download + OCR + retries do
+    # LLM): enquanto uma mensagem está sendo processada ela fica invisível; se
+    # isso expirar antes do worker apagá-la, o job reentrega e reprocessa
+    # (custo em dobro).
+    QUEUE_VISIBILITY_TIMEOUT: int = Field(default=300)  # segundos
+    QUEUE_POLL_INTERVAL: int = Field(default=3)         # segundos entre polls vazios
+
     # WhatsApp Cloud API (Meta)
     WHATSAPP_API_URL: str = Field(default="https://graph.facebook.com/v21.0")
     PHONE_NUMBER_ID: str = Field(default="")

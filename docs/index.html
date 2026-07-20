@@ -195,6 +195,8 @@ footer.site-footer{background:#2A2018;color:#C4B6A0;margin-top:64px;border-top:2
 <a href="#testes-e-lint" class="dropdown-link" data-page="inicio">Testes e lint</a>
 <a href="#conectando-os-canais" class="dropdown-link" data-page="inicio">Conectando os canais</a>
 <a href="#deploy-azure-container-apps-" class="dropdown-link" data-page="inicio">Deploy (Azure Container Apps)</a>
+<a href="#simples-code-minreplicas-1-code-sempre-n" class="dropdown-link" data-page="inicio">Simples (minReplicas=1) — sempre no ar</a>
+<a href="#scale-to-zero-code-minreplicas-0-code-s-" class="dropdown-link" data-page="inicio">Scale-to-zero (minReplicas=0) — só paga enquanto corrige</a>
 <a href="#estrutura" class="dropdown-link" data-page="inicio">Estrutura</a>
 </div>
     </div>
@@ -285,7 +287,7 @@ footer.site-footer{background:#2A2018;color:#C4B6A0;margin-top:64px;border-top:2
 <a href="#justificativa-arquitetural" class="dropdown-link" data-page="robustez">Justificativa Arquitetural</a>
 <a href="#6-4-estado-persist-ncia-e-escalabilidade" class="dropdown-link" data-page="robustez">6.4 Estado, persistência e escalabilidade</a>
 <a href="#como-foi-implementado" class="dropdown-link" data-page="robustez">Como foi implementado</a>
-<a href="#o-limite-de-escala-e-o-caminho-para-supe" class="dropdown-link" data-page="robustez">O limite de escala — e o caminho para superá-lo</a>
+<a href="#o-limite-de-escala-e-os-dois-caminhos-pa" class="dropdown-link" data-page="robustez">O limite de escala — e os dois caminhos para superá-lo</a>
 <a href="#6-5-qualidade-testes-puros" class="dropdown-link" data-page="robustez">6.5 Qualidade: testes puros</a>
 </div>
     </div>
@@ -380,7 +382,7 @@ Aluno                    Bot
 <ul>
 <li><strong>Mono-container</strong>: FastAPI + Redis no MESMO contêiner. O <code>entrypoint.sh</code> sobe o <code>redis-server</code> (só em <code>127.0.0.1</code>, nunca exposto fora do contêiner), espera o PING responder e só então executa o <code>uvicorn</code>. Um único deploy, sem Redis gerenciado à parte.</li>
 <li><strong>Estado 100% em Redis</strong> (sem banco relacional): máquina de estados da conversa (TTL 45 min), consentimento LGPD, rate-limit diário e idempotência de webhook. O AOF em <code>/data</code> (volume) sobrevive a restart do contêiner.</li>
-<li><strong>Réplica única, sempre</strong>: como o Redis vive dentro do contêiner, ele não é compartilhado entre réplicas — <code>replicas > 1</code> fragmentaria rate-limit, consentimento e estado de fluxo (cada réplica veria um Redis diferente). Mantenha 1 réplica (folgado para o tráfego de uma escola).</li>
+<li><strong>Réplica única no modo padrão</strong>: como o Redis embutido não é compartilhado entre réplicas, <code>replicas > 1</code> fragmentaria rate-limit, consentimento e estado de fluxo (cada réplica veria um Redis diferente). Mantenha 1 réplica (folgado para o tráfego de uma escola). Um backend de despacho plugável (<code>QUEUE_BACKEND</code>: <code>memory</code> default, ou <code>azure</code>) também habilita um deploy alternativo em <strong>scale-to-zero</strong> com Redis externo — ver <a href="#deploy-azure-container-apps">Deploy</a> abaixo.</li>
 <li><strong>Correção plugável</strong>: o provedor do LLM troca por env var (<code>CORRECTION_PROVIDER</code>: <code>gemini</code> | <code>claude</code> | <code>openai</code> | <code>deepseek</code> | <code>maritaca</code>; <code>CORRECTION_MODEL</code> define o modelo dentro dele — default <code>deepseek</code> / <code>deepseek-v4-flash</code>, adotado por custo × qualidade), o que permite comparar modelos rápido. O prompt é dividido em bloco estático (matriz, ~6.000 tokens) + bloco dinâmico (tema/motivadores/redação) para aproveitar cache de contexto — explícito no Gemini e no Claude, automático no OpenAI/DeepSeek (a Maritaca não documenta cache; o bloco estático é reenviado sem desconto confirmado).</li>
 </ul>
 
@@ -453,7 +455,9 @@ curl "https://api.telegram.org/bot$TOKEN/setWebhook" \
 
 <h2 id="deploy-azure-container-apps-">Deploy (Azure Container Apps)</h2>
 
-<p>O docker-compose é a forma canônica de rodar; para produção o alvo é o Azure Container Apps, no mesmo padrão do projeto pai:</p>
+<p>O docker-compose é a forma canônica de rodar localmente; para produção o alvo é o Azure Container Apps, em dois modos:</p>
+
+<h3 id="simples-code-minreplicas-1-code-sempre-n">Simples (<code>minReplicas=1</code>) — sempre no ar</h3>
 
 <ul>
 <li><strong>1 único Container App</strong> (imagem deste Dockerfile — Redis já embutido, sem Azure Cache for Redis nem serviço separado).</li>
@@ -461,6 +465,20 @@ curl "https://api.telegram.org/bot$TOKEN/setWebhook" \
 <li>Monte um <strong>Azure Files</strong> em <code>/data</code> (mesmo mount point da <code>VOLUME</code> do Dockerfile) para o AOF do Redis sobreviver a um redeploy/restart do contêiner.</li>
 <li>Segredos (tokens, chaves) via Key Vault/secret refs — nunca env var em texto plano no manifesto.</li>
 </ul>
+
+<h3 id="scale-to-zero-code-minreplicas-0-code-s-">Scale-to-zero (<code>minReplicas=0</code>) — só paga enquanto corrige</h3>
+
+<p>Para volume pessoal/baixo, <code>QUEUE_BACKEND=azure</code> desacopla receber a mensagem (webhook) de processá-la (OCR + LLM) via uma <strong>Azure Storage Queue</strong>, drenada por um worker no mesmo contêiner. Uma regra de escala KEDA <strong>azure-queue</strong> mantém uma réplica viva só enquanto a fila tem mensagem — tempo ocioso é cobrado <strong>zero</strong>, e o tempo ativo para volume pessoal cabe na cota mensal gratuita do Container Apps (que é <strong>por assinatura</strong>, não por app). Trade-offs: exige <strong>Redis externo</strong> (o embutido morre ao escalar pra zero — o free tier do Upstash cobre), um atraso de cold-start na primeira mensagem após ociosidade (ok no Telegram, arriscado pro SLA de 200ms do WhatsApp) e reprocessamento raro se o contêiner cair no meio de um job.</p>
+
+<p>O deploy é um comando só, com um template Bicep (Infraestrutura como Código — <code>deploy/main.bicep</code>):</p>
+
+<pre><code class="lang-bash">
+cp deploy/.env.deploy.example deploy/.env.deploy   # preencha a config de Azure (RG, região, nome do ACR)
+az login
+make deploy                                        # build da imagem na nuvem → bicep → setWebhook do Telegram, tudo automático
+</code></pre>
+
+<p>Guia completo (setup do Upstash, o que o Bicep provisiona, alternativa passo a passo): <a href="deploy/README.md">deploy/README.md</a>.</p>
 
 <h2 id="estrutura">Estrutura</h2>
 
@@ -472,15 +490,22 @@ curl "https://api.telegram.org/bot$TOKEN/setWebhook" \
 .
 ├── Dockerfile              # imagem única: app + redis embutido (ver entrypoint.sh)
 ├── docker-compose.yml      # `make up` — forma canônica de rodar (app + redis)
-├── entrypoint.sh           # sobe redis-server (127.0.0.1) → espera PING → uvicorn
+├── entrypoint.sh           # sobe redis-server (127.0.0.1, pulado se REDIS_URL externo) → uvicorn
+├── .dockerignore            # mantém enxuto o contexto de build na nuvem (az acr build)
 ├── Makefile                 # `make help` lista todos os atalhos de dev
 ├── pyproject.toml            # config de ruff (lint/format) e pytest
 ├── requirements.txt           # dependências de runtime
 ├── requirements-dev.txt        # + pytest/ruff (dependências de dev)
 ├── .env.example                 # todas as env vars documentadas — copiar para .env
 │
+├── deploy/                        # deploy scale-to-zero (IaC) — ver deploy/README.md
+│   ├── main.bicep                    # Storage+fila, Container Apps env, KEDA azure-queue scaler
+│   ├── deploy.sh                      # orquestra: build na nuvem → bicep → setWebhook do Telegram
+│   └── .env.deploy.example              # config de Azure (segredos herdados do ../.env)
+│
 ├── src/
-│   ├── main.py                    # FastAPI: webhooks (valida → enfileira task → 200)
+│   ├── main.py                    # FastAPI: webhooks (valida → submit_job → 200)
+│   ├── tasks.py                     # despacho de job: memory (asyncio.Task) ou azure (Storage Queue + worker)
 │   ├── config.py                   # pydantic-settings — todas as env vars
 │   ├── messages.py                  # toda a copy de UX (nenhuma string solta no flow/)
 │   ├── prompts.py                    # prompt do corretor ENEM (Matriz do INEP; str.format, nunca f-string)
@@ -510,7 +535,7 @@ curl "https://api.telegram.org/bot$TOKEN/setWebhook" \
 │   └── simulate.py            # REPL de conversa com canal fake — E2E local sem provedor real
 │
 └── tests/
-    └── unit/                     # 52 testes puros — FakeRedis + FakeChannel, sem I/O
+    └── unit/                     # 59 testes puros — FakeRedis + FakeChannel, sem I/O
 </code></pre>
 </div>
 </div>
@@ -963,24 +988,26 @@ Corretor de Redação do ENEM
 <li><strong>Valida a assinatura</strong> (HMAC SHA-256 no WhatsApp, <em>secret token</em> no Telegram — em produção).</li>
 <li><strong>Faz o parse</strong> do payload para uma <code>InboundMessage</code> normalizada (agnóstica de canal).</li>
 <li><strong>Descarta duplicatas</strong> (idempotência: Meta/Telegram reenviam o mesmo <em>update</em> em <em>timeout</em>/restart).</li>
-<li><strong>Despacha</strong> o processamento para uma <strong>task asyncio</strong> e retorna <code>200</code> imediatamente.</li>
+<li><strong>Despacha</strong> o processamento (<code>submit_job</code>, <code>src/tasks.py</code>) e retorna <code>200</code> imediatamente.</li>
 </ul>
 
-<p>Todo o trabalho caro — <strong>download da mídia, OCR e LLM</strong> — acontece nessa task de <em>background</em>, nunca no caminho da resposta HTTP. Exceções na task são isoladas e registradas; nunca escapam para o webhook.</p>
+<p>Todo o trabalho caro — <strong>download da mídia, OCR e LLM</strong> — acontece em <em>background</em>, nunca no caminho da resposta HTTP. O despacho é abstraído: no modo padrão é uma <strong>task asyncio</strong> no mesmo processo; no modo scale-to-zero, uma <strong>mensagem numa fila</strong> drenada por um <em>worker</em> (ver §2.6). Nos dois casos, exceções no processamento são isoladas e registradas; nunca escapam para o webhook.</p>
 
 <pre><code class="lang-text">
 Meta/Telegram ──POST──▶ verify_signature ──▶ parse_inbound ──▶ is_duplicate?
                                                                    │ não
                                                                    ▼
-                                            200 OK ◀── create_task(_process) ──▶ (background)
-                                                                                    handle_message
+                                            200 OK ◀── submit_job(...) ──▶ (background)
+                                                                            task asyncio  ou  fila+worker
+                                                                                   └──▶ handle_message
 </code></pre>
 
 <h2 id="2-3-detalhamento-dos-componentes">2.3 Detalhamento dos componentes</h2>
 
 <div class="table-wrap"><table>
 <tr><th>Componente</th><th>Arquivo</th><th>Responsabilidade</th></tr>
-<tr><td><strong>Borda HTTP</strong></td><td><code>src/main.py</code></td><td>Recebe webhooks, valida, responde 200 em <200ms, despacha a task</td></tr>
+<tr><td><strong>Borda HTTP</strong></td><td><code>src/main.py</code></td><td>Recebe webhooks, valida, responde 200 em <200ms, despacha via <code>submit_job</code></td></tr>
+<tr><td><strong>Despacho de job</strong></td><td><code>src/tasks.py</code></td><td><code>submit_job</code>/<code>worker_loop</code>: task asyncio (default) ou Azure Storage Queue + worker (scale-to-zero), por <code>QUEUE_BACKEND</code></td></tr>
 <tr><td><strong>Canais</strong></td><td><code>src/channels/</code></td><td><code>IMessagingChannel</code>: WhatsApp e Telegram; <em>parse</em> de entrada, envio de texto/botões, download de mídia, verificação de assinatura</td></tr>
 <tr><td><strong>Máquina de estados</strong></td><td><code>src/flow/</code></td><td>Fluxo da conversa (<code>states.py</code>) e handlers (<code>handlers.py</code>), com estado em Redis</td></tr>
 <tr><td><strong>OCR</strong></td><td><code>src/correction/ocr.py</code></td><td>Transcrição da foto da redação via Mistral OCR (<code>mistral-ocr-latest</code>)</td></tr>
@@ -1056,7 +1083,9 @@ Aluno                         Bot
 
 <h2 id="2-6-deploy-azure-container-apps-">2.6 Deploy (Azure Container Apps)</h2>
 
-<p>O <code>docker-compose</code> é a forma canônica de rodar; para produção o alvo é o <strong>Azure Container Apps</strong>, no mesmo padrão do projeto pai:</p>
+<p>O <code>docker-compose</code> é a forma canônica de rodar localmente; para produção o alvo é o <strong>Azure Container Apps</strong>, em <strong>dois modos</strong> (o backend de despacho troca por env var <code>QUEUE_BACKEND</code>, sem tocar no código):</p>
+
+<p><strong>Modo simples (<code>minReplicas=1</code>, <code>QUEUE_BACKEND=memory</code>) — sempre no ar:</strong></p>
 
 <ul>
 <li><strong>1 único Container App</strong> (imagem deste Dockerfile — Redis já embutido).</li>
@@ -1064,6 +1093,18 @@ Aluno                         Bot
 <li><strong>Azure Files</strong> montado em <code>/data</code> (mesmo <em>mount point</em> da <code>VOLUME</code> do Dockerfile) para o AOF do Redis sobreviver a <em>redeploy</em>/restart.</li>
 <li><strong>Segredos</strong> (tokens, chaves) via Key Vault / <em>secret refs</em> — nunca env var em texto plano no manifesto.</li>
 </ul>
+
+<p><strong>Modo scale-to-zero (<code>minReplicas=0</code>, <code>QUEUE_BACKEND=azure</code>) — só paga enquanto corrige:</strong></p>
+
+<ul>
+<li>O webhook <strong>enfileira</strong> o trabalho numa <strong>Azure Storage Queue</strong> em vez de despachar uma task em memória; um <em>worker</em> no mesmo contêiner drena a fila. Como a fila é durável, a carga fica <strong>visível ao autoscaler</strong> — uma regra <strong>KEDA azure-queue</strong> mantém a réplica viva só enquanto há job e a derruba a zero quando esvazia.</li>
+<li><strong>Exige Redis externo</strong> (o embutido morre ao escalar a zero) — o <em>free tier</em> do Upstash cobre. Custo de compute tende a <strong>US$ 0</strong> para volume pessoal/baixo (ver <strong>Métricas e ROI</strong>, §8.4.1). Preço: um <strong>cold-start</strong> de alguns segundos na primeira mensagem após ociosidade (ok no Telegram, arriscado pro SLA de 200 ms do WhatsApp).</li>
+<li>Toda a infraestrutura é declarada como código (<strong>Bicep</strong>) em <code>deploy/main.bicep</code> e sobe com um comando (<code>make deploy</code>). Detalhes em <code>deploy/README.md</code>.</li>
+</ul>
+
+<blockquote>
+<p>Os dois modos rodam a <strong>mesma imagem</strong> — a diferença é configuração (<code>QUEUE_BACKEND</code> + onde está o Redis), não código. O despacho é abstraído em <code>src/tasks.py</code> (<code>submit_job</code>), então o handler do webhook não muda entre eles.</p>
+</blockquote>
 
 <hr>
 </div>
@@ -1422,20 +1463,25 @@ Aluno                         Bot
 <li><strong>Idempotência de webhook.</strong> Meta/Telegram reenviam o mesmo <em>update</em> em <em>timeout</em>/restart; uma chave de deduplicação por <code>message_id</code> descarta a repetição antes de processar.</li>
 </ul>
 
-<h3 id="o-limite-de-escala-e-o-caminho-para-supe">O limite de escala — e o caminho para superá-lo</h3>
+<h3 id="o-limite-de-escala-e-os-dois-caminhos-pa">O limite de escala — e os dois caminhos para superá-lo</h3>
 
-<p>O Redis é <strong>embutido no contêiner</strong>, então <strong>não é compartilhável entre réplicas</strong>. Consequência: o deploy roda com <strong>1 réplica fixa</strong> (<code>minReplicas = maxReplicas = 1</code>). Subir mais réplicas fragmentaria rate-limit, consentimento e fluxo (cada réplica veria um Redis diferente).</p>
+<p>No <strong>modo padrão</strong> (<code>QUEUE_BACKEND=memory</code>), o Redis é <strong>embutido no contêiner</strong> e o despacho do trabalho pesado é uma <code>asyncio.Task</code> em processo. Isso amarra o deploy a <strong>1 réplica fixa</strong> (<code>minReplicas = maxReplicas = 1</code>): o Redis embutido não é compartilhável, então subir réplicas fragmentaria rate-limit, consentimento e fluxo (cada réplica veria um Redis diferente).</p>
+
+<p>Esse limite tem uma raiz única — o estado local — e <strong>externalizá-lo</strong> (uma mudança contida, porque todo acesso passa por <code>src/redis_client.py</code>) destrava <strong>dois</strong> caminhos distintos:</p>
 
 <div class="table-wrap"><table>
-<tr><th>Aspecto</th><th>Hoje (1 réplica)</th><th>Caminho para escalar</th></tr>
-<tr><td>Estado</td><td>Redis embutido no contêiner</td><td>Externalizar para um Redis gerenciado compartilhado</td></tr>
-<tr><td>Réplicas</td><td>Fixo em 1</td><td>Liberar <code>maxReplicas > 1</code> após externalizar o Redis</td></tr>
-<tr><td>Gargalo</td><td>I/O de OCR + LLM (rede), não CPU</td><td>Concorrência de tasks já é assíncrona</td></tr>
-<tr><td>Superfície de mudança</td><td>—</td><td>Contida em <code>src/redis_client.py</code> (todo acesso passa por lá)</td></tr>
+<tr><th></th><th><strong>Scale-to-zero</strong> (economia)</th><th><strong>Scale-out</strong> (concorrência)</th></tr>
+<tr><td>Objetivo</td><td>Pagar só enquanto corrige (ocioso → US$0)</td><td>Absorver muitos alunos simultâneos</td></tr>
+<tr><td>Réplicas</td><td><code>minReplicas=0</code>, <code>maxReplicas=1</code></td><td><code>maxReplicas > 1</code></td></tr>
+<tr><td>Estado</td><td>Redis externo (Upstash free tier)</td><td>Redis gerenciado compartilhado</td></tr>
+<tr><td>Despacho</td><td>Fila durável + worker (<code>QUEUE_BACKEND=azure</code>)</td><td>Tasks assíncronas (já concorrentes)</td></tr>
+<tr><td>Status</td><td><strong>Implementado</strong> — ver <code>deploy/</code> (IaC Bicep) e §8.4.1</td><td>Hipótese documentada (não implementada)</td></tr>
 </table></div>
 
+<p><strong>Scale-to-zero — implementado.</strong> Com <code>QUEUE_BACKEND=azure</code>, o webhook responde <code>200</code> e <strong>enfileira</strong> o trabalho numa Azure Storage Queue; um worker no mesmo contêiner drena a fila. Como a fila é durável, a carga pendente fica <strong>visível ao autoscaler</strong> (uma task em memória não fica) — uma regra KEDA <em>azure-queue</em> mantém a réplica viva só enquanto há redação a processar e a derruba a zero quando esvazia. Ocioso não custa nada; o tempo ativo, para volume pessoal/baixo, cabe na cota gratuita mensal do Container Apps. Troca-se isso por: <strong>Redis externo obrigatório</strong> (o embutido morre ao escalar a zero), um <strong>cold-start</strong> de alguns segundos na primeira mensagem após ociosidade (tolerável no Telegram, arriscado pro SLA de 200ms do WhatsApp) e um reprocessamento raro se o contêiner cair no meio de um job. A infraestrutura é declarada como código em <code>deploy/main.bicep</code> e sobe com <code>make deploy</code> (ver <strong>Métricas e ROI</strong>, §8.4.1, para o custo, e <code>deploy/README.md</code> para o passo a passo).</p>
+
 <blockquote>
-<p><strong>Justificativa:</strong> para o volume de uma escola, uma réplica com Redis local é <strong>folgada</strong> — o custo dominante é a latência de rede das APIs, não CPU do contêiner. A restrição é <strong>documentada e assumida</strong>, não uma armadilha silenciosa; e o caminho para escalar (externalizar o Redis) é uma mudança contida, porque todo o acesso ao estado já está centralizado.</p>
+<p><strong>Justificativa:</strong> para o volume de uma escola, uma réplica com Redis local é <strong>folgada</strong> — o custo dominante é a latência de rede das APIs, não CPU do contêiner. A restrição do modo padrão é <strong>documentada e assumida</strong>, não uma armadilha silenciosa; e como o acesso ao estado já é centralizado, os dois caminhos de evolução (o de economia, já implementado; o de concorrência, ainda hipotético) são mudanças contidas, não reescritas.</p>
 </blockquote>
 
 <hr>
@@ -1580,7 +1626,7 @@ tokens_saída    ≈  a correção formatada (competências + feedback + reescri
 
 <h4 id="custo-de-execu-o-ocr-llm-medido-n-o-esti">Custo de execução (OCR + LLM) — medido, não estimado</h4>
 
-<p>Diferente da seção anterior deste documento (que era projeção), os números abaixo vêm de <strong>uso real</strong> do projeto, e cobrem a parte do custo que independe de onde a aplicação roda (a chamada às APIs de OCR e LLM). O que falta somar é o <strong>custo de hospedagem em nuvem</strong> (Azure Container Apps — ver <strong>Arquitetura</strong>, §2.6), ainda não medido.</p>
+<p>Diferente da seção anterior deste documento (que era projeção), os números abaixo vêm de <strong>uso real</strong> do projeto, e cobrem a parte do custo que independe de onde a aplicação roda (a chamada às APIs de OCR e LLM). O <strong>custo de hospedagem em nuvem</strong> (Azure Container Apps) está <strong>modelado</strong> logo abaixo (§ "Custo de hospedagem"); a medição de uma <strong>fatura de produção em regime</strong> ainda está pendente.</p>
 
 <div class="table-wrap"><table>
 <tr><th>Item</th><th>Observação</th><th>Valor</th></tr>
@@ -1607,7 +1653,26 @@ tokens_saída    ≈  a correção formatada (competências + feedback + reescri
 <p>O câmbio USD→BRL não está fixado aqui de propósito: Mistral e DeepSeek cobram em dólar, e a conversão exata depende da cotação no momento da compra de créditos — para orçamento, use a cotação comercial vigente.</p>
 </blockquote>
 
-<p><strong>Em aberto.</strong> O custo de <strong>hospedagem em nuvem</strong> (Container App no Azure) ainda não foi medido — é o item que falta para fechar o custo operacional total do projeto (execução + infraestrutura). A comparação <strong>custo × qualidade</strong> entre os demais provedores de LLM (Gemini, Claude, OpenAI, Maritaca) também segue em aberto.</p>
+<h4 id="custo-de-hospedagem-em-nuvem-azure-conta">Custo de hospedagem em nuvem (Azure Container Apps)</h4>
+
+<p>O projeto oferece <strong>dois modos de deploy</strong> (ver <strong>Robustez e Escalabilidade</strong>, §6.4), com perfis de custo bem diferentes:</p>
+
+<p><strong>Modo scale-to-zero (<code>QUEUE_BACKEND=azure</code>) — o compute tende a US$ 0.</strong> No plano Consumption, a Microsoft dá uma <strong>cota mensal gratuita por assinatura</strong>: 180.000 vCPU-s, 360.000 GiB-s e 2 milhões de requisições; e uma réplica <strong>escalada a zero não gera nenhuma cobrança de compute</strong> (<a href="https://learn.microsoft.com/en-us/azure/container-apps/billing">doc oficial de billing</a>). Como o contêiner só acorda para processar, o custo se resume ao <strong>tempo ativo</strong>. Usando a latência real medida (§8.1, ~99 s por correção) num contêiner de 0,5 vCPU / 1 GiB:</p>
+
+<ul>
+<li>Só o tempo ativo consome ~<code>99 × 0,5 = 49,5</code> vCPU-s por correção → a cota grátis cobriria <strong>~3.600 correções/mês</strong> antes de qualquer cobrança de compute.</li>
+<li>Descontando o <em>cooldown</em> do KEDA (mantém a réplica viva alguns minutos após cada rajada antes de dormir), a folga cai, mas para volume <strong>pessoal ou de turma</strong> (dezenas a poucas centenas de correções/mês) o compute continua <strong>integralmente dentro da cota gratuita → US$ 0/mês</strong>.</li>
+<li>A <strong>fila</strong> em si (Azure Storage Queue) custa US$ 0,0004 por 10.000 operações — para esse volume, <strong>frações de centavo por mês</strong>.</li>
+<li>O <strong>Redis externo</strong> obrigatório nesse modo cabe no <em>free tier</em> do Upstash (<strong>US$ 0</strong>).</li>
+</ul>
+
+<p><strong>Modo simples (<code>minReplicas=1</code>) — uma réplica sempre ligada.</strong> Aqui o contêiner nunca dorme: roda 24/7 (a maior parte do tempo <em>ocioso</em>, cobrado a uma tarifa reduzida, parcialmente abatida pela mesma cota gratuita). O custo é baixo (ordem de <strong>poucos dólares por mês</strong> para um contêiner pequeno), mas <strong>não é zero</strong> como no scale-to-zero. É o modo indicado quando o cold-start não é aceitável (ex.: WhatsApp, com SLA de 200 ms).</p>
+
+<blockquote>
+<p><strong>Natureza do número.</strong> O tempo ativo (~99 s) é <strong>medido</strong>; a cota gratuita e a regra de "réplica a zero = US$ 0" são da <strong>doc oficial</strong>. A composição acima é, portanto, um <strong>modelo bem fundamentado</strong> — não uma fatura de produção em regime, que continua sendo o item a fechar. Mas a conclusão qualitativa é robusta: <strong>para o volume-alvo (pessoal a escola), a hospedagem no modo scale-to-zero é essencialmente gratuita.</strong></p>
+</blockquote>
+
+<p><strong>Em aberto.</strong> Falta uma <strong>fatura de produção em regime</strong> para cravar o número de hospedagem (o modelo acima é o teto de confiança atual). A comparação <strong>custo × qualidade</strong> entre os demais provedores de LLM (Gemini, Claude, OpenAI, Maritaca) também segue em aberto.</p>
 
 <h4 id="custo-em-escala-de-um-aluno-a-uma-escola">Custo em escala: de um aluno a uma escola inteira</h4>
 
@@ -1628,7 +1693,7 @@ tokens_saída    ≈  a correção formatada (competências + feedback + reescri
 </blockquote>
 <p>></p>
 <blockquote>
-<p>Mesmo no cenário mais caro da tabela (<strong>escola inteira, ano letivo completo, adoção de 1/3, sem considerar o free tier</strong>), o custo de execução fica na casa de <strong>dezenas de dólares por ano</strong> — não milhares, não centenas. Isso muda a leitura da seção a seguir (§8.4.3): para uso pessoal, de turma ou de escola, o custo é baixo o bastante para ser <strong>bancado do próprio bolso</strong> por um aluno, professor ou desenvolvedor entusiasta, sem precisar de nenhum modelo de negócio. Só na escala de <strong>múltiplas escolas simultâneas</strong> — onde a soma de correções e o custo (ainda não medido) de hospedagem em nuvem começam a pesar — um custeio institucional passaria a fazer sentido, e como viabilização de acesso, não como fim comercial.</p>
+<p>Mesmo no cenário mais caro da tabela (<strong>escola inteira, ano letivo completo, adoção de 1/3, sem considerar o free tier</strong>), o custo de execução fica na casa de <strong>dezenas de dólares por ano</strong> — não milhares, não centenas. Isso muda a leitura da seção a seguir (§8.4.3): para uso pessoal, de turma ou de escola, o custo é baixo o bastante para ser <strong>bancado do próprio bolso</strong> por um aluno, professor ou desenvolvedor entusiasta, sem precisar de nenhum modelo de negócio. Só na escala de <strong>múltiplas escolas simultâneas</strong> — onde a soma de correções ultrapassa a cota gratuita de hospedagem (modelada em §8.4.1: ~US$ 0 no scale-to-zero até a cota, crescendo só nesse regime) e começa a pesar — um custeio institucional passaria a fazer sentido, e como viabilização de acesso, não como fim comercial.</p>
 </blockquote>
 
 <h3 id="8-4-2-valor-gerado-a-l-gica-">8.4.2 Valor gerado (a lógica)</h3>
@@ -1651,7 +1716,7 @@ tokens_saída    ≈  a correção formatada (competências + feedback + reescri
 <li><strong>Privacidade pensada para menor de idade.</strong> Foto descartada após o OCR, sem histórico, TTL curto — cuidado que uma conversa avulsa num chatbot genérico não oferece.</li>
 </ul>
 
-<p><strong>O enquadramento honesto é portfólio + acesso, não receita.</strong> Como o custo de execução é de centavos (§8.4.1) e fica em dezenas de dólares por ano mesmo para uma escola inteira, um projeto assim se sustenta <strong>do próprio bolso</strong> em escala pessoal, de turma ou de escola — não precisa de modelo de negócio para existir e cumprir seu propósito social e demonstrar competência técnica. Se um dia escalasse para muitas escolas ao mesmo tempo, aí a conta de nuvem (ainda não medida) pesaria, e um custeio institucional — convênio com rede pública, patrocínio de edital — faria sentido <strong>como viabilização de acesso, não como fim comercial</strong>. Vender assinatura contra um ChatGPT gratuito não é a estratégia; fingir que seria só enfraqueceria a análise honesta que o resto desta seção construiu.</p>
+<p><strong>O enquadramento honesto é portfólio + acesso, não receita.</strong> Como o custo de execução é de centavos (§8.4.1) e fica em dezenas de dólares por ano mesmo para uma escola inteira, um projeto assim se sustenta <strong>do próprio bolso</strong> em escala pessoal, de turma ou de escola — não precisa de modelo de negócio para existir e cumprir seu propósito social e demonstrar competência técnica. Se um dia escalasse para muitas escolas ao mesmo tempo, aí a conta de nuvem (modelada em §8.4.1 — essencialmente gratuita no scale-to-zero até a cota da assinatura) passaria a pesar, e um custeio institucional — convênio com rede pública, patrocínio de edital — faria sentido <strong>como viabilização de acesso, não como fim comercial</strong>. Vender assinatura contra um ChatGPT gratuito não é a estratégia; fingir que seria só enfraqueceria a análise honesta que o resto desta seção construiu.</p>
 
 <hr>
 

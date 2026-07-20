@@ -14,6 +14,9 @@ redacoes/
 ocr_experiments/
 prompt_ab_results/
 
+# Deploy secrets (Azure/Upstash/Telegram/API keys) — só o .example é versionado.
+deploy/.env.deploy
+
 # Corpus Essay-BR (MIT, github.com/lplnufpi/essay-br) usado para medir
 # acurácia da nota estimada — dataset de terceiro, baixado sob demanda, não
 # faz sentido versionar 13MB de CSV. Ver _local/scripts/essay_br_eval.py.

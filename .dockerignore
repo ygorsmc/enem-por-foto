@@ -1,0 +1,36 @@
+# Mantém o contexto de build enxuto (o `az acr build` faz upload dele pra nuvem).
+# A imagem só precisa de: requirements.txt, src/, entrypoint.sh (ver Dockerfile).
+
+.git
+.github
+.venv
+_local
+deploy
+docs
+scripts
+tests
+redacoes
+essay_br
+essay_br_results
+ocr_experiments
+prompt_ab_results
+
+.env
+.env.*
+*.png
+*.jpg
+*.jpeg
+
+.ruff_cache
+.pytest_cache
+__pycache__
+*.pyc
+
+AGENTS.md
+CLAUDE.md
+MEMORY.md
+README.md
+Makefile
+docker-compose.yml
+pyproject.toml
+requirements-dev.txt
