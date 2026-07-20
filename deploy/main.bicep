@@ -31,6 +31,9 @@ param storageAccountName string = toLower('enem${uniqueString(resourceGroup().id
 @description('Nome da fila de jobs (deve casar com ESSAY_QUEUE_NAME no app).')
 param queueName string = 'essay-jobs'
 
+@description('Prefixo de namespace nas chaves Redis. Use um valor único (ex.: "enem") quando dois bots dividem o mesmo Upstash — evita colisão de estado.')
+param redisNamespace string = ''
+
 @description('Imagem do contêiner (ex.: myacr.azurecr.io/enem-reviewer:latest).')
 param containerImage string
 
@@ -183,6 +186,7 @@ var baseEnv = [
   { name: 'QUEUE_POLL_INTERVAL', value: string(queuePollInterval) }
   { name: 'ENVIRONMENT', value: 'production' }
   { name: 'CHANNEL_BACKEND', value: 'telegram' }
+  { name: 'REDIS_NAMESPACE', value: redisNamespace }
   { name: 'CORRECTION_PROVIDER', value: correctionProvider }
   { name: 'CORRECTION_MODEL', value: correctionModel }
   { name: 'CORRECTION_EFFORT', value: correctionEffort }

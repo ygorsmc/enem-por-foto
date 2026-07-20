@@ -8,13 +8,13 @@ custo. Contado por (canal, remetente, dia UTC); a chave expira sozinha em 24h.
 from datetime import datetime, timezone
 
 from src.config import settings
-from src.redis_client import get_redis
+from src.redis_client import get_redis, redis_key
 
 
 def daily_count_key(channel_name: str, sender_id: str, now: datetime | None = None) -> str:
     """Chave do contador diário (pura, testável)."""
     day = (now or datetime.now(timezone.utc)).strftime("%Y%m%d")
-    return f"essay_count:{channel_name}:{sender_id}:{day}"
+    return redis_key("essay_count", channel_name, sender_id, day)
 
 
 async def check_and_increment(channel_name: str, sender_id: str) -> bool:

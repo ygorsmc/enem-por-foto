@@ -6,6 +6,7 @@ import pytest
 
 import src.redis_client as redis_client
 from src.channels.interfaces import IMessagingChannel, InboundMessage
+from src.config import settings
 
 
 class FakeRedis:
@@ -75,10 +76,15 @@ class FakeChannel(IMessagingChannel):
 
 @pytest.fixture(autouse=True)
 def fake_redis():
-    """Substitui a conexão global por um FakeRedis novo a cada teste."""
+    """Substitui a conexão global por um FakeRedis novo a cada teste, e zera o
+    REDIS_NAMESPACE — os testes são determinísticos, independentes do .env do dev
+    (que pode ter um namespace setado para dividir um Upstash entre bots)."""
     fake = FakeRedis()
     redis_client._redis = fake
+    prev_ns = settings.REDIS_NAMESPACE
+    settings.REDIS_NAMESPACE = ""
     yield fake
+    settings.REDIS_NAMESPACE = prev_ns
     redis_client._redis = None
 
 

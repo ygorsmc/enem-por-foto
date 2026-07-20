@@ -57,6 +57,7 @@ FQDN=$(az deployment group create \
         registryUsername="$REGISTRY_USERNAME" \
         registryPassword="$REGISTRY_PASSWORD" \
         redisUrl="$REDIS_URL" \
+        redisNamespace="${REDIS_NAMESPACE:-}" \
         telegramBotToken="$TELEGRAM_BOT_TOKEN" \
         telegramWebhookSecret="${TELEGRAM_WEBHOOK_SECRET:-}" \
         mistralApiKey="$MISTRAL_API_KEY" \

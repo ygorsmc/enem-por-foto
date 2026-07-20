@@ -56,8 +56,14 @@ projeto, a soma dos dois continua bem dentro do grátis. Use `RESOURCE_GROUP`/
 
 Crie um banco em <https://upstash.com> → Redis → copie a connection string TLS
 (`rediss://default:<senha>@<host>:<porta>`). É a única coisa fora do Azure.
-Se o projeto irmão (ACT) já usa Upstash, pode criar um segundo banco free tier
-separado, ou reutilizar o mesmo se o volume combinado couber (10k comandos/dia).
+
+> **Dividindo o banco com o projeto irmão (ACT).** O free tier do Upstash só
+> permite **um banco por vez**, então os dois bots dividem o mesmo Redis. Para
+> não colidir estado (os dois usam o canal `telegram`, e o `chat_id` é o mesmo
+> por usuário nos dois bots), este projeto usa **`REDIS_NAMESPACE=enem`** —
+> todas as chaves ganham o prefixo `enem:`, enquanto o ACT roda sem prefixo. Já
+> está setado no `.env`; o `deploy.sh` o repassa ao contêiner. O volume somado
+> cabe no limite de 10k comandos/dia com folga.
 
 **2. Preencha a config**
 

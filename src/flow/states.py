@@ -13,7 +13,7 @@ from dataclasses import asdict, dataclass, field
 from enum import StrEnum
 
 from src.config import settings
-from src.redis_client import get_redis
+from src.redis_client import get_redis, redis_key
 
 
 class FlowState(StrEnum):
@@ -46,11 +46,11 @@ class FlowData:
 
 
 def _flow_key(channel_name: str, sender_id: str) -> str:
-    return f"flow:{channel_name}:{sender_id}"
+    return redis_key("flow", channel_name, sender_id)
 
 
 def _consent_key(channel_name: str, sender_id: str) -> str:
-    return f"consent:{channel_name}:{sender_id}"
+    return redis_key("consent", channel_name, sender_id)
 
 
 async def load_flow(channel_name: str, sender_id: str) -> FlowData | None:
