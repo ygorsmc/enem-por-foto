@@ -31,6 +31,24 @@ set +a
 : "${TELEGRAM_BOT_TOKEN:?defina no .env.deploy}"
 : "${MISTRAL_API_KEY:?defina no .env.deploy}"
 
+# Se EXISTING_ENV_ID não foi fixado no .env.deploy, tenta descobrir um
+# Container Apps Environment já existente em $LOCATION e reaproveitá-lo; se
+# não achar nenhum, segue com EXISTING_ENV_ID vazio — o Bicep cria um novo
+# automaticamente (comportamento padrão do main.bicep).
+if [ -z "${EXISTING_ENV_ID:-}" ]; then
+    # location vem como "Brazil South" (display name); normaliza pra comparar
+    # com o canônico "brazilsouth" do .env.deploy.
+    norm_target=$(echo "$LOCATION" | tr -d ' ' | tr '[:upper:]' '[:lower:]')
+    EXISTING_ENV_ID=$(az containerapp env list --query "[].{id:id, location:location}" -o tsv 2>/dev/null \
+        | while IFS=$'\t' read -r id loc; do
+            norm_loc=$(echo "$loc" | tr -d ' ' | tr '[:upper:]' '[:lower:]')
+            [ "$norm_loc" = "$norm_target" ] && echo "$id" && break
+          done)
+    if [ -n "$EXISTING_ENV_ID" ]; then
+        echo "==> Reaproveitando Container Apps Environment existente em $LOCATION"
+    fi
+fi
+
 APP_NAME="${APP_NAME:-enem-reviewer}"
 IMAGE_TAG="${IMAGE_TAG:-enem-reviewer:latest}"
 
@@ -52,6 +70,7 @@ FQDN=$(az deployment group create \
     --query properties.outputs.fqdn.value -o tsv \
     --parameters \
         appName="$APP_NAME" \
+        existingEnvironmentId="$EXISTING_ENV_ID" \
         containerImage="$IMAGE" \
         registryServer="$REGISTRY_SERVER" \
         registryUsername="$REGISTRY_USERNAME" \

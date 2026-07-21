@@ -18,9 +18,9 @@ _redis = None
 
 
 def redis_key(*parts: str) -> str:
-    """Monta uma chave Redis aplicando o REDIS_NAMESPACE configurado. Permite
-    dois bots dividirem o mesmo Redis (ex.: um único banco Upstash free tier)
-    sem colidir estado — cada um usa um namespace diferente. Vazio = sem prefixo."""
+    """Monta uma chave Redis aplicando o REDIS_NAMESPACE configurado. Útil quando
+    o mesmo Redis é compartilhado entre múltiplos ambientes/deploys, evitando
+    colisão de chave entre eles. Vazio = sem prefixo."""
     joined = ":".join(parts)
     return f"{settings.REDIS_NAMESPACE}:{joined}" if settings.REDIS_NAMESPACE else joined
 

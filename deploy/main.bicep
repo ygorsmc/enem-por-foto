@@ -1,21 +1,13 @@
 // Infra scale-to-zero do Corretor ENEM no Azure Container Apps.
 //
-// Provisiona: Storage Account + fila (essay-jobs), Log Analytics, Container Apps
-// Environment e o Container App com minReplicas=0 + regra KEDA azure-queue. O
-// contêiner só roda (e só é cobrado) enquanto há redação na fila.
+// Provisiona: Storage Account + fila (essay-jobs), Container Apps Environment
+// (+ Log Analytics) e o Container App com minReplicas=0 + regra KEDA
+// azure-queue. O contêiner só roda (e só é cobrado) enquanto há redação na fila.
 //
 // NÃO provisiona o Redis: o modo scale-to-zero exige um Redis EXTERNO (o
 // embutido morre ao escalar pra 0). Use Upstash (free tier) e passe a URL em
 // `redisUrl`. Azure Cache for Redis não é free (~US$16/mês) e mataria a
 // economia — por isso fica de fora de propósito. Ver deploy/README.md.
-//
-// Nota: se este projeto (Corretor ENEM) e o projeto irmão (ACT Essay Reviewer)
-// forem hospedados na MESMA assinatura Azure, a cota mensal grátis do
-// Container Apps (180.000 vCPU-s / 360.000 GiB-s / 2M requisições) é POR
-// ASSINATURA — compartilhada entre os dois apps, não uma cota extra por app.
-// Para o volume de uso pessoal de cada um, a soma continua bem dentro do
-// grátis; usar `appName`/`storageAccountName` diferentes evita qualquer
-// colisão de nome de recurso entre os dois deploys.
 //
 // Deploy: use deploy/deploy.sh (build da imagem + este template + setWebhook).
 
@@ -28,10 +20,18 @@ param appName string = 'enem-reviewer'
 @description('Nome da Storage Account (3-24, minúsculas/dígitos, único global).')
 param storageAccountName string = toLower('enem${uniqueString(resourceGroup().id)}')
 
+@description('''Resource ID de um Container Apps Environment já existente, para reaproveitar em
+vez de criar um novo (opcional). Deixe em branco para o template criar seu próprio
+Environment (comportamento padrão). Preencha se sua assinatura limita o número de
+Environments por região (algumas assinaturas de avaliação/estudante permitem só 1) e
+você já possui um na região de destino. Obtenha o ID com:
+az containerapp env list --query "[].id" -o tsv''')
+param existingEnvironmentId string = ''
+
 @description('Nome da fila de jobs (deve casar com ESSAY_QUEUE_NAME no app).')
 param queueName string = 'essay-jobs'
 
-@description('Prefixo de namespace nas chaves Redis. Use um valor único (ex.: "enem") quando dois bots dividem o mesmo Upstash — evita colisão de estado.')
+@description('Prefixo opcional aplicado a todas as chaves Redis. Útil se este banco Redis for compartilhado entre múltiplos ambientes/deploys, evitando colisão de chave entre eles.')
 param redisNamespace string = ''
 
 @description('Imagem do contêiner (ex.: myacr.azurecr.io/enem-reviewer:latest).')
@@ -107,8 +107,12 @@ resource essayQueue 'Microsoft.Storage/storageAccounts/queueServices/queues@2023
 
 var storageConnectionString = 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccount.listKeys().keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
 
-// ── Observabilidade ──────────────────────────────────────────────────────────
-resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
+// ── Observabilidade / Container Apps Environment ────────────────────────────
+// Cria um Environment (+ Log Analytics) próprio, a menos que existingEnvironmentId
+// já aponte para um (ver descrição do parâmetro acima).
+var createEnvironment = empty(existingEnvironmentId)
+
+resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2022-10-01' = if (createEnvironment) {
   name: '${appName}-logs'
   location: location
   properties: {
@@ -119,7 +123,7 @@ resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
   }
 }
 
-resource managedEnv 'Microsoft.App/managedEnvironments@2024-03-01' = {
+resource newEnvironment 'Microsoft.App/managedEnvironments@2024-03-01' = if (createEnvironment) {
   name: '${appName}-env'
   location: location
   properties: {
@@ -132,6 +136,8 @@ resource managedEnv 'Microsoft.App/managedEnvironments@2024-03-01' = {
     }
   }
 }
+
+var environmentId = createEnvironment ? newEnvironment.id : existingEnvironmentId
 
 // ── Secrets / env / registries (montados condicionalmente) ───────────────────
 var baseSecrets = [
@@ -212,7 +218,7 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
   name: appName
   location: location
   properties: {
-    managedEnvironmentId: managedEnv.id
+    managedEnvironmentId: environmentId
     configuration: {
       activeRevisionsMode: 'Single'
       ingress: {

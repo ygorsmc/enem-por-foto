@@ -39,14 +39,14 @@ autoscaler** — coisa que uma `asyncio.Task` em memória não é. Isso permite:
   reprocessa (OCR/LLM em dobro). Raro e aceitável para uso pessoal/escolar.
 - **`maxReplicas=1`.** Evita workers concorrentes; ample para o volume atual.
 
-### Se este projeto conviver com o ACT Essay Reviewer na mesma assinatura
+### Container Apps Environment
 
-A cota mensal grátis do Container Apps (180.000 vCPU-s / 360.000 GiB-s / 2M
-requisições) é **por assinatura**, compartilhada entre todos os Container Apps
-dela — não uma cota extra por app. Para o volume de uso pessoal de cada
-projeto, a soma dos dois continua bem dentro do grátis. Use `RESOURCE_GROUP`/
-`ACR_NAME` diferentes dos do outro projeto (ACR é nome único global) — ver
-`.env.deploy.example`.
+Por padrão, o `main.bicep` cria seu próprio Container Apps Environment (+ Log
+Analytics workspace). Se preferir apontar para um Environment já existente na
+mesma região — por exemplo, porque sua assinatura limita quantos Environments
+podem existir por região —, defina `existingEnvironmentId` (parâmetro do
+Bicep) com o resource ID dele; o `deploy.sh` também tenta descobrir um
+automaticamente se `EXISTING_ENV_ID` não estiver fixado no `.env.deploy`.
 
 ---
 
@@ -57,13 +57,10 @@ projeto, a soma dos dois continua bem dentro do grátis. Use `RESOURCE_GROUP`/
 Crie um banco em <https://upstash.com> → Redis → copie a connection string TLS
 (`rediss://default:<senha>@<host>:<porta>`). É a única coisa fora do Azure.
 
-> **Dividindo o banco com o projeto irmão (ACT).** O free tier do Upstash só
-> permite **um banco por vez**, então os dois bots dividem o mesmo Redis. Para
-> não colidir estado (os dois usam o canal `telegram`, e o `chat_id` é o mesmo
-> por usuário nos dois bots), este projeto usa **`REDIS_NAMESPACE=enem`** —
-> todas as chaves ganham o prefixo `enem:`, enquanto o ACT roda sem prefixo. Já
-> está setado no `.env`; o `deploy.sh` o repassa ao contêiner. O volume somado
-> cabe no limite de 10k comandos/dia com folga.
+> Opcionalmente, `REDIS_NAMESPACE` (env var) aplica um prefixo a todas as
+> chaves Redis — útil se este banco for compartilhado entre múltiplos
+> ambientes/deploys, evitando colisão de chave entre eles. Vazio (padrão) =
+> sem prefixo.
 
 **2. Preencha a config**
 
@@ -90,9 +87,8 @@ precisa de Docker local), aplica o `main.bicep` e registra o webhook do Telegram
 app e o comando de logs.
 
 > **Sanidade de custo:** o Bicep fixa `minReplicas=0`. Compute em US$0 quando
-> ocioso; o tempo ativo cabe na cota grátis mensal (compartilhada com outros
-> Container Apps da mesma assinatura, se houver). A fila custa frações de
-> centavo.
+> ocioso; o tempo ativo cabe na cota grátis mensal (por assinatura Azure). A
+> fila custa frações de centavo.
 
 ## Verificação
 
@@ -113,7 +109,7 @@ az containerapp logs show -n enem-reviewer -g <RG> --follow
 |---|---|
 | Storage Account + fila `essay-jobs` | Fila durável de jobs (KEDA lê o tamanho dela) |
 | Log Analytics workspace | Logs do Container App |
-| Container Apps Environment | Ambiente gerenciado do app |
+| Container Apps Environment | Ambiente gerenciado do app (criado por padrão; opcionalmente reaproveita um existente — ver `existingEnvironmentId`) |
 | Container App (`minReplicas=0`, `maxReplicas=1`) | O app: uvicorn (webhook) + worker (drena a fila) |
 
 Parâmetros úteis do `main.bicep` (todos com default sensato): `appName`, `cpu`

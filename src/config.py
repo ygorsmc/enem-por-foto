@@ -17,10 +17,9 @@ class Settings(BaseSettings):
     MAX_TEXT_MESSAGE_LENGTH: int = Field(default=4000)
 
     REDIS_URL: str = Field(default="redis://localhost:6379/0")
-    # Prefixo aplicado a TODAS as chaves Redis. Permite dois bots dividirem o
-    # mesmo Redis (ex.: um único banco Upstash free tier) sem colidir estado —
-    # cada deploy usa um namespace diferente. Vazio = sem prefixo (comportamento
-    # padrão; o Redis embutido local não precisa disso).
+    # Prefixo opcional aplicado a TODAS as chaves Redis. Útil quando o mesmo
+    # Redis é compartilhado entre múltiplos ambientes/deploys, evitando colisão
+    # de chave entre eles. Vazio = sem prefixo (comportamento padrão).
     REDIS_NAMESPACE: str = Field(default="")
 
     # Backend de despacho de job: como o webhook entrega o trabalho ao passo OCR+LLM.
