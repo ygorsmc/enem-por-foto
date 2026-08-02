@@ -15,7 +15,7 @@ PORT := 8000
 
 help: ## Lista os alvos disponíveis
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
-		| awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
+		| awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
 
 # ── Docker Compose (jeito canônico: app + redis embutido num container) ──────
 up: ## Sobe app + redis embutido via docker compose (porta 8000)
@@ -65,6 +65,23 @@ tunnel: ## Sobe (ou reaproveita) um túnel ngrok PERSISTENTE e grava NGROK_URL n
 	echo "Túnel ngrok ativo: $$url"; \
 	$(NGROK_SYNC_ENV)
 
+# Lê o valor de uma chave do .env (uso: $(call ENV_VAL,CHAVE)).
+ENV_VAL = sed -nE 's/^$(1)=//p' .env 2>/dev/null | tr -d '"\r' | head -1
+
+webhook-local: ## Aponta o webhook do Telegram para o túnel atual (o passo que a URL nova do ngrok invalida)
+	@url="$$($(NGROK_EXISTING))"; \
+	if [ -z "$$url" ]; then echo "  Nenhum túnel ativo — rode 'make tunnel' antes."; exit 1; fi; \
+	token="$$($(call ENV_VAL,TELEGRAM_BOT_TOKEN))"; \
+	if [ -z "$$token" ]; then echo "  TELEGRAM_BOT_TOKEN vazio no .env — setWebhook pulado."; exit 0; fi; \
+	secret="$$($(call ENV_VAL,TELEGRAM_WEBHOOK_SECRET))"; \
+	resp=$$(curl -sS -m 20 "https://api.telegram.org/bot$$token/setWebhook" \
+		--data-urlencode "url=$$url/v1/webhook/telegram" \
+		$${secret:+--data-urlencode "secret_token=$$secret"}); \
+	case "$$resp" in \
+		*'"ok":true'*) echo "  setWebhook OK → $$url/v1/webhook/telegram";; \
+		*) echo "  setWebhook FALHOU: $$resp"; exit 1;; \
+	esac
+
 tunnel-stop: ## Encerra o túnel ngrok persistente
 	@pkill -f 'ngrok http $(PORT)' 2>/dev/null && echo "Túnel encerrado." || echo "Nenhum túnel ativo."
 
@@ -73,11 +90,11 @@ dev: ## Sobe o túnel + app num só comando (grava NGROK_URL no .env); segue os 
 	docker compose up -d --build
 	@echo "Aguardando app subir em :$(PORT)..."
 	@until curl -sf http://localhost:$(PORT)/health >/dev/null 2>&1; do sleep 0.5; done
+	@echo ""
+	@echo "App no ar. Registrando o webhook do Telegram no túnel atual:"
+	-@$(MAKE) --no-print-directory webhook-local
 	@url="$$($(NGROK_EXISTING))"; \
-	echo ""; \
-	echo "App no ar. Webhook a registrar no provedor:"; \
-	echo "  Telegram: $$url/v1/webhook/telegram"; \
-	echo "  WhatsApp: $$url/v1/webhook/whatsapp   (painel da Meta + META_VERIFY_TOKEN)"; \
+	echo "  WhatsApp (manual, painel da Meta): $$url/v1/webhook/whatsapp"; \
 	echo ""
 	@echo "Ctrl+C derruba o app; o túnel segue ativo ('make tunnel-stop' p/ encerrá-lo)."
 	@trap 'docker compose down' INT TERM; docker compose logs -f

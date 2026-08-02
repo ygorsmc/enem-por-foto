@@ -89,15 +89,16 @@ make lint                  # ruff check; `make fmt` para auto-corrigir e formata
 O teste real mais barato é o **Telegram** (token grátis no @BotFather) com um túnel local:
 
 ```bash
-make dev             # túnel ngrok + app num só comando; imprime as URLs de webhook
-curl "https://api.telegram.org/bot$TOKEN/setWebhook" \
-  -d "url=https://SEU-TUNEL/v1/webhook/telegram" \
-  -d "secret_token=$TELEGRAM_WEBHOOK_SECRET"      # OBRIGATÓRIO em produção
+make dev             # túnel + app + setWebhook do Telegram, tudo num comando
 ```
 
-O `make dev` garante o túnel **antes** de subir o app (o `env_file` do compose é lido na criação do contêiner) e grava a URL em `NGROK_URL` no `.env` — de onde você copia o endereço para colar no painel da Meta. Ele também imprime as URLs de webhook prontas dos dois canais ao final.
+O `make dev` faz, nessa ordem: garante o túnel ngrok (reaproveita se já houver um ativo) → grava a URL em `NGROK_URL` no `.env` → sobe o app → registra o túnel como webhook do Telegram. A ordem importa: o `env_file` do compose é lido na *criação* do contêiner, então o túnel precisa existir antes do `up`.
 
-O túnel fica de pé mesmo depois de Ctrl+C (só o app cai) — reiniciar o app com `make dev` de novo reaproveita a mesma URL, sem precisar refazer o `setWebhook`. Para encerrar o túnel de vez: `make tunnel-stop`.
+**No plano free do ngrok a URL muda a cada túnel novo**, o que invalida o webhook registrado (o Telegram passa a receber `404` e o bot fica mudo). Por isso o `setWebhook` é refeito automaticamente a cada `make dev` — e `make webhook-local` reaplica sozinho, se precisar. Para o WhatsApp o passo é manual (painel da Meta): a URL fica em `NGROK_URL` no `.env`, pronta para copiar.
+
+> **Atenção:** o bot tem um webhook só. Rodar `make dev` aponta o bot para a sua máquina, então a instância de produção para de receber mensagens até você rodar `make deploy` (que refaz o `setWebhook` para o host da nuvem no passo 4/4).
+
+O túnel fica de pé mesmo depois de Ctrl+C (só o app cai). Para encerrar de vez: `make tunnel-stop`.
 
 **WhatsApp** (Meta Cloud API): crie um app no Meta for Developers, aponte o webhook para `https://SEU-HOST/v1/webhook/whatsapp` usando o `META_VERIFY_TOKEN` do `.env`, e preencha `PHONE_NUMBER_ID`, `WHATSAPP_TOKEN` e `META_APP_SECRET`.
 
