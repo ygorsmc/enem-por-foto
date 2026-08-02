@@ -89,13 +89,15 @@ make lint                  # ruff check; `make fmt` para auto-corrigir e formata
 O teste real mais barato é o **Telegram** (token grátis no @BotFather) com um túnel local:
 
 ```bash
-make dev             # sobe o app + túnel ngrok persistente, imprime a URL pública
+make dev             # túnel ngrok + app num só comando; imprime as URLs de webhook
 curl "https://api.telegram.org/bot$TOKEN/setWebhook" \
   -d "url=https://SEU-TUNEL/v1/webhook/telegram" \
   -d "secret_token=$TELEGRAM_WEBHOOK_SECRET"      # OBRIGATÓRIO em produção
 ```
 
-O túnel do `make dev` fica de pé mesmo depois de Ctrl+C (só o app cai) — reiniciar o app com `make dev` de novo reaproveita a mesma URL, sem precisar refazer o `setWebhook`. Para encerrar o túnel de vez: `make tunnel-stop`.
+O `make dev` garante o túnel **antes** de subir o app (o `env_file` do compose é lido na criação do contêiner) e grava a URL em `NGROK_URL` no `.env` — de onde você copia o endereço para colar no painel da Meta. Ele também imprime as URLs de webhook prontas dos dois canais ao final.
+
+O túnel fica de pé mesmo depois de Ctrl+C (só o app cai) — reiniciar o app com `make dev` de novo reaproveita a mesma URL, sem precisar refazer o `setWebhook`. Para encerrar o túnel de vez: `make tunnel-stop`.
 
 **WhatsApp** (Meta Cloud API): crie um app no Meta for Developers, aponte o webhook para `https://SEU-HOST/v1/webhook/whatsapp` usando o `META_VERIFY_TOKEN` do `.env`, e preencha `PHONE_NUMBER_ID`, `WHATSAPP_TOKEN` e `META_APP_SECRET`.
 

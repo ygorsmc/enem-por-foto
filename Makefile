@@ -30,9 +30,28 @@ logs: ## Segue os logs do container
 # Extrai a public_url de um túnel ngrok já ativo (API local :4040), se houver.
 NGROK_EXISTING = curl -sf http://127.0.0.1:4040/api/tunnels 2>/dev/null | grep -o '"public_url":"https://[^"]*"' | head -1 | cut -d'"' -f4
 
-tunnel: ## Sobe (ou reaproveita) um túnel ngrok PERSISTENTE; URL estável entre restarts do app
+# Grava a URL do túnel em NGROK_URL no .env (espera $$url definida no shell da
+# receita). O app NÃO lê essa variável — `Settings` usa extra="ignore", então ela
+# só trafega como registro para colar no painel da Meta (webhook do WhatsApp) e
+# no setWebhook do Telegram. Delimitador | no sed porque a URL tem barras.
+NGROK_SYNC_ENV = \
+	if [ ! -f .env ]; then \
+		echo "  .env não encontrado — NGROK_URL não registrada."; \
+	elif grep -qE '^[[:space:]]*NGROK_URL=' .env; then \
+		sed -i -E "s|^[[:space:]]*NGROK_URL=.*|NGROK_URL=$$url|" .env; \
+		echo "  NGROK_URL atualizada no .env"; \
+	else \
+		printf 'NGROK_URL=%s\n' "$$url" >> .env; \
+		echo "  NGROK_URL adicionada ao .env"; \
+	fi
+
+tunnel: ## Sobe (ou reaproveita) um túnel ngrok PERSISTENTE e grava NGROK_URL no .env
 	@url="$$($(NGROK_EXISTING))"; \
-	if [ -n "$$url" ]; then echo "Túnel ngrok já ativo: $$url"; exit 0; fi; \
+	if [ -n "$$url" ]; then \
+		echo "Túnel ngrok já ativo: $$url"; \
+		$(NGROK_SYNC_ENV); \
+		exit 0; \
+	fi; \
 	command -v ngrok >/dev/null || { echo "ngrok não encontrado — instale e rode 'ngrok config add-authtoken <token>'"; exit 1; }; \
 	echo "Iniciando ngrok em background..."; \
 	nohup ngrok http $(PORT) >/dev/null 2>&1 & \
@@ -43,17 +62,24 @@ tunnel: ## Sobe (ou reaproveita) um túnel ngrok PERSISTENTE; URL estável entre
 		echo "ngrok não subiu em ~9s. Rode 'ngrok http $(PORT)' à mão p/ ver o erro (auth, sessão já ativa em outra conta, etc.)."; \
 		exit 1; \
 	fi; \
-	echo "Túnel ngrok ativo: $$url"
+	echo "Túnel ngrok ativo: $$url"; \
+	$(NGROK_SYNC_ENV)
 
 tunnel-stop: ## Encerra o túnel ngrok persistente
 	@pkill -f 'ngrok http $(PORT)' 2>/dev/null && echo "Túnel encerrado." || echo "Nenhum túnel ativo."
 
-dev: ## Sobe o app e garante o túnel persistente; segue os logs. Ctrl+C derruba só o app (túnel fica)
+dev: ## Sobe o túnel + app num só comando (grava NGROK_URL no .env); segue os logs. Ctrl+C derruba só o app (túnel fica)
+	@$(MAKE) --no-print-directory tunnel
 	docker compose up -d --build
 	@echo "Aguardando app subir em :$(PORT)..."
 	@until curl -sf http://localhost:$(PORT)/health >/dev/null 2>&1; do sleep 0.5; done
-	@$(MAKE) --no-print-directory tunnel
-	@echo "App no ar. Ctrl+C derruba o app; o túnel segue ativo ('make tunnel-stop' p/ encerrá-lo)."
+	@url="$$($(NGROK_EXISTING))"; \
+	echo ""; \
+	echo "App no ar. Webhook a registrar no provedor:"; \
+	echo "  Telegram: $$url/v1/webhook/telegram"; \
+	echo "  WhatsApp: $$url/v1/webhook/whatsapp   (painel da Meta + META_VERIFY_TOKEN)"; \
+	echo ""
+	@echo "Ctrl+C derruba o app; o túnel segue ativo ('make tunnel-stop' p/ encerrá-lo)."
 	@trap 'docker compose down' INT TERM; docker compose logs -f
 
 # ── Dev local (venv + redis avulso, pro simulador de terminal) ──────────────
