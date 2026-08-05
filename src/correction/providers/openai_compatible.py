@@ -6,11 +6,25 @@ O bloco de sistema é idêntico, byte a byte, em toda chamada — ambos os
 provedores reconhecem e cacheiam sozinhos prefixos repetidos acima de um
 mínimo de tokens, cobrando uma fração do preço normal nas chamadas seguintes.
 
-`reasoning_effort` liga o "thinking mode" do DeepSeek V4 (Flash/Pro): só
-"high" ou "max" são aceitos (a API já mapeia low/medium→high e xhigh→max).
-Os tokens de raciocínio (reasoning_content, nunca visto pelo aluno) são
-cobrados como output — por isso ficam logados separados em
+`reasoning_effort` gradua o "thinking mode" do DeepSeek V4 (Flash/Pro). Os
+tokens de raciocínio (reasoning_content, nunca visto pelo aluno) são cobrados
+como output — por isso ficam logados separados em
 completion_tokens_details.reasoning_tokens.
+
+ATENÇÃO — dois comportamentos medidos em 2026-08-04 no `deepseek-v4-flash`
+(versão 0731), ambos DIFERENTES do que esta docstring afirmava antes:
+
+- **Os quatro níveis são distintos.** A API não colapsa mais low/medium em
+  high. Numa mesma redação: low=15 tokens de raciocínio, medium=11.572,
+  high=12.654, max=14.011. `low` na prática desliga o raciocínio e corta a
+  latência de ~2min para ~40s.
+- **Effort vazio NÃO desliga o thinking.** O `if` abaixo deixa de enviar
+  `reasoning_effort` e `thinking.enabled`, mas o modelo raciocina assim mesmo
+  (12.525 tokens medidos) — e ainda por cima sem controle do nível. Se a
+  intenção for gastar menos, use `low` explicitamente, não string vazia.
+
+O nível afeta a NOTA, não só o custo: mais raciocínio correlaciona com correção
+mais dura. Ver a comparação pareada em _local/docs_src/08_metricas_performance_e_roi.md.
 """
 
 import structlog

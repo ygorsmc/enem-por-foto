@@ -22,6 +22,13 @@ deploy/.env.deploy
 # faz sentido versionar 13MB de CSV. Ver _local/scripts/essay_br_eval.py.
 essay_br/
 essay_br_results/
+essay_br_results_gemini35fl
+heldout_deepseek_seed7
+gemini_prompt_ab_results
+essay_br_results_v2
+heldout_deepseek_seed7_high
+heldout_deepseek_seed7_medium
+heldout_deepseek_seed7_low
 
 # Ferramental de laboratório/documentação-fonte e docs de referência de
 # terceiros — ficam no disco para desenvolvimento local, mas não são parte

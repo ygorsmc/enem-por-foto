@@ -297,6 +297,7 @@ footer.site-footer{background:#2A2018;color:#C4B6A0;margin-top:64px;border-top:2
         <div class="tab-dropdown">
 <a href="#8-1-lat-ncia-tempo-at-a-nota-chegar" class="dropdown-link" data-page="metricas">8.1 Latência: tempo até a nota chegar</a>
 <a href="#8-2-acur-cia-da-nota-estimada-medido-con" class="dropdown-link" data-page="metricas">8.2 Acurácia da nota estimada — medido contra o Essay-BR</a>
+<a href="#compara-o-com-outro-provedor-gemini-3-5-" class="dropdown-link" data-page="metricas">Comparação com outro provedor — Gemini 3.5 Flash Lite (medido)</a>
 <a href="#8-3-confiabilidade" class="dropdown-link" data-page="metricas">8.3 Confiabilidade</a>
 <a href="#8-4-custo-e-roi" class="dropdown-link" data-page="metricas">8.4 Custo e ROI</a>
 <a href="#8-4-1-custo-por-corre-o-estrutura-" class="dropdown-link" data-page="metricas">8.4.1 Custo por correção (estrutura)</a>
@@ -388,7 +389,7 @@ Aluno                    Bot
 
 <h3 id="por-que-mensageria-e-n-o-um-app-de-ia">Por que mensageria, e não um app de IA</h3>
 
-<p>WhatsApp e Telegram costumam continuar acessíveis em redes escolares que bloqueiam ChatGPT/Gemini/Claude — a correção chega por um canal que já não é bloqueado. E como a entrada é uma <em>foto do manuscrito</em> (não texto digitado), o treino continua fiel ao formato real da prova: o aluno escreve à mão, no papel, como no dia do ENEM.</p>
+<p>A correção chega pelo canal de <strong>menor atrito</strong>: sem instalar aplicativo, sem criar conta, dentro do mensageiro que o aluno já usa todo dia — inclusive no ambiente escolar, onde ferramentas de IA de uso geral raramente estão disponíveis. E como a entrada é uma <em>foto do manuscrito</em> (não texto digitado), o treino continua fiel ao formato real da prova: o aluno escreve à mão, no papel, como no dia do ENEM.</p>
 
 <h2 id="lgpd-o-p-blico-menor-de-idade-">LGPD (o público é menor de idade)</h2>
 
@@ -439,13 +440,18 @@ make lint                  # ruff check; `make fmt` para auto-corrigir e formata
 <p>O teste real mais barato é o <strong>Telegram</strong> (token grátis no @BotFather) com um túnel local:</p>
 
 <pre><code class="lang-bash">
-make dev             # sobe o app + túnel ngrok persistente, imprime a URL pública
-curl "https://api.telegram.org/bot$TOKEN/setWebhook" \
-  -d "url=https://SEU-TUNEL/v1/webhook/telegram" \
-  -d "secret_token=$TELEGRAM_WEBHOOK_SECRET"      # OBRIGATÓRIO em produção
+make dev             # túnel + app + setWebhook do Telegram, tudo num comando
 </code></pre>
 
-<p>O túnel do <code>make dev</code> fica de pé mesmo depois de Ctrl+C (só o app cai) — reiniciar o app com <code>make dev</code> de novo reaproveita a mesma URL, sem precisar refazer o <code>setWebhook</code>. Para encerrar o túnel de vez: <code>make tunnel-stop</code>.</p>
+<p>O <code>make dev</code> faz, nessa ordem: garante o túnel ngrok (reaproveita se já houver um ativo) → grava a URL em <code>NGROK_URL</code> no <code>.env</code> → sobe o app → registra o túnel como webhook do Telegram. A ordem importa: o <code>env_file</code> do compose é lido na <em>criação</em> do contêiner, então o túnel precisa existir antes do <code>up</code>.</p>
+
+<p><strong>No plano free do ngrok a URL muda a cada túnel novo</strong>, o que invalida o webhook registrado (o Telegram passa a receber <code>404</code> e o bot fica mudo). Por isso o <code>setWebhook</code> é refeito automaticamente a cada <code>make dev</code> — e <code>make webhook-local</code> reaplica sozinho, se precisar. Para o WhatsApp o passo é manual (painel da Meta): a URL fica em <code>NGROK_URL</code> no <code>.env</code>, pronta para copiar.</p>
+
+<blockquote>
+<p><strong>Atenção:</strong> o bot tem um webhook só. Rodar <code>make dev</code> aponta o bot para a sua máquina, então a instância de produção para de receber mensagens até você rodar <code>make deploy</code> (que refaz o <code>setWebhook</code> para o host da nuvem no passo 4/4).</p>
+</blockquote>
+
+<p>O túnel fica de pé mesmo depois de Ctrl+C (só o app cai). Para encerrar de vez: <code>make tunnel-stop</code>.</p>
 
 <p><strong>WhatsApp</strong> (Meta Cloud API): crie um app no Meta for Developers, aponte o webhook para <code>https://SEU-HOST/v1/webhook/whatsapp</code> usando o <code>META_VERIFY_TOKEN</code> do <code>.env</code>, e preencha <code>PHONE_NUMBER_ID</code>, <code>WHATSAPP_TOKEN</code> e <code>META_APP_SECRET</code>.</p>
 
@@ -592,7 +598,7 @@ make deploy                                        # build da imagem na nuvem �
 <p><strong>E a IA genérica (ChatGPT, GPTs de terceiros) já não resolveria isso?</strong> Só em parte — e não no contexto onde o aluno mais precisa. Colar a redação num chatbot de propósito geral esbarra em três problemas concretos:</p>
 
 <ul>
-<li><strong>A rede da escola costuma bloquear justamente essas ferramentas.</strong> ChatGPT, Gemini e Claude são alvos comuns de bloqueio institucional (ver §1.5); um GPT customizado de terceiros herda o mesmo bloqueio, porque ainda roda dentro do domínio do ChatGPT.</li>
+<li><strong>Essas ferramentas raramente estão disponíveis no ambiente escolar.</strong> ChatGPT, Gemini e Claude costumam ficar fora do que a rede da escola disponibiliza ao aluno (ver §1.5); um GPT customizado de terceiros herda a mesma indisponibilidade, porque ainda roda dentro do domínio do ChatGPT.</li>
 <li><strong>Exige digitar a redação inteira</strong> — o aluno perde o treino no formato real da prova (escrita à mão, sob o tempo e o cansaço de redigir no papel) só para conseguir uma correção.</li>
 <li><strong>Sem garantia de rigor nem de privacidade adequada a menores.</strong> Um chatbot genérico não segue a Matriz de Referência do INEP por padrão (a menos que o próprio aluno monte um prompt elaborado), não é obrigado a citar trechos exatos, e os termos de uso padrão de uma conta de IA generalista não foram desenhados pensando em dados de adolescentes.</li>
 </ul>
@@ -610,7 +616,7 @@ make deploy                                        # build da imagem na nuvem �
 <tr><td>C3</td><td><strong>Feedback genérico não ensina</strong></td><td>"Melhore a argumentação" sem apontar o trecho e o porquê não diz ao aluno o que fazer diferente</td></tr>
 <tr><td>C4</td><td><strong>Latência do retorno</strong></td><td>Quando a correção chega (dias/semanas depois), o aluno já perdeu a conexão com o que escreveu</td></tr>
 <tr><td>C5</td><td><strong>Barreira de ferramenta</strong></td><td>Soluções que exigem instalar app, criar conta e digitar o texto criam atrito — o aluno escreve no papel, à mão</td></tr>
-<tr><td>C6</td><td><strong>IA genérica não é acessível no contexto escolar</strong></td><td>ChatGPT/GPTs de terceiros costumam ser bloqueados na rede da escola, exigem digitar e não garantem rigor nem privacidade para menores</td></tr>
+<tr><td>C6</td><td><strong>IA genérica não é acessível no contexto escolar</strong></td><td>ChatGPT/GPTs de terceiros raramente estão disponíveis na rede da escola, exigem digitar e não garantem rigor nem privacidade para menores</td></tr>
 </table></div>
 
 <hr>
@@ -643,7 +649,7 @@ make deploy                                        # build da imagem na nuvem �
 <p><strong>Por que WhatsApp/Telegram, e não um app de IA direto — dois diferenciais que não são só conveniência:</strong></p>
 
 <ul>
-<li><strong>Contorna o bloqueio de IA nas escolas.</strong> Muitas redes de ensino bloqueiam, na rede da escola, o acesso a ferramentas de IA generalistas (ChatGPT, Gemini, Claude etc.) — mas WhatsApp e Telegram, por serem apps de mensagens de uso cotidiano, normalmente <strong>não</strong> entram nesse bloqueio. Ao entregar a correção por um canal de mensageria em vez de um app de IA, o produto continua acessível dentro do ambiente escolar, onde o aluno mais precisaria dele.</li>
+<li><strong>Encontra o aluno no canal de menor atrito.</strong> Ferramentas de IA generalistas (ChatGPT, Gemini, Claude etc.) exigem, no mínimo, uma conta e um app disponível — condições que raramente se cumprem no ambiente escolar. WhatsApp e Telegram, por serem apps de mensagens de uso cotidiano, já estão instalados, já estão autenticados e já fazem parte da comunicação da escola com aluno e família. Entregar a correção por um canal de mensageria, em vez de um app de IA, é escolher o caminho com <strong>zero instalação e zero cadastro</strong> — que é justamente onde o aluno já está.</li>
 <li><strong>Preserva o treino no formato real da prova.</strong> O ENEM é escrito <strong>à mão, no papel</strong>. Corretores online genéricos pedem o texto <strong>digitado</strong>, o que já é um exercício diferente do que o aluno vai enfrentar no dia da prova (a caligrafia, o tempo de escrita à mão, a ausência de corretor automático). Aqui o aluno fotografa o que escreveu no papel — o treino continua fiel ao formato oficial, e o OCR é que se adapta ao aluno, não o contrário.</li>
 </ul>
 
@@ -1198,9 +1204,15 @@ Aluno                         Bot
 <li><strong>Transparência de estimativa.</strong> O feedback deixa claro que a nota é uma <strong>estimativa por IA</strong> e que a nota oficial depende de humanos.</li>
 </ul>
 
-<p><strong>Medido (piloto) — deixou de ser um vazio total de dados.</strong> Como o INEP nunca publica o texto das redações (só a nota), medir "vs. nota oficial" é inviável para qualquer projeto. O proxy mais próximo é o corpus público <strong>Essay-BR</strong> (redações reais corrigidas segundo os critérios do ENEM). Duas medições independentes convergiram para o mesmo intervalo: um teste interno menor (5 redações de nota conhecida) mediu <strong>MAE de 120,0 pontos</strong> para este prompt; um piloto maior (30 redações do Essay-BR) mediu <strong>MAE de 129,3 pontos</strong> e <strong>viés médio de -1,3</strong> (praticamente neutro — a favor das regras anti-inflação acima). Detalhes completos, metodologia e limitações em <strong>Métricas e ROI</strong>, §8.2.</p>
+<p><strong>Medido (piloto) — deixou de ser um vazio total de dados.</strong> Como o INEP nunca publica o texto das redações (só a nota), medir "vs. nota oficial" é inviável para qualquer projeto. O proxy mais próximo é o corpus público <strong>Essay-BR</strong> (redações reais corrigidas segundo os critérios do ENEM). Com o modelo em produção hoje (DeepSeek V4 Flash, versão 0731), duas amostras independentes de 30 redações mediram <strong>MAE de 145,3 e 148,0 pontos</strong> — a leitura honesta é <strong>~145–150 pontos</strong>, não um valor único. O <strong>viés é de -28 a -39 pontos</strong> (o corretor subestima, em média). Detalhes completos, metodologia e limitações em <strong>Métricas e ROI</strong>, §8.2.</p>
 
-<p><strong>Em aberto.</strong> A amostra do piloto (n=30) ainda é pequena para uma leitura estatística apertada, e não há como descartar que o LLM tenha visto o corpus Essay-BR (público desde 2021) durante o treino. Ampliar a amostra e repetir com outro provedor é o próximo passo natural (ver <strong>Métricas e ROI</strong>, §8.5).</p>
+<blockquote>
+<p><strong>Este número mudou porque o modelo mudou, não o código.</strong> Uma versão anterior desta documentação registrava MAE de 129,3 e viés de -1,3 — medidos na versão anterior do <code>deepseek-v4-flash</code>, antes de a DeepSeek atualizar o modelo por trás do mesmo id da API. Nenhuma linha do prompt foi alterada. <strong>Métrica de qualidade de um produto que depende de LLM de terceiro é datada por natureza</strong>, e o texto antigo chegava a creditar ao prompt um viés neutro que era, ao menos em parte, mérito daquela versão do modelo.</p>
+</blockquote>
+
+<p><strong>O erro é regressivo, não uniforme.</strong> O corretor <strong>infla</strong> redações fracas (+91 pontos na faixa ≤ 440) e <strong>pune</strong> redações boas (-120 na faixa ≥ 720), puxando tudo em direção ao centro da escala. Para um produto de treino isso tem um custo específico: o coeficiente angular de 0,47 significa que <strong>apenas ~metade da melhora real do aluno aparece na nota</strong>. Em compensação, os defeitos apontados são reais mesmo quando a nota é dura — o diagnóstico se sustenta onde o número erra (ver §8.2).</p>
+
+<p><strong>Em aberto.</strong> A amostra (n=30 por rodada) ainda é pequena para leitura estatística apertada; a mesma configuração nunca foi rodada duas vezes, então diferenças abaixo de ~15 pontos não se distinguem de ruído; e não há como descartar que o LLM tenha visto o corpus Essay-BR (público desde 2021) durante o treino — ressalva que <strong>cresce</strong> a cada versão nova de modelo. O Gemini 3.5 Flash Lite foi medido e empatou (ver <strong>Métricas e ROI</strong>, §8.2).</p>
 
 <hr>
 
@@ -1541,31 +1553,81 @@ Aluno                         Bot
 
 <p><strong>Metodologia do piloto.</strong> 30 redações sorteadas aleatoriamente (seed fixa) do subconjunto do corpus com nota > 0 (exclui ~1,4% do corpus com todas as competências zeradas — provável triagem de nota zero, um teste diferente de "acurácia"). Cada uma passou pelo caminho de correção real (<code>src/correction/factory.get_corrector</code>) com o <strong>prompt de produção sem variantes</strong> (<code>src/prompts.py</code>) — só o texto de entrada muda: tema e proposta do Essay-BR no lugar da foto transcrita por OCR. Provedor: DeepSeek V4 Flash com <code>CORRECTION_EFFORT=max</code>, o mesmo já medido em custo (§8.4.1).</p>
 
-<div class="table-wrap"><table>
-<tr><th>Métrica</th><th>Valor</th></tr>
-<tr><td>MAE geral (erro médio absoluto vs. nota do corpus)</td><td><strong>129,3 pontos</strong> (escala 0–1.000)</td></tr>
-<tr><td>Viés médio (estimado − corpus)</td><td><strong>-1,3 pontos</strong> — praticamente neutro</td></tr>
-<tr><td>MAE por competência</td><td>C1: 30,7 · C2: 27,6 · C3: 35,9 · C4: 29,3 · <strong>C5: 45,3</strong></td></tr>
-</table></div>
-
-<p>O <strong>viés próximo de zero</strong> é o achado mais importante: o corretor não infla nem deflaciona a nota sistematicamente — evidência a favor das regras anti-inflação do prompt (ver <strong>Análise e Limitações</strong>, §3.2). <strong>C5 (proposta de intervenção)</strong> concentra o maior erro médio, consistente com ser a competência mais subjetiva de avaliar, mesmo entre corretores humanos.</p>
-
 <blockquote>
-<p><strong>Ponto de referência, não prova de equivalência.</strong> O próprio material do Essay-BR descreve que, no processo oficial do ENEM, dois corretores humanos podem divergir em até <strong>80 pontos por competência</strong> antes de um terceiro avaliador ser acionado. Todas as médias de erro por competência acima (27–45) ficam abaixo desse limiar — o que não significa que o corretor "iguala" um humano (a comparação aqui é contra um único avaliador do Essay-BR, não dois corretores do INEP em consenso), mas mostra que o erro medido está na mesma ordem de grandeza da variância que o próprio sistema oficial trata como aceitável.</p>
+<p>### ⚠️ A medição tem prazo de validade — e ele venceu uma vez</p>
+</blockquote>
+<p>></p>
+<blockquote>
+<p>Os números desta seção foram medidos duas vezes, em <strong>duas versões diferentes do mesmo modelo</strong>. O id da API (<code>deepseek-v4-flash</code>) <strong>não mudou</strong>: a DeepSeek atualizou o modelo por trás dele (versão reportada pelo fornecedor como <strong>V4 Flash 0731</strong>; a API não expõe id datado, então não há como fixar a versão pelo código). O resultado do corretor mudou sem que uma linha deste repositório fosse alterada.</p>
+</blockquote>
+<p>></p>
+<blockquote>
+<p>Isso é um achado de engenharia, não um detalhe: <strong>qualquer métrica de qualidade publicada aqui é válida para a versão do modelo que estava no ar no dia da medição.</strong> Um projeto que depende de LLM de terceiro não tem número de acurácia permanente — tem número datado.</p>
 </blockquote>
 
-<p><strong>Consistência com uma medição anterior e independente.</strong> O teste A/B do prompt (ver <strong>Análise e Limitações</strong>, §3.2 — n=5, redações de nota conhecida) havia medido MAE de 120,0 pontos para este mesmo prompt de produção — muito próximo dos 129,3 medidos aqui, em corpus e metodologia diferentes. Duas medições convergindo para o mesmo intervalo (~120–130) é evidência de que o número é estável, não um acidente de amostra pequena.</p>
+<p><strong>Resultado com a versão atual (V4 Flash 0731), medido em duas amostras independentes:</strong></p>
 
-<p><strong>Limitações do piloto — honestas, não descartáveis:</strong></p>
+<div class="table-wrap"><table>
+<tr><th>Métrica</th><th>Amostra A (n=30)</th><th>Amostra B, held-out (n=30)</th></tr>
+<tr><td>MAE geral</td><td><strong>145,3 pontos</strong></td><td><strong>148,0 pontos</strong></td></tr>
+<tr><td>Viés médio (estimado − corpus)</td><td>-28,0</td><td>-38,7</td></tr>
+<tr><td>MAE por competência</td><td>C1 35,9 · C2 27,6 · C3 31,7 · C4 30,3 · C5 34,5</td><td>C1 43,3 · C2 32,0 · C3 38,0 · C4 44,7 · C5 44,7</td></tr>
+</table></div>
+
+<p>As duas amostras não têm nenhuma redação em comum, e os MAEs ficaram a 2,7 pontos um do outro — o número <strong>replica</strong>. A leitura honesta é <strong>MAE ≈ 145–150 pontos</strong>, não um valor único: medições em amostras diferentes de 30 redações variam, e citar "145,3" com uma casa decimal sugere uma precisão que o método não tem.</p>
+
+<p><strong>Comparação com a versão anterior do modelo (mesmas 30 redações, pareado):</strong></p>
+
+<div class="table-wrap"><table>
+<tr><th>Métrica</th><th>Versão anterior</th><th>V4 Flash 0731</th><th>Δ</th></tr>
+<tr><td>MAE geral</td><td>129,3</td><td>145,3</td><td><strong>+16,0</strong></td></tr>
+<tr><td>Viés médio</td><td>-1,3 (neutro)</td><td>-28,0 (subestima)</td><td>-26,7</td></tr>
+<tr><td>MAE C5</td><td>45,7</td><td>34,3</td><td><strong>-11,4</strong></td></tr>
+<tr><td>MAE C1</td><td>28,6</td><td>35,7</td><td>+7,1</td></tr>
+</table></div>
+
+<p><em>(as linhas por competência usam as 28 redações em que as duas versões produziram as cinco notas)</em></p>
+
+<p>A atualização <strong>piorou a nota agregada e melhorou a competência mais difícil</strong>: C5 (proposta de intervenção), que era o maior erro do modelo antigo, caiu 11,4 pontos; C1 (norma culta) piorou 7,1. Não é uma degradação uniforme — é uma troca. Apenas 3 das 30 notas ficaram idênticas entre as versões, com mudança média de 80 pontos por redação: o comportamento mudou de forma ampla.</p>
+
+<blockquote>
+<p><strong>A afirmação anterior desta seção não vale mais.</strong> A versão anterior tinha viés de -1,3 e esta documentação destacava o "viés próximo de zero" como o achado mais importante — evidência a favor das regras anti-inflação do prompt. <strong>Com o modelo atual isso é falso</strong>: o viés é de -28 a -39. O prompt não mudou; o modelo mudou. O texto foi corrigido em vez de removido porque o erro de leitura é instrutivo — atribuímos ao prompt um mérito que era, ao menos em parte, do modelo.</p>
+</blockquote>
+
+<p><strong>A estrutura do erro importa mais que o MAE.</strong> Decompondo o erro da amostra B:</p>
+
+<div class="table-wrap"><table>
+<tr><th>Faixa da nota real</th><th>Viés do corretor</th></tr>
+<tr><td>Baixa (≤ 440)</td><td><strong>+91,4</strong> — infla</td></tr>
+<tr><td>Média (480–680)</td><td>-32,7</td></tr>
+<tr><td>Alta (≥ 720)</td><td><strong>-120,0</strong> — pune</td></tr>
+</table></div>
+
+<p>O erro é <strong>regressivo à média</strong>: o corretor puxa toda redação em direção ao centro da escala. Duas consequências práticas:</p>
+
+<ul>
+<li><strong>Coeficiente angular de 0,47.</strong> Para cada 100 pontos de melhora real do aluno, a nota estimada sobe ~47. Metade do progresso fica invisível — relevante para um produto cujo propósito é o aluno perceber que evoluiu.</li>
+<li><strong>Correlação de ordenação (Spearman) de 0,66.</strong> O corretor ordena redações da pior para a melhor razoavelmente bem, o que é o que mais importa em uso pedagógico — mas não perfeitamente.</li>
+</ul>
+
+<p>Vale registrar que <strong>os defeitos apontados são reais mesmo quando a nota é dura</strong>: na redação mais penalizada da amostra B (corpus 880 → estimada 600), a justificativa cita desvios concretos e verificáveis do próprio texto (falta de espaço em "sejadifundido", crase ausente, erro de concordância, quebra de paralelismo). O modelo não inventa defeito para sustentar nota baixa — o diagnóstico continua válido mesmo onde o número erra.</p>
+
+<blockquote>
+<p><strong>Ponto de referência, não prova de equivalência.</strong> O próprio material do Essay-BR descreve que, no processo oficial do ENEM, dois corretores humanos podem divergir em até <strong>80 pontos por competência</strong> antes de um terceiro avaliador ser acionado. As médias de erro por competência acima (28–45) ficam abaixo desse limiar — o que não significa que o corretor "iguala" um humano (a comparação aqui é contra um único avaliador do Essay-BR, não dois corretores do INEP em consenso), mas mostra que o erro medido está na mesma ordem de grandeza da variância que o próprio sistema oficial trata como aceitável.</p>
+</blockquote>
+
+<p><strong>Limitações — honestas, não descartáveis:</strong></p>
 
 <ul class="ordered">
-<li><strong>Amostra pequena (n=30).</strong> Suficiente para uma primeira leitura, não para afirmar acurácia com confiança estatística apertada.</li>
-<li><strong>Risco de vazamento de dado.</strong> O Essay-BR é público desde 2021 — não há garantia de que o LLM usado nunca "viu" pares redação↔nota desse corpus durante o treino. Se houver, o MAE medido fica artificialmente bom; não é possível descartar essa hipótese sem um corpus inédito.</li>
-<li><strong>Qualidade de dado da fonte, não do corretor.</strong> 12,2% do corpus (52 de 151 temas, concentrados num lote específico de ids) tem o texto do tema sem nenhuma acentuação — bug de origem no Essay-BR, não introduzido por este projeto. Não afeta o texto da redação em si, só o enunciado do tema em parte dos casos; 4 das 30 redações da amostra foram afetadas, sem um padrão claro de piorar o erro.</li>
+<li><strong>Amostra pequena (n=30 por rodada).</strong> Suficiente para uma leitura de ordem de grandeza, não para confiança estatística apertada. Duas amostras independentes convergindo (145,3 e 148,0) reforçam o número, mas não o transformam em medição fechada.</li>
+<li><strong>Variabilidade entre amostras é grande.</strong> Medido nesta rodada com um modelo de controle: o mesmo modelo e o mesmo prompt deram MAE 165,3 numa amostra e 189,3 em outra — <strong>24 pontos de diferença só por trocar as redações</strong>. Comparações de MAE entre amostras diferentes não significam nada abaixo de ~25 pontos. Todas as comparações desta seção são <strong>pareadas</strong> (mesmas redações) exatamente por isso.</li>
+<li><strong>Variância entre execuções nunca foi medida.</strong> Cada configuração rodou <strong>uma vez</strong>. Não sabemos quanto o mesmo modelo varia ao corrigir as mesmas redações duas vezes seguidas. Diferenças menores que ~15 pontos nesta seção devem ser lidas como possivelmente ruído.</li>
+<li><strong>Risco de vazamento de dado.</strong> O Essay-BR é público desde 2021 — não há garantia de que o LLM nunca "viu" pares redação↔nota desse corpus durante o treino. Se houver, o MAE fica artificialmente bom. A ressalva <strong>aumenta</strong> a cada nova versão de modelo treinada com mais dado público, não diminui.</li>
+<li><strong>Qualidade de dado da fonte, não do corretor.</strong> 12,2% do corpus (52 de 151 temas, concentrados num lote específico de ids) tem o texto do tema sem nenhuma acentuação — bug de origem no Essay-BR, não introduzido por este projeto. Não afeta o texto da redação em si, só o enunciado do tema em parte dos casos.</li>
 <li><strong>Comparação contra um avaliador único</strong>, não o consenso de dois corretores do INEP — o Essay-BR é um proxy, nunca o gabarito oficial.</li>
 </ul>
 
-<p><strong>Sensibilidade ao <code>CORRECTION_EFFORT</code>: <code>max</code> vs. <code>high</code>, mesmas 30 redações.</strong> O piloto foi repetido inteiro com <code>CORRECTION_EFFORT=high</code> (era <code>max</code>), mesma seed — garantindo comparação pareada, essay a essay:</p>
+<p><strong>Sensibilidade ao <code>CORRECTION_EFFORT</code>: <code>max</code> vs. <code>high</code>, mesmas 30 redações.</strong> O piloto foi repetido inteiro com <code>CORRECTION_EFFORT=high</code> (era <code>max</code>), mesma seed — garantindo comparação pareada, essay a essay. <strong>Atenção: esta comparação foi feita na versão ANTERIOR do modelo</strong> (é a origem do 129,3 na tabela abaixo) e não foi refeita na 0731 — dado datado, mantido por valor histórico:</p>
 
 <div class="table-wrap"><table>
 <tr><th>Métrica</th><th><code>max</code></th><th><code>high</code></th><th>Δ</th></tr>
@@ -1578,7 +1640,33 @@ Aluno                         Bot
 
 <p><strong>Não dá para saber se <code>high</code> está mais certo ou mais errado.</strong> <code>max</code> estava melhor calibrado <em>contra este proxy específico</em> (viés ≈ 0); isso não prova que <code>max</code> é mais correto em termos absolutos, só que combinou melhor com as notas do Essay-BR nesta amostra. A mesma limitação epistêmica do restante desta seção se aplica: <code>high</code> pode estar sendo mais rigoroso do que um corretor humano exigente seria (o que aproximaria da realidade), ou superpunindo (o que afastaria) — sem um terceiro corretor de referência, não dá para desempatar. Na prática, <code>CORRECTION_EFFORT</code> se mostrou um eixo de calibração de comportamento tão relevante quanto a escolha de provedor, e também afeta a latência (ver §8.1) — vale documentar qual valor está em produção e por quê, não só qual é mais rápido.</p>
 
-<p><strong>Por que a amostra fica em n=30 (decisão, não pendência).</strong> Ampliar para 100+ apertaria o intervalo de confiança, mas o MAE de ~130 pontos no <code>max</code> já é <strong>aceitável para o propósito do produto</strong> — a própria correção oficial do ENEM admite divergência entre dois avaliadores humanos, e uma nota <em>estimada</em> nunca prometeu equivalência exata (ver <strong>Análise e Limitações</strong>, §3.2). Também não repetimos com <strong>outro provedor</strong>: o Gemini 3 Flash custa ~R$ 0,31/redação contra o custo marginal do DeepSeek (§8.4.1) — a diferença de preço não se justifica para um ganho de qualidade que o piloto não sugere existir. E não há <strong>effort intermediário</strong> a testar no DeepSeek: a API expõe só dois níveis efetivos, <code>high</code> e <code>max</code> (<code>low</code>/<code>medium</code> são mapeados para <code>high</code> internamente) — ou seja, o espectro completo de effort do DeepSeek já foi coberto pelos dois pilotos, não é uma varredura pela metade. Em resumo: <code>DeepSeek</code> + <code>CORRECTION_EFFORT=max</code> é a configuração adotada, e ampliar a amostra ou trocar de provedor foram <strong>avaliados e descartados por custo/benefício</strong>, não deixados pendentes.</p>
+<h3 id="compara-o-com-outro-provedor-gemini-3-5-">Comparação com outro provedor — Gemini 3.5 Flash Lite (medido)</h3>
+
+<p>Uma versão anterior desta documentação afirmava que outros provedores tinham sido descartados <strong>sem medição</strong>, por custo. Isso mudou: o <strong>Gemini 3.5 Flash Lite</strong> — a faixa mais barata da linha, onde o argumento de custo do Gemini 3 Flash não se aplica — foi avaliado nas mesmas redações.</p>
+
+<div class="table-wrap"><table>
+<tr><th>Configuração (mesmas 30 redações held-out)</th><th>MAE</th><th>Viés</th><th>Spearman</th><th>Slope</th></tr>
+<tr><td>DeepSeek V4 Flash 0731 (<code>max</code>)</td><td>148,0</td><td>-38,7</td><td>0,66</td><td>0,47</td></tr>
+<tr><td>Gemini 3.5 Flash Lite (prompt de produção)</td><td>189,3</td><td>-157,3</td><td>0,68</td><td>0,47</td></tr>
+<tr><td>Gemini 3.5 Flash Lite (prompt com âncora de escala)</td><td><strong>144,0</strong></td><td>-101,3</td><td><strong>0,74</strong></td><td><strong>0,55</strong></td></tr>
+</table></div>
+
+<p><strong>DeepSeek e Gemini-com-âncora empatam.</strong> 148,0 contra 144,0, com o Gemini melhor em 15 redações e o DeepSeek em 13 — <strong>teste de sinais p = 0,851</strong>, ou seja, indistinguível de acaso. Os 4 pontos de diferença não sustentam uma troca de provedor.</p>
+
+<p>O achado que sobra é sobre <strong>a natureza do erro de cada um</strong>, e ele é oposto:</p>
+
+<ul>
+<li>O <strong>DeepSeek</strong> está bem calibrado (viés -38,7) e é <strong>disperso</strong>: zerando o viés restante, o erro só cai para 137,7. Não há erro sistemático a remover — uma calibração linear ótima, ajustada nos próprios dados, não melhora nada (129,3 → 132,9 na versão anterior).</li>
+<li>O <strong>Gemini</strong> está mal calibrado (viés -101,3) e é <strong>preciso</strong>: zerando o viés restante, cai para 114,5. O erro dele é quase todo um deslocamento de escala.</li>
+</ul>
+
+<p>Ou seja: o Gemini tem ~23 pontos de folga que o DeepSeek não tem, atacáveis por prompt. Uma variante experimental que apenas ancora a escala (sem tocar em critérios da matriz) melhorou o Gemini de 189,3 para 144,0 — ganho real, <strong>p = 0,041</strong> em amostra held-out — mas fechou só parte do viés: a faixa alta ainda sai 183 pontos abaixo. Essa variante <strong>não está em produção</strong> e é específica do Gemini.</p>
+
+<p><strong>Custo do Flash Lite não foi medido</strong>, só a acurácia. Um dado relevante apareceu no caminho: o <strong>cache de contexto do Gemini não funciona nesse modelo no free tier</strong> (a API recusa a criação de cache), então os ~6.400 tokens do bloco de sistema vão sem cache em toda chamada — o oposto dos 75% de cache-hit medidos no DeepSeek (§8.4.1). Qualquer comparação de custo teria de partir daí.</p>
+
+<p><strong>Decisão vigente:</strong> manter <code>DeepSeek</code> + <code>CORRECTION_EFFORT=max</code>. O empate não justifica a troca, e o Gemini ainda carrega a questão do cache. A decisão agora se apoia em <strong>dado de acurácia</strong>, não só em custo — o que é uma base melhor do que a anterior.</p>
+
+<p><strong>Por que a amostra fica em n=30 (decisão, não pendência).</strong> Ampliar para 100+ apertaria o intervalo de confiança, mas o MAE de ~145–150 pontos já é <strong>aceitável para o propósito do produto</strong> — a própria correção oficial do ENEM admite divergência entre dois avaliadores humanos, e uma nota <em>estimada</em> nunca prometeu equivalência exata (ver <strong>Análise e Limitações</strong>, §3.2). E não há <strong>effort intermediário</strong> a testar no DeepSeek: a API expõe só dois níveis efetivos, <code>high</code> e <code>max</code> (<code>low</code>/<code>medium</code> são mapeados para <code>high</code> internamente) — o espectro completo de effort já foi coberto, não é uma varredura pela metade. A pendência de medição mais relevante que resta <strong>não é ampliar a amostra</strong>, e sim <strong>repetir a mesma rodada duas vezes</strong> para saber quanta variação vem do próprio modelo (ver Limitação 3).</p>
 
 <hr>
 
@@ -1711,7 +1799,7 @@ tokens_saída    ≈  a correção formatada (competências + feedback + reescri
 <p>Existe correção de redação por IA de graça — colar o texto num ChatGPT gratuito faz isso. Então <em>"quem pagaria por isto?"</em> é a pergunta errada: a resposta honesta é <strong>provavelmente ninguém</strong>, e tudo bem. O valor deste projeto não está em cobrar pelo que a IA genérica já faz de graça, e sim em <strong>entregar isso onde a IA genérica não chega</strong>:</p>
 
 <ul>
-<li><strong>Sem app, sem login, sem digitar.</strong> A rede da escola costuma bloquear o ChatGPT; aqui o aluno usa o WhatsApp/Telegram que já tem, fotografa o manuscrito e não redigita nada — preservando o treino da letra à mão da prova real.</li>
+<li><strong>Sem app, sem login, sem digitar.</strong> Ferramentas de IA de uso geral raramente estão disponíveis no ambiente escolar; aqui o aluno usa o WhatsApp/Telegram que já tem, fotografa o manuscrito e não redigita nada — preservando o treino da letra à mão da prova real.</li>
 <li><strong>Rigor da matriz, não "dar uma nota".</strong> A correção segue a Matriz do INEP transcrita em regras (triagem de zero, cinco competências, trecho citado), não um chute genérico de chatbot.</li>
 <li><strong>Privacidade pensada para menor de idade.</strong> Foto descartada após o OCR, sem histórico, TTL curto — cuidado que uma conversa avulsa num chatbot genérico não oferece.</li>
 </ul>
@@ -1738,7 +1826,11 @@ tokens_saída    ≈  a correção formatada (competências + feedback + reescri
 </ul>
 
 <blockquote>
-<p><strong>Fora do roadmap (decisões tomadas, não pendências):</strong> ampliar a amostra de acurácia além de n=30 e medir outros provedores de LLM (Gemini/Claude/OpenAI/Maritaca) foram <strong>avaliados e descartados</strong> — <code>DeepSeek</code> + <code>CORRECTION_EFFORT=max</code> é a configuração adotada por custo × qualidade (ver §8.2 e §8.4.1). Os efforts de DeepSeek (<code>high</code> e <code>max</code>, os dois únicos efetivos) já foram os dois comparados. Não são lacunas de medição em aberto.</p>
+<p><strong>Fora do roadmap (decisões tomadas, não pendências):</strong> ampliar a amostra de acurácia além de n=30 foi <strong>avaliado e descartado</strong>; <code>DeepSeek</code> + <code>CORRECTION_EFFORT=max</code> é a configuração adotada por custo × qualidade (ver §8.2 e §8.4.1). Os efforts de DeepSeek (<code>high</code> e <code>max</code>, os dois únicos efetivos) já foram os dois comparados. O <strong>Gemini 3.5 Flash Lite foi medido</strong> e empatou com o DeepSeek (§8.2) — a decisão de provedor deixou de ser só de custo e passou a ter dado de acurácia. Claude/OpenAI/Maritaca seguem não medidos.</p>
+</blockquote>
+<p>></p>
+<blockquote>
+<p><strong>Pendência de medição que permanece aberta:</strong> ninguém rodou a mesma configuração <strong>duas vezes</strong> nas mesmas redações. Sem isso não há como separar diferença real de ruído do modelo abaixo de ~15 pontos de MAE (§8.2, Limitação 3). É a medição mais barata e de maior retorno que ainda falta.</p>
 </blockquote>
 
 <hr>
@@ -1879,7 +1971,7 @@ tokens_saída    ≈  a correção formatada (competências + feedback + reescri
 
 <p>Boas histórias de dados têm começo, meio e fim — e a deste projeto começa por uma assimetria: <strong>milhões de alunos escrevem redações, mas pouquíssimos recebem feedback detalhado o bastante para melhorar.</strong></p>
 
-<p><strong>O problema.</strong> A redação do ENEM vale até 1.000 pontos e é decisiva no acesso ao ensino superior. O que faz a nota subir não é escrever mais — é receber um retorno <strong>por competência, ancorado no próprio texto</strong>. Só que corrigir bem uma redação leva 15–20 minutos e exige um olho treinado na Matriz do INEP. Um professor de escola pública, com dezenas ou centenas de alunos, não tem como dar esse retorno a todos; e a correção particular, que dá, <strong>custa caro</strong>. A IA generativa reduziu o custo <em>técnico</em> de gerar uma correção — mas colar a redação num ChatGPT ou GPT de terceiros esbarra justamente onde o aluno está: a rede da escola costuma <strong>bloquear</strong> esses apps, o fluxo <strong>exige digitar</strong> (perdendo o treino manuscrito da prova real) e nada garante rigor com a matriz oficial nem cuidado com dado de menor. O gargalo, portanto, nunca foi a escrita, nem a existência de IA — é o <strong>acesso a uma correção rigorosa, no lugar certo, sem atrito</strong>.</p>
+<p><strong>O problema.</strong> A redação do ENEM vale até 1.000 pontos e é decisiva no acesso ao ensino superior. O que faz a nota subir não é escrever mais — é receber um retorno <strong>por competência, ancorado no próprio texto</strong>. Só que corrigir bem uma redação leva 15–20 minutos e exige um olho treinado na Matriz do INEP. Um professor de escola pública, com dezenas ou centenas de alunos, não tem como dar esse retorno a todos; e a correção particular, que dá, <strong>custa caro</strong>. A IA generativa reduziu o custo <em>técnico</em> de gerar uma correção — mas colar a redação num ChatGPT ou GPT de terceiros esbarra justamente onde o aluno está: esses apps <strong>raramente estão disponíveis</strong> no ambiente escolar e exigem conta própria, o fluxo <strong>exige digitar</strong> (perdendo o treino manuscrito da prova real) e nada garante rigor com a matriz oficial nem cuidado com dado de menor. O gargalo, portanto, nunca foi a escrita, nem a existência de IA — é o <strong>acesso a uma correção rigorosa, no lugar certo, sem atrito</strong>.</p>
 
 <p><strong>A solução e a prova.</strong> O bot ataca exatamente esse gargalo. O aluno fotografa a redação escrita à mão — <strong>sem instalar app, sem cadastro, sem digitar</strong> — e recebe de volta a nota estimada por competência, com trechos citados e uma sugestão de reescrita, em cerca de um minuto. Por trás da simplicidade, decisões de engenharia deliberadas: a borda HTTP responde ao webhook em <strong>menos de 200ms</strong> e joga o trabalho pesado para <em>background</em> (nada de travar o SLA da Meta); o estado vive <strong>45 minutos</strong> em Redis e some sozinho; a <strong>foto é descartada</strong> logo após o OCR; e o motor de correção usa um prompt de ~6.000 tokens <strong>cacheado</strong> para conter custo. A correção não é um "chatbot que dá uma nota": é a Matriz de Referência do INEP transcrita em regras — triagem de nota zero, cinco competências com tabelas de níveis, e a exigência de <strong>citar o trecho</strong> em cada observação.</p>
 
@@ -1919,7 +2011,10 @@ tokens_saída    ≈  a correção formatada (competências + feedback + reescri
 <li>Conformidade de base: consentimento LGPD, descarte da foto, TTL de 45 min, sem histórico, rate-limit diário.</li>
 <li>Arquitetura mono-contêiner (app + Redis embutido), borda com resposta <200ms e processamento em <em>background</em>.</li>
 <li><strong>Custo efetivo por correção</strong> medido em uso real (DeepSeek V4 Flash) — ver Métricas e ROI, §8.4.1.</li>
-<li><strong>Acurácia da nota</strong> — piloto medido (30 redações do Essay-BR, MAE 129,3 pontos, viés praticamente neutro com <code>CORRECTION_EFFORT=max</code>) — ver Métricas e ROI, §8.2. Não é a nota oficial do INEP (que não publica o texto das redações), e a amostra ainda é pequena para fechar o número. Repetir com <code>CORRECTION_EFFORT=high</code> mudou bastante a nota (MAE subiu para 162,7, viés para -64) — o effort não é só um botão de velocidade, muda o comportamento do corretor.</li>
+<li><strong>Acurácia da nota</strong> — medida em duas amostras independentes de 30 redações do Essay-BR com o modelo em produção (DeepSeek V4 Flash 0731, <code>CORRECTION_EFFORT=max</code>): <strong>MAE ~145–150 pontos</strong>, viés de <strong>-28 a -39</strong> (subestima) — ver Métricas e ROI, §8.2. Não é a nota oficial do INEP (que não publica o texto das redações), e a amostra ainda é pequena para fechar o número. Três achados que valem a menção:</li>
+<li><strong>O número é datado.</strong> A versão anterior do mesmo modelo media MAE 129,3 com viés neutro; a DeepSeek atualizou o modelo por trás do mesmo id da API e o resultado mudou <strong>sem nenhuma alteração de código</strong>. Métrica de qualidade em produto que depende de LLM de terceiro tem prazo de validade.</li>
+<li><strong>O erro é regressivo</strong>: infla redação fraca (+91) e pune redação boa (-120), e só ~metade da melhora real do aluno aparece na nota (coeficiente angular 0,47).</li>
+<li><strong><code>CORRECTION_EFFORT</code> não é só um botão de velocidade</strong> — na versão anterior do modelo, trocar <code>max</code> por <code>high</code> levou o MAE a 162,7 e o viés a -64 (comparação não refeita na versão atual).</li>
 <li><strong>Latência por etapa</strong> — piloto local medido (n=5, Telegram): ~99s médios até a nota chegar, dos quais <strong>~93% é só a chamada ao LLM</strong> (~92s) — download+OCR somam só ~4s. Confirma com folga a hipótese de que o gargalo é a camada de modelos, não a infraestrutura — ver Métricas e ROI, §8.1.</li>
 <li><strong>Rajada na borda</strong> — piloto local medido (até 100 webhooks concorrentes): o edge escala (<strong>100 concorrentes a p95 130ms</strong>) e <strong>toda requisição retorna 200</strong> (sem retry-storm); na faixa realista (≤20 concorrentes) o <200ms segura. Sob rajada agressiva (≥50), o que degrada é a contenção das tasks de background no worker único, não o edge — ver Testes de Stress.</li>
 </ul>

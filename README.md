@@ -42,7 +42,7 @@ Aluno                    Bot
 
 ### Por que mensageria, e não um app de IA
 
-WhatsApp e Telegram costumam continuar acessíveis em redes escolares que bloqueiam ChatGPT/Gemini/Claude — a correção chega por um canal que já não é bloqueado. E como a entrada é uma *foto do manuscrito* (não texto digitado), o treino continua fiel ao formato real da prova: o aluno escreve à mão, no papel, como no dia do ENEM.
+A correção chega pelo canal de **menor atrito**: sem instalar aplicativo, sem criar conta, dentro do mensageiro que o aluno já usa todo dia — inclusive no ambiente escolar, onde ferramentas de IA de uso geral raramente estão disponíveis. E como a entrada é uma *foto do manuscrito* (não texto digitado), o treino continua fiel ao formato real da prova: o aluno escreve à mão, no papel, como no dia do ENEM.
 
 ## LGPD (o público é menor de idade)
 
