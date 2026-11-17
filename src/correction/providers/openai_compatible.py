@@ -6,25 +6,28 @@ O bloco de sistema é idêntico, byte a byte, em toda chamada — ambos os
 provedores reconhecem e cacheiam sozinhos prefixos repetidos acima de um
 mínimo de tokens, cobrando uma fração do preço normal nas chamadas seguintes.
 
-`reasoning_effort` gradua o "thinking mode" do DeepSeek V4 (Flash/Pro). Os
-tokens de raciocínio (reasoning_content, nunca visto pelo aluno) são cobrados
-como output — por isso ficam logados separados em
+`reasoning_effort` gradua o "thinking mode" do DeepSeek. Os tokens de
+raciocínio (reasoning_content, nunca visto pelo aluno) são cobrados como
+output — por isso ficam logados separados em
 completion_tokens_details.reasoning_tokens.
 
-ATENÇÃO — dois comportamentos medidos em 2026-08-04 no `deepseek-v4-flash`
-(versão 0731), ambos DIFERENTES do que esta docstring afirmava antes:
+MODELO ATUAL (conferido em 2026-11-16 via `GET /models`): desde 10/09/2026 a
+DeepSeek serve o **V4.1-Flash** com o id `deepseek-flash`. O id antigo
+`deepseek-v4-flash` ainda responde, mas é só um apelido TEMPORÁRIO para o
+V4.1 — trocar `CORRECTION_MODEL` antes que ele seja desligado. A API declara
+os níveis `low | high | max` (padrão `high`); `medium` não dá erro, mas se
+comporta como `high`. Raciocínio numa mesma redação (2026-11-16): low ~3,5 mil
+tokens, medium ~5,2 mil, high ~4,0 mil, max ~17,3 mil.
 
-- **Os quatro níveis são distintos.** A API não colapsa mais low/medium em
-  high. Numa mesma redação: low=15 tokens de raciocínio, medium=11.572,
-  high=12.654, max=14.011. `low` na prática desliga o raciocínio e corta a
-  latência de ~2min para ~40s.
+Medido antes, no V4 Flash 0731 (2026-08-04), e não reconferido no V4.1:
+
 - **Effort vazio NÃO desliga o thinking.** O `if` abaixo deixa de enviar
-  `reasoning_effort` e `thinking.enabled`, mas o modelo raciocina assim mesmo
-  (12.525 tokens medidos) — e ainda por cima sem controle do nível. Se a
-  intenção for gastar menos, use `low` explicitamente, não string vazia.
-
-O nível afeta a NOTA, não só o custo: mais raciocínio correlaciona com correção
-mais dura. Ver a comparação pareada em _local/docs_src/08_metricas_performance_e_roi.md.
+  `reasoning_effort` e `thinking.enabled`, mas o modelo raciocinava assim
+  mesmo (12.525 tokens medidos), sem controle do nível. Se a intenção for
+  gastar menos, use `low` explicitamente, não string vazia.
+- O nível afetava a NOTA, não só o custo: mais raciocínio correlacionava com
+  correção mais dura. Ver a comparação pareada em
+  _local/docs_src/08_metricas_performance_e_roi.md.
 """
 
 import structlog

@@ -38,7 +38,7 @@ Aluno                    Bot
 - **Mono-container**: FastAPI + Redis no MESMO contêiner. O `entrypoint.sh` sobe o `redis-server` (só em `127.0.0.1`, nunca exposto fora do contêiner), espera o PING responder e só então executa o `uvicorn`. Um único deploy, sem Redis gerenciado à parte.
 - **Estado 100% em Redis** (sem banco relacional): máquina de estados da conversa (TTL 45 min), consentimento LGPD, rate-limit diário e idempotência de webhook. O AOF em `/data` (volume) sobrevive a restart do contêiner.
 - **Réplica única no modo padrão**: como o Redis embutido não é compartilhado entre réplicas, `replicas > 1` fragmentaria rate-limit, consentimento e estado de fluxo (cada réplica veria um Redis diferente). Mantenha 1 réplica (folgado para o tráfego de uma escola). Um backend de despacho plugável (`QUEUE_BACKEND`: `memory` default, ou `azure`) também habilita um deploy alternativo em **scale-to-zero** com Redis externo — ver [Deploy](#deploy-azure-container-apps) abaixo.
-- **Correção plugável**: o provedor do LLM troca por env var (`CORRECTION_PROVIDER`: `gemini` | `claude` | `openai` | `deepseek` | `maritaca`; `CORRECTION_MODEL` define o modelo dentro dele — default `deepseek` / `deepseek-v4-flash`, adotado por custo × qualidade), o que permite comparar modelos rápido. O prompt é dividido em bloco estático (matriz, ~6.000 tokens) + bloco dinâmico (tema/motivadores/redação) para aproveitar cache de contexto — explícito no Gemini e no Claude, automático no OpenAI/DeepSeek (a Maritaca não documenta cache; o bloco estático é reenviado sem desconto confirmado).
+- **Correção plugável**: o provedor do LLM troca por env var (`CORRECTION_PROVIDER`: `gemini` | `claude` | `openai` | `deepseek` | `maritaca`; `CORRECTION_MODEL` define o modelo dentro dele — default `deepseek` / `deepseek-flash` (V4.1-Flash), adotado por custo × qualidade), o que permite comparar modelos rápido. O prompt é dividido em bloco estático (matriz, ~6.000 tokens) + bloco dinâmico (tema/motivadores/redação) para aproveitar cache de contexto — explícito no Gemini e no Claude, automático no OpenAI/DeepSeek (a Maritaca não documenta cache; o bloco estático é reenviado sem desconto confirmado).
 
 ### Por que mensageria, e não um app de IA
 
@@ -122,9 +122,9 @@ Para volume pessoal/baixo, `QUEUE_BACKEND=azure` desacopla receber a mensagem (w
 O deploy é um comando só, com um template Bicep (Infraestrutura como Código — `deploy/main.bicep`):
 
 ```bash
-cp deploy/.env.deploy.example deploy/.env.deploy   # preencha a config de Azure (RG, região, nome do ACR)
+cp deploy/.env.deploy.example deploy/.env.deploy   # preencha a config de Azure (resource group e região)
 az login
-make deploy                                        # build da imagem na nuvem → bicep → setWebhook do Telegram, tudo automático
+make deploy                                        # build da imagem (Docker local) → push pro ghcr.io → bicep → setWebhook do Telegram
 ```
 
 Guia completo (setup do Upstash, o que o Bicep provisiona, alternativa passo a passo): [deploy/README.md](deploy/README.md).
@@ -140,7 +140,7 @@ scripts de laboratório não fazem parte deste repositório.
 ├── Dockerfile              # imagem única: app + redis embutido (ver entrypoint.sh)
 ├── docker-compose.yml      # `make up` — forma canônica de rodar (app + redis)
 ├── entrypoint.sh           # sobe redis-server (127.0.0.1, pulado se REDIS_URL externo) → uvicorn
-├── .dockerignore            # mantém enxuto o contexto de build na nuvem (az acr build)
+├── .dockerignore            # imagem enxuta e sem segredos (publicada como pacote público no ghcr.io)
 ├── Makefile                 # `make help` lista todos os atalhos de dev
 ├── pyproject.toml            # config de ruff (lint/format) e pytest
 ├── requirements.txt           # dependências de runtime
@@ -178,7 +178,8 @@ scripts de laboratório não fazem parte deste repositório.
 │       ├── corrector.py                      # lógica comum de chamada ao provedor
 │       ├── interfaces.py                      # contrato ICorrector
 │       ├── factory.py                          # get_corrector(provider) — troca via CORRECTION_PROVIDER
-│       └── providers/                           # gemini.py, claude.py, openai_compatible.py (openai/deepseek/maritaca)
+│       ├── providers/                           # gemini.py, claude.py, openai_compatible.py (openai/deepseek/maritaca)
+│       └── hybrid/                              # modo experimental CORRECTION_MODE=hibrido (nota por modelo calibrado, feedback pelo LLM)
 │
 ├── scripts/
 │   └── simulate.py            # REPL de conversa com canal fake — E2E local sem provedor real

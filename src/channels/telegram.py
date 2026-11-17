@@ -4,6 +4,7 @@ from typing import Any, Mapping
 import httpx
 import structlog
 from fastapi import Response
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from src.channels.interfaces import IMessagingChannel, InboundMessage
 from src.channels.text_utils import chunk_text
@@ -23,6 +24,15 @@ class TelegramChannel(IMessagingChannel):
         self.secret_token = settings.TELEGRAM_WEBHOOK_SECRET
         self.max_length = settings.MAX_TEXT_MESSAGE_LENGTH
 
+    # Repete só falha de CONEXÃO (TLS caindo no handshake, visto em dev): o pedido nem chegou ao
+    # Telegram, então reenviar não duplica mensagem. Sem isso, uma queda isolada perdia a mensagem e
+    # deixava o aluno preso (ex.: prévia do OCR entregue, botões não). Timeout de leitura NÃO repete.
+    @retry(
+        retry=retry_if_exception_type((httpx.ConnectError, httpx.ConnectTimeout)),
+        wait=wait_exponential(multiplier=0.5, min=0.5, max=4),
+        stop=stop_after_attempt(4),
+        reraise=True,
+    )
     async def _send_request(self, endpoint: str, payload: dict) -> dict:
         async with httpx.AsyncClient() as client:
             response = await client.post(

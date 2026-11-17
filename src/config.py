@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     # isso expirar antes do worker apagá-la, o job reentrega e reprocessa
     # (custo em dobro).
     QUEUE_VISIBILITY_TIMEOUT: int = Field(default=300)  # segundos
-    QUEUE_POLL_INTERVAL: int = Field(default=3)         # segundos entre polls vazios
+    QUEUE_POLL_INTERVAL: int = Field(default=3)  # segundos entre polls vazios
 
     # WhatsApp Cloud API (Meta)
     WHATSAPP_API_URL: str = Field(default="https://graph.facebook.com/v21.0")
@@ -52,19 +52,26 @@ class Settings(BaseSettings):
     # OCR (Mistral) e correção (provedor plugável — ver src/correction/factory.py)
     MISTRAL_API_KEY: str = Field(default="")
     CORRECTION_PROVIDER: str = Field(default="deepseek")  # gemini | claude | openai | deepseek | maritaca
-    CORRECTION_MODEL: str = Field(default="deepseek-v4-flash")  # nome do modelo NO provedor acima
-    CORRECTION_EFFORT: str = Field(default="max")  # claude e deepseek: low | medium | high | max
+    CORRECTION_MODEL: str = Field(default="deepseek-flash")  # nome do modelo NO provedor acima
+    # claude: low | medium | high | max · deepseek (V4.1): low | high | max
+    CORRECTION_EFFORT: str = Field(default="max")
     GOOGLE_API_KEY: str = Field(default="")
     ANTHROPIC_API_KEY: str = Field(default="")
     OPENAI_API_KEY: str = Field(default="")
     DEEPSEEK_API_KEY: str = Field(default="")
     MARITACA_API_KEY: str = Field(default="")
 
+    # Modo da correção: "llm" (o LLM dá a nota e o feedback — padrão) ou "hibrido" (a nota vem do modelo
+    # calibrado sobre as respostas do Jev, ver src/correction/hybrid/, e o LLM só escreve o feedback).
+    CORRECTION_MODE: str = Field(default="llm")
+    JEV_API_KEY: str = Field(default="")  # TypeSafe AI (Jev) — só usado no modo híbrido
+    JEV_MODEL: str = Field(default="jev-1.14.0")
+
     # Limites do fluxo
-    ESSAY_DAILY_LIMIT: int = Field(default=2)     # correções/aluno/dia (fluxo caro)
-    MIN_ESSAY_CHARS: int = Field(default=120)     # OCR abaixo disso = foto ilegível
-    MAX_ESSAY_PHOTOS: int = Field(default=2)      # partes de foto por redação (frente/verso)
-    FLOW_TTL_SECONDS: int = Field(default=2700)   # 45 min para concluir o fluxo
+    ESSAY_DAILY_LIMIT: int = Field(default=2)  # correções/aluno/dia (fluxo caro)
+    MIN_ESSAY_CHARS: int = Field(default=120)  # OCR abaixo disso = foto ilegível
+    MAX_ESSAY_PHOTOS: int = Field(default=2)  # partes de foto por redação (frente/verso)
+    FLOW_TTL_SECONDS: int = Field(default=2700)  # 45 min para concluir o fluxo
     OCR_PREVIEW_MAX_CHARS: int = Field(default=3000)
     # Palavra do OCR abaixo deste score (0-1) entra na lista de "conferir" do preview.
     OCR_CONFIDENCE_THRESHOLD: float = Field(default=0.85)

@@ -297,8 +297,12 @@ footer.site-footer{background:#2A2018;color:#C4B6A0;margin-top:64px;border-top:2
         <div class="tab-dropdown">
 <a href="#8-1-lat-ncia-tempo-at-a-nota-chegar" class="dropdown-link" data-page="metricas">8.1 Latência: tempo até a nota chegar</a>
 <a href="#8-2-acur-cia-da-nota-estimada-medido-con" class="dropdown-link" data-page="metricas">8.2 Acurácia da nota estimada — medido contra o Essay-BR</a>
+<a href="#vari-ncia-entre-execu-es-id-nticas-a-med" class="dropdown-link" data-page="metricas">Variância entre execuções idênticas — a medição que faltava</a>
+<a href="#sensibilidade-ao-code-correction-effort-" class="dropdown-link" data-page="metricas">Sensibilidade ao CORRECTION_EFFORT — os quatro níveis, medidos na 0731</a>
+<a href="#qwk-e-a-compara-o-com-os-baselines-publi" class="dropdown-link" data-page="metricas">QWK e a comparação com os baselines publicados do corpus</a>
 <a href="#compara-o-com-outro-provedor-gemini-3-5-" class="dropdown-link" data-page="metricas">Comparação com outro provedor — Gemini 3.5 Flash Lite (medido)</a>
 <a href="#8-3-confiabilidade" class="dropdown-link" data-page="metricas">8.3 Confiabilidade</a>
+<a href="#dois-defeitos-de-sa-da-encontrados-nas-c" class="dropdown-link" data-page="metricas">Dois defeitos de saída encontrados nas corridas de avaliação</a>
 <a href="#8-4-custo-e-roi" class="dropdown-link" data-page="metricas">8.4 Custo e ROI</a>
 <a href="#8-4-1-custo-por-corre-o-estrutura-" class="dropdown-link" data-page="metricas">8.4.1 Custo por correção (estrutura)</a>
 <a href="#8-4-2-valor-gerado-a-l-gica-" class="dropdown-link" data-page="metricas">8.4.2 Valor gerado (a lógica)</a>
@@ -384,7 +388,7 @@ Aluno                    Bot
 <li><strong>Mono-container</strong>: FastAPI + Redis no MESMO contêiner. O <code>entrypoint.sh</code> sobe o <code>redis-server</code> (só em <code>127.0.0.1</code>, nunca exposto fora do contêiner), espera o PING responder e só então executa o <code>uvicorn</code>. Um único deploy, sem Redis gerenciado à parte.</li>
 <li><strong>Estado 100% em Redis</strong> (sem banco relacional): máquina de estados da conversa (TTL 45 min), consentimento LGPD, rate-limit diário e idempotência de webhook. O AOF em <code>/data</code> (volume) sobrevive a restart do contêiner.</li>
 <li><strong>Réplica única no modo padrão</strong>: como o Redis embutido não é compartilhado entre réplicas, <code>replicas > 1</code> fragmentaria rate-limit, consentimento e estado de fluxo (cada réplica veria um Redis diferente). Mantenha 1 réplica (folgado para o tráfego de uma escola). Um backend de despacho plugável (<code>QUEUE_BACKEND</code>: <code>memory</code> default, ou <code>azure</code>) também habilita um deploy alternativo em <strong>scale-to-zero</strong> com Redis externo — ver <a href="#deploy-azure-container-apps">Deploy</a> abaixo.</li>
-<li><strong>Correção plugável</strong>: o provedor do LLM troca por env var (<code>CORRECTION_PROVIDER</code>: <code>gemini</code> | <code>claude</code> | <code>openai</code> | <code>deepseek</code> | <code>maritaca</code>; <code>CORRECTION_MODEL</code> define o modelo dentro dele — default <code>deepseek</code> / <code>deepseek-v4-flash</code>, adotado por custo × qualidade), o que permite comparar modelos rápido. O prompt é dividido em bloco estático (matriz, ~6.000 tokens) + bloco dinâmico (tema/motivadores/redação) para aproveitar cache de contexto — explícito no Gemini e no Claude, automático no OpenAI/DeepSeek (a Maritaca não documenta cache; o bloco estático é reenviado sem desconto confirmado).</li>
+<li><strong>Correção plugável</strong>: o provedor do LLM troca por env var (<code>CORRECTION_PROVIDER</code>: <code>gemini</code> | <code>claude</code> | <code>openai</code> | <code>deepseek</code> | <code>maritaca</code>; <code>CORRECTION_MODEL</code> define o modelo dentro dele — default <code>deepseek</code> / <code>deepseek-flash</code> (V4.1-Flash), adotado por custo × qualidade), o que permite comparar modelos rápido. O prompt é dividido em bloco estático (matriz, ~6.000 tokens) + bloco dinâmico (tema/motivadores/redação) para aproveitar cache de contexto — explícito no Gemini e no Claude, automático no OpenAI/DeepSeek (a Maritaca não documenta cache; o bloco estático é reenviado sem desconto confirmado).</li>
 </ul>
 
 <h3 id="por-que-mensageria-e-n-o-um-app-de-ia">Por que mensageria, e não um app de IA</h3>
@@ -479,9 +483,9 @@ make dev             # túnel + app + setWebhook do Telegram, tudo num comando
 <p>O deploy é um comando só, com um template Bicep (Infraestrutura como Código — <code>deploy/main.bicep</code>):</p>
 
 <pre><code class="lang-bash">
-cp deploy/.env.deploy.example deploy/.env.deploy   # preencha a config de Azure (RG, região, nome do ACR)
+cp deploy/.env.deploy.example deploy/.env.deploy   # preencha a config de Azure (resource group e região)
 az login
-make deploy                                        # build da imagem na nuvem → bicep → setWebhook do Telegram, tudo automático
+make deploy                                        # build da imagem (Docker local) → push pro ghcr.io → bicep → setWebhook do Telegram
 </code></pre>
 
 <p>Guia completo (setup do Upstash, o que o Bicep provisiona, alternativa passo a passo): <a href="deploy/README.md">deploy/README.md</a>.</p>
@@ -497,7 +501,7 @@ make deploy                                        # build da imagem na nuvem �
 ├── Dockerfile              # imagem única: app + redis embutido (ver entrypoint.sh)
 ├── docker-compose.yml      # `make up` — forma canônica de rodar (app + redis)
 ├── entrypoint.sh           # sobe redis-server (127.0.0.1, pulado se REDIS_URL externo) → uvicorn
-├── .dockerignore            # mantém enxuto o contexto de build na nuvem (az acr build)
+├── .dockerignore            # imagem enxuta e sem segredos (publicada como pacote público no ghcr.io)
 ├── Makefile                 # `make help` lista todos os atalhos de dev
 ├── pyproject.toml            # config de ruff (lint/format) e pytest
 ├── requirements.txt           # dependências de runtime
@@ -1204,7 +1208,7 @@ Aluno                         Bot
 <li><strong>Transparência de estimativa.</strong> O feedback deixa claro que a nota é uma <strong>estimativa por IA</strong> e que a nota oficial depende de humanos.</li>
 </ul>
 
-<p><strong>Medido (piloto) — deixou de ser um vazio total de dados.</strong> Como o INEP nunca publica o texto das redações (só a nota), medir "vs. nota oficial" é inviável para qualquer projeto. O proxy mais próximo é o corpus público <strong>Essay-BR</strong> (redações reais corrigidas segundo os critérios do ENEM). Com o modelo em produção hoje (DeepSeek V4 Flash, versão 0731), duas amostras independentes de 30 redações mediram <strong>MAE de 145,3 e 148,0 pontos</strong> — a leitura honesta é <strong>~145–150 pontos</strong>, não um valor único. O <strong>viés é de -28 a -39 pontos</strong> (o corretor subestima, em média). Detalhes completos, metodologia e limitações em <strong>Métricas e ROI</strong>, §8.2.</p>
+<p><strong>Medido (piloto) — deixou de ser um vazio total de dados.</strong> Como o INEP nunca publica o texto das redações (só a nota), medir "vs. nota oficial" é inviável para qualquer projeto. O proxy mais próximo é o corpus público <strong>Essay-BR</strong> (redações reais corrigidas segundo os critérios do ENEM). Com o DeepSeek V4 Flash, versão 0731 (o modelo em produção até setembro de 2026; o V4.1-Flash, que o substituiu em 10/09, ainda não foi medido), duas amostras independentes de 30 redações mediram <strong>MAE de 145,3 e 148,0 pontos</strong> — a leitura honesta é <strong>~145–150 pontos</strong>, não um valor único. O <strong>viés é de -28 a -39 pontos</strong> (o corretor subestima, em média). Detalhes completos, metodologia e limitações em <strong>Métricas e ROI</strong>, §8.2.</p>
 
 <blockquote>
 <p><strong>Este número mudou porque o modelo mudou, não o código.</strong> Uma versão anterior desta documentação registrava MAE de 129,3 e viés de -1,3 — medidos na versão anterior do <code>deepseek-v4-flash</code>, antes de a DeepSeek atualizar o modelo por trás do mesmo id da API. Nenhuma linha do prompt foi alterada. <strong>Métrica de qualidade de um produto que depende de LLM de terceiro é datada por natureza</strong>, e o texto antigo chegava a creditar ao prompt um viés neutro que era, ao menos em parte, mérito daquela versão do modelo.</p>
@@ -1212,7 +1216,13 @@ Aluno                         Bot
 
 <p><strong>O erro é regressivo, não uniforme.</strong> O corretor <strong>infla</strong> redações fracas (+91 pontos na faixa ≤ 440) e <strong>pune</strong> redações boas (-120 na faixa ≥ 720), puxando tudo em direção ao centro da escala. Para um produto de treino isso tem um custo específico: o coeficiente angular de 0,47 significa que <strong>apenas ~metade da melhora real do aluno aparece na nota</strong>. Em compensação, os defeitos apontados são reais mesmo quando a nota é dura — o diagnóstico se sustenta onde o número erra (ver §8.2).</p>
 
-<p><strong>Em aberto.</strong> A amostra (n=30 por rodada) ainda é pequena para leitura estatística apertada; a mesma configuração nunca foi rodada duas vezes, então diferenças abaixo de ~15 pontos não se distinguem de ruído; e não há como descartar que o LLM tenha visto o corpus Essay-BR (público desde 2021) durante o treino — ressalva que <strong>cresce</strong> a cada versão nova de modelo. O Gemini 3.5 Flash Lite foi medido e empatou (ver <strong>Métricas e ROI</strong>, §8.2).</p>
+<p><strong>Ancorado na literatura.</strong> O MAE em pontos é interpretável, mas não se compara com nada publicado. Traduzido para <strong>QWK</strong> — a métrica padrão de <em>Automatic Essay Scoring</em>, usada no próprio paper do Essay-BR — o corretor fica em <strong>0,53 a 0,60 de QWK total</strong>, contra <strong>0,49 e 0,53</strong> dos dois baselines publicados sobre o mesmo corpus (Marinho, Anchiêta & Moura, JIDM 13(1), 2022). Ou seja: um LLM <strong>sem nenhum treino no corpus</strong> fica na faixa de modelos treinados nele. A exceção é a <strong>C1</strong> (norma culta), onde fica claramente abaixo — justamente a competência mais exposta a erro de OCR no produto real. Ressalvas metodológicas que impedem ler isso como ranking, em <strong>Métricas e ROI</strong>, §8.2.</p>
+
+<p><strong>O esforço de raciocínio deixou de importar para a nota.</strong> Os quatro níveis de <code>CORRECTION_EFFORT</code> foram medidos nas mesmas 29 redações e <strong>nenhum se distinguiu dos outros</strong> (todos os testes de sinal com p > 0,3). No modelo anterior essa diferença era de 33 pontos de MAE — sumiu com a atualização. Como o effort continua mandando no custo e na latência, a escolha passou a ser econômica, não de qualidade.</p>
+
+<p><strong>A limitação mais séria não é o erro médio — é a instabilidade.</strong> A mesma configuração foi finalmente rodada 3× nas mesmas redações: uma execução isolada carrega <strong>MAE de 148 ± 9 pontos</strong>, e a <strong>mesma redação recebe notas com ~123 pontos de amplitude</strong> entre repetições idênticas (num caso, 360 / 640 / 760 para o mesmo texto). Não é ajustável: repetir o experimento com <code>temperature = 0</code> não reduziu nada, então o não-determinismo é do provedor, não da configuração. Para o produto isso importa mais que o MAE — um aluno que reenviasse a mesma redação veria notas bem diferentes. É também por que a comparação entre versões do modelo, acima, deve ser lida como "o modelo mudou", não como "o modelo piorou 16 pontos".</p>
+
+<p><strong>Em aberto.</strong> A amostra (n=30 por rodada) ainda é pequena para leitura estatística apertada, e agora sabe-se que diferenças abaixo de ~20 pontos não se distinguem de ruído do próprio modelo; e não há como descartar que o LLM tenha visto o corpus Essay-BR (público desde 2021) durante o treino — ressalva que <strong>cresce</strong> a cada versão nova de modelo. O Gemini 3.5 Flash Lite foi medido e empatou (ver <strong>Métricas e ROI</strong>, §8.2). A medição que mais falta é o <strong>split de teste oficial do corpus</strong> (~987 redações), que tornaria a comparação com os baselines direta e daria poder estatístico para decidir o effort.</p>
 
 <hr>
 
@@ -1529,7 +1539,7 @@ Aluno                         Bot
 <tr><td><strong>Total combinado</strong> (foto + correção)</td><td>—</td><td>89,02s</td><td><strong>99,00s</strong></td><td>105,16s</td></tr>
 </table></div>
 
-<p><strong>A hipótese se confirma, com folga — e de forma mais extrema do que o previsto.</strong> O LLM sozinho responde por <strong>~93% do tempo total</strong>. O overhead de infra é desprezível na etapa da foto (~0s) e pequeno mesmo na etapa da correção (2-4s, ~3% do total) — o "borda + Redis desprezível" está bem confirmado. Toda alavanca de latência real está, portanto, na <strong>camada de modelos</strong> — e dentro dela, <code>CORRECTION_EFFORT</code> (ver §8.2) já se mostrou uma variável de peso: os ~92s médios acima são específicos do effort <code>max</code>. Não medimos a latência com <code>high</code>/<code>medium</code>/<code>low</code> ainda — a comparação <code>high</code> feita até agora foi só de <strong>qualidade</strong> da correção (§8.2), não de tempo.</p>
+<p><strong>A hipótese se confirma, com folga — e de forma mais extrema do que o previsto.</strong> O LLM sozinho responde por <strong>~93% do tempo total</strong>. O overhead de infra é desprezível na etapa da foto (~0s) e pequeno mesmo na etapa da correção (2-4s, ~3% do total) — o "borda + Redis desprezível" está bem confirmado. Toda alavanca de latência real está, portanto, na <strong>camada de modelos</strong> — e dentro dela, <code>CORRECTION_EFFORT</code> é a variável de maior peso: os ~92s médios acima são específicos do effort <code>max</code>. Numa sondagem de <strong>uma</strong> redação, <code>low</code> respondeu em ~40s contra ~148s do <code>max</code> (4.195 contra 16.996 tokens de saída) — indício forte de que o effort é a alavanca de latência, ainda que n=1 não feche o número. E como <code>low</code> <strong>não</strong> perdeu acurácia mensurável (§8.2), essa alavanca hoje parece quase gratuita.</p>
 
 <blockquote>
 <p><strong>Nota de UX:</strong> o fluxo mascara a latência com sinais de progresso — mensagem de "processando", indicador de "digitando" e o <strong>preview do OCR</strong> (que já dá ao aluno algo para revisar enquanto ainda não há nota). A latência percebida é menor que a medida — mas quase 100 segundos de espera na correção é tempo real, não só percepção, e vale considerar ao escolher o effort de produção.</p>
@@ -1564,6 +1574,10 @@ Aluno                         Bot
 <blockquote>
 <p>Isso é um achado de engenharia, não um detalhe: <strong>qualquer métrica de qualidade publicada aqui é válida para a versão do modelo que estava no ar no dia da medição.</strong> Um projeto que depende de LLM de terceiro não tem número de acurácia permanente — tem número datado.</p>
 </blockquote>
+<p>></p>
+<blockquote>
+<p><strong>E o prazo venceu de novo.</strong> Desde 10/09/2026 a DeepSeek serve o <strong>V4.1-Flash</strong>, agora com id próprio (<code>deepseek-flash</code>); o <code>deepseek-v4-flash</code> virou um apelido temporário que aponta para ele, e o projeto passou a usar o id novo. Os números abaixo são do <strong>V4 Flash 0731</strong> e <strong>ainda não foram medidos no V4.1</strong> (⏳ a medir).</p>
+</blockquote>
 
 <p><strong>Resultado com a versão atual (V4 Flash 0731), medido em duas amostras independentes:</strong></p>
 
@@ -1589,6 +1603,10 @@ Aluno                         Bot
 <p><em>(as linhas por competência usam as 28 redações em que as duas versões produziram as cinco notas)</em></p>
 
 <p>A atualização <strong>piorou a nota agregada e melhorou a competência mais difícil</strong>: C5 (proposta de intervenção), que era o maior erro do modelo antigo, caiu 11,4 pontos; C1 (norma culta) piorou 7,1. Não é uma degradação uniforme — é uma troca. Apenas 3 das 30 notas ficaram idênticas entre as versões, com mudança média de 80 pontos por redação: o comportamento mudou de forma ampla.</p>
+
+<blockquote>
+<p><strong>Ressalva que só ficou possível depois:</strong> os <strong>+16,0</strong> de MAE acima estão <strong>dentro</strong> da variância entre execuções idênticas, medida posteriormente em ±9 pontos por execução (ver a subseção de variância adiante). O comportamento do modelo mudou — as 27 de 30 notas diferentes e a inversão C1/C5 são sinais amplos e pareados, difíceis de atribuir a sorteio. Mas a afirmação específica <em>"o MAE piorou 16 pontos"</em> <strong>não está estatisticamente sustentada</strong> com uma execução de cada lado. Separar as duas coisas importa: o que se sustenta é que <strong>o modelo mudou</strong>, não que <strong>ficou pior</strong>.</p>
+</blockquote>
 
 <blockquote>
 <p><strong>A afirmação anterior desta seção não vale mais.</strong> A versão anterior tinha viés de -1,3 e esta documentação destacava o "viés próximo de zero" como o achado mais importante — evidência a favor das regras anti-inflação do prompt. <strong>Com o modelo atual isso é falso</strong>: o viés é de -28 a -39. O prompt não mudou; o modelo mudou. O texto foi corrigido em vez de removido porque o erro de leitura é instrutivo — atribuímos ao prompt um mérito que era, ao menos em parte, do modelo.</p>
@@ -1621,24 +1639,109 @@ Aluno                         Bot
 <ul class="ordered">
 <li><strong>Amostra pequena (n=30 por rodada).</strong> Suficiente para uma leitura de ordem de grandeza, não para confiança estatística apertada. Duas amostras independentes convergindo (145,3 e 148,0) reforçam o número, mas não o transformam em medição fechada.</li>
 <li><strong>Variabilidade entre amostras é grande.</strong> Medido nesta rodada com um modelo de controle: o mesmo modelo e o mesmo prompt deram MAE 165,3 numa amostra e 189,3 em outra — <strong>24 pontos de diferença só por trocar as redações</strong>. Comparações de MAE entre amostras diferentes não significam nada abaixo de ~25 pontos. Todas as comparações desta seção são <strong>pareadas</strong> (mesmas redações) exatamente por isso.</li>
-<li><strong>Variância entre execuções nunca foi medida.</strong> Cada configuração rodou <strong>uma vez</strong>. Não sabemos quanto o mesmo modelo varia ao corrigir as mesmas redações duas vezes seguidas. Diferenças menores que ~15 pontos nesta seção devem ser lidas como possivelmente ruído.</li>
+<li><strong>Variância entre execuções — medida, e é grande.</strong> Ver a subseção dedicada abaixo. Em resumo: o MAE de uma execução isolada é de <strong>148 ± 9 pontos</strong>, e a mesma redação recebe notas com <strong>~123 pontos de amplitude</strong> entre repetições idênticas. <strong>Toda diferença menor que ~20 pontos nesta seção deve ser lida como possivelmente ruído</strong> — inclusive a comparação entre versões do modelo, logo acima.</li>
 <li><strong>Risco de vazamento de dado.</strong> O Essay-BR é público desde 2021 — não há garantia de que o LLM nunca "viu" pares redação↔nota desse corpus durante o treino. Se houver, o MAE fica artificialmente bom. A ressalva <strong>aumenta</strong> a cada nova versão de modelo treinada com mais dado público, não diminui.</li>
 <li><strong>Qualidade de dado da fonte, não do corretor.</strong> 12,2% do corpus (52 de 151 temas, concentrados num lote específico de ids) tem o texto do tema sem nenhuma acentuação — bug de origem no Essay-BR, não introduzido por este projeto. Não afeta o texto da redação em si, só o enunciado do tema em parte dos casos.</li>
 <li><strong>Comparação contra um avaliador único</strong>, não o consenso de dois corretores do INEP — o Essay-BR é um proxy, nunca o gabarito oficial.</li>
 </ul>
 
-<p><strong>Sensibilidade ao <code>CORRECTION_EFFORT</code>: <code>max</code> vs. <code>high</code>, mesmas 30 redações.</strong> O piloto foi repetido inteiro com <code>CORRECTION_EFFORT=high</code> (era <code>max</code>), mesma seed — garantindo comparação pareada, essay a essay. <strong>Atenção: esta comparação foi feita na versão ANTERIOR do modelo</strong> (é a origem do 129,3 na tabela abaixo) e não foi refeita na 0731 — dado datado, mantido por valor histórico:</p>
+<h3 id="vari-ncia-entre-execu-es-id-nticas-a-med">Variância entre execuções idênticas — a medição que faltava</h3>
+
+<p>Esta documentação vinha apontando, como pendência mais barata e de maior retorno, rodar <strong>a mesma configuração duas vezes</strong> nas mesmas redações. Foi feito: 30 redações × <strong>3 execuções</strong>, tudo idêntico — mesmo modelo, mesmo prompt, mesmo effort, mesma redação. O resultado é o número mais importante desta seção inteira, porque é a régua de todos os outros.</p>
 
 <div class="table-wrap"><table>
-<tr><th>Métrica</th><th><code>max</code></th><th><code>high</code></th><th>Δ</th></tr>
-<tr><td>MAE geral</td><td>129,3</td><td>162,7</td><td>+33,4</td></tr>
-<tr><td>Viés médio</td><td>-1,3 (neutro)</td><td>-64,0 (subestima)</td><td>—</td></tr>
-<tr><td>MAE C1 / C2 / C3 / C4 / C5</td><td>30,7 / 27,6 / 35,9 / 29,3 / 45,3</td><td>32,9 / 26,4 / 27,4 / 33,6 / 49,3</td><td>misto</td></tr>
+<tr><th></th><th></th></tr>
+<tr><td>Amplitude média (maior − menor das 3 notas da mesma redação)</td><td><strong>123,3 pontos</strong></td></tr>
+<tr><td>Amplitude mediana / máxima</td><td>120 / <strong>400</strong></td></tr>
+<tr><td>Redações que reproduziram a nota exata nas 3 execuções</td><td><strong>1 de 30</strong></td></tr>
+<tr><td>MAE de cada execução isolada</td><td>159,3 / 136,7 / 146,0</td></tr>
+<tr><td>Espalhamento do MAE entre execuções idênticas</td><td><strong>22,7 pontos</strong></td></tr>
 </table></div>
 
-<p>Não é ruído: comparando as 30 redações par a par (mesmo texto, effort diferente), <code>high</code> deu nota em média <strong>62,7 pontos mais baixa</strong> que <code>max</code> na mesma redação — e a diferença <strong>persiste em -61,4 pontos mesmo excluindo os dois maiores outliers</strong>, ou seja, é uma tendência ampla, não dois casos isolados puxando a média. Os dois outliers mais extremos foram <strong>triagens de nota zero que só aconteceram no <code>high</code></strong> (as mesmas redações tinham nota normal — 240 e 400 — no <code>max</code>): uma por fuga total ao tema, outra por cópia de texto motivador, ambas com trechos do próprio texto citados corretamente na justificativa — não parecem alucinação, mas um julgamento mais rigoroso na aplicação da triagem.</p>
+<p>Um caso concreto: a redação <code>essaybr-36-597</code> (nota do corpus: 440) recebeu <strong>360, 640 e 760</strong> em três execuções seguidas. Nada mudou entre elas.</p>
 
-<p><strong>Não dá para saber se <code>high</code> está mais certo ou mais errado.</strong> <code>max</code> estava melhor calibrado <em>contra este proxy específico</em> (viés ≈ 0); isso não prova que <code>max</code> é mais correto em termos absolutos, só que combinou melhor com as notas do Essay-BR nesta amostra. A mesma limitação epistêmica do restante desta seção se aplica: <code>high</code> pode estar sendo mais rigoroso do que um corretor humano exigente seria (o que aproximaria da realidade), ou superpunindo (o que afastaria) — sem um terceiro corretor de referência, não dá para desempatar. Na prática, <code>CORRECTION_EFFORT</code> se mostrou um eixo de calibração de comportamento tão relevante quanto a escolha de provedor, e também afeta a latência (ver §8.1) — vale documentar qual valor está em produção e por quê, não só qual é mais rápido.</p>
+<p><strong>Baixar a temperatura não resolve.</strong> A suspeita imediata era que o projeto nunca define <code>temperature</code> — o corretor chama a API sem esse parâmetro, usando o default. O experimento foi repetido inteiro com <code>temperature = 0</code>:</p>
+
+<div class="table-wrap"><table>
+<tr><th></th><th>temperature default</th><th>temperature 0</th></tr>
+<tr><td>Amplitude média</td><td>123,3</td><td><strong>134,5</strong></td></tr>
+<tr><td>Amplitude máxima</td><td>400</td><td><strong>520</strong></td></tr>
+<tr><td>Notas idênticas nas 3 execuções</td><td>1/30</td><td>1/29</td></tr>
+</table></div>
+
+<p>Não caiu — variou de leve para cima, o que dentro desse ruído significa "sem efeito". A API aceita o parâmetro sem erro, mas ele não muda o comportamento. Duas explicações plausíveis, ambas fora do alcance deste projeto: o modo de raciocínio ignora <code>temperature</code> (comum em modelos de <em>reasoning</em>, cujo bloco de pensamento não obedece ao parâmetro), ou o não-determinismo é inerente à infraestrutura de serviço (roteamento de especialistas, agrupamento de requisições em lote). <strong>É propriedade do provedor, não configuração</strong> — por isso não foi adicionada uma variável <code>CORRECTION_TEMPERATURE</code>.</p>
+
+<p><strong>O que isso obriga a reler.</strong> Juntando as 6 execuções isoladas dos dois experimentos, o MAE de uma execução única é <strong>148 ± 9 pontos</strong>. Isso significa que <strong>diferenças de até ~20 pontos entre configurações desta seção não se distinguem de ruído</strong>, por mais bem pareada que a comparação esteja. Em particular:</p>
+
+<ul>
+<li>O nulo entre os quatro níveis de effort (espalhamento de 8,3 pontos) fica <strong>confirmado</strong> por um segundo caminho independente.</li>
+<li>A queda entre versões do modelo (129,3 → 145,3, <strong>16 pontos</strong>) fica <strong>dentro</strong> dessa faixa. Não está refutada — o sinal apareceu de forma pareada, redação a redação — mas está mal sustentada, e é honesto dizer isso em vez de mantê-la como achado fechado.</li>
+<li>O ganho da variante de prompt do Gemini (45 pontos) <strong>sobrevive</strong> com folga.</li>
+</ul>
+
+<p><strong>Agregar várias execuções ajuda pouco.</strong> Corrigir 3× e combinar reduz o MAE de ~148 para ~142–145 — de 4 a 6 pontos, com o mesmo sinal nas duas rodadas. <em>Qual</em> combinação usar não importa: a média venceu num experimento e a mediana no outro, inversão que é ela própria ruído. O ganho não paga 3× de custo em acurácia; se algum dia pagar, será por <strong>estabilidade</strong> — hoje o mesmo aluno reenviando a mesma redação vê notas com ~123 pontos de diferença, e essa é a limitação mais séria do produto, maior que o erro médio contra o corpus.</p>
+
+<h3 id="sensibilidade-ao-code-correction-effort-">Sensibilidade ao <code>CORRECTION_EFFORT</code> — os quatro níveis, medidos na 0731</h3>
+
+<p><strong>Esta medição substitui a anterior.</strong> Até 2026-08-04 esta seção documentava só <code>max</code> vs. <code>high</code>, medidos na versão <strong>anterior</strong> do modelo, onde a diferença era grande: MAE 129,3 contra 162,7 (<strong>+33,4</strong>) e viés -1,3 contra -64,0. Foi esse resultado que justificou fixar <code>max</code> em produção.</p>
+
+<p>Refeito na 0731, com os quatro níveis nas <strong>mesmas 29 redações pareadas</strong> (amostra held-out, seed 7 — a mesma da comparação com o Gemini), o resultado é outro:</p>
+
+<div class="table-wrap"><table>
+<tr><th>Effort</th><th>MAE</th><th>Viés</th><th>RMSE</th><th>QWK médio</th><th>Spearman</th><th>Slope</th><th>Teste de sinal vs. <code>max</code></th></tr>
+<tr><td><code>low</code></td><td>146,2</td><td>-49,7</td><td>165,1</td><td>0,351</td><td>0,638</td><td>0,45</td><td>p = 0,541</td></tr>
+<tr><td><code>medium</code></td><td>137,9</td><td>-29,0</td><td>163,7</td><td>0,346</td><td>0,655</td><td>0,47</td><td>p = 0,307</td></tr>
+<tr><td><code>high</code></td><td>144,1</td><td>-14,5</td><td>165,5</td><td>0,297</td><td>0,608</td><td>0,39</td><td>p = 0,832</td></tr>
+<tr><td><code>max</code> <strong>(produção)</strong></td><td>142,1</td><td>-29,0</td><td>164,9</td><td>0,345</td><td>0,676</td><td>0,45</td><td>—</td></tr>
+</table></div>
+
+<p><strong>Nenhum nível se distingue de nenhum outro.</strong> Todos os testes de sinal dão p > 0,3, e o RMSE varia <strong>1,8 ponto</strong> entre o melhor e o pior. O gradiente de effort que existia no modelo anterior <strong>desapareceu</strong> — a atualização 0731 mexeu no comportamento do effort, não só na calibração. A justificativa original para fixar <code>max</code> deixou de valer; a configuração permanece por inércia deliberada, não por evidência atual.</p>
+
+<p><strong>Duas correções ao que esta seção afirmava antes:</strong></p>
+
+<ul>
+<li>A API <strong>não</strong> expõe só dois níveis efetivos. A afirmação de que <code>low</code>/<code>medium</code> eram mapeados para <code>high</code> internamente valia para o modelo antigo e não vale mais: medido numa mesma redação, <code>low</code> gasta <strong>15</strong> tokens de raciocínio contra 11.572 do <code>medium</code>, 12.654 do <code>high</code> e 14.011 do <code>max</code>. São quatro níveis distintos.</li>
+<li><strong>Effort vazio não desliga o raciocínio.</strong> Deixar <code>CORRECTION_EFFORT</code> em branco faz o código parar de enviar o parâmetro, mas o modelo raciocina assim mesmo (12.525 tokens medidos) — e sem controle de nível. Para gastar menos, use <code>low</code> explicitamente.</li>
+</ul>
+
+<p><strong>A armadilha do viés agregado.</strong> <code>high</code> tem o melhor viés da tabela (-14,5) e o <strong>pior</strong> de todo o resto: menor QWK (0,297), menor Spearman (0,608), menor slope (0,39). O viés pequeno é cancelamento — <code>high</code> infla a faixa baixa em <strong>+165,7</strong> e pune a alta em <strong>-118,3</strong>. É o mesmo padrão regressivo descrito acima: viés agregado próximo de zero não é sinal de acerto, e quem escolher effort por essa coluna escolhe o pior corretor da tabela.</p>
+
+<p><strong>Uma hipótese testada e refutada.</strong> A expectativa era que menos raciocínio produzisse correção mais <strong>frouxa</strong> (menos capacidade de achar defeito → nota mais alta). <code>low</code> ficou o <strong>mais duro</strong> dos quatro (viés -49,7). Uma sondagem preliminar de <strong>uma única redação</strong> havia indicado exatamente o contrário, de forma monotônica e convincente — registro do quanto n=1 engana, inclusive quando o padrão parece limpo.</p>
+
+<p><strong>O que isto não autoriza a concluir.</strong> Que os níveis são equivalentes. Com n=29 só se detecta diferença grande — o piso empírico desta documentação é de ~25 pontos de MAE (ver Limitação 3). A leitura correta é "não detectamos diferença", não "não há diferença". A troca de <code>max</code> por um nível mais barato <strong>não deve ser feita com esta amostra</strong>; depende do split oficial (ver §8.5).</p>
+
+<p><strong>Onde isso desloca a decisão.</strong> Se o effort não compra acurácia mensurável, ele passa a ser decisão de <strong>custo e latência</strong>, não de qualidade. Pela sondagem, <code>low</code> produz 4.195 tokens de saída contra 16.996 do <code>max</code> (~4×) e responde em ~40s contra ~148s. Como o custo por correção é dominado pela saída (§8.4.1), isso é uma economia de ordem relevante em escala — e é hoje a hipótese de otimização mais promissora do projeto, pendente de confirmação com poder estatístico.</p>
+
+<h3 id="qwk-e-a-compara-o-com-os-baselines-publi">QWK e a comparação com os baselines publicados do corpus</h3>
+
+<p>O MAE em pontos é interpretável para o produto ("erra ~145 pontos numa escala de 1.000"), mas é <strong>incomparável com qualquer resultado publicado</strong>. A literatura de <em>Automatic Essay Scoring</em> — incluindo o paper do próprio Essay-BR — reporta <strong>QWK</strong> (<em>Quadratic Weighted Kappa</em>), métrica herdada da competição ASAP: compara o nível atribuído com o nível de referência penalizando o erro pelo <strong>quadrado</strong> da distância e descontando a concordância esperada por acaso. 1 é acordo perfeito, 0 é o nível do chute.</p>
+
+<p>As competências do ENEM são ordinais em 6 níveis (0/40/80/120/160/200), então o cálculo é direto, sem conversão de escala. Foi feito <strong>offline</strong>, reprocessando as respostas já salvas das mesmas execuções que produziram os MAEs acima — nenhuma chamada de modelo nova, portanto os números se referem exatamente às mesmas correções.</p>
+
+<div class="table-wrap"><table>
+<tr><th>Modelo</th><th>C1</th><th>C2</th><th>C3</th><th>C4</th><th>C5</th><th>QWK total</th><th>RMSE total</th></tr>
+<tr><td>Amorim & Veloso (2017) — <em>supervisionado</em></td><td>0,39</td><td>0,46</td><td>0,40</td><td>0,38</td><td>0,34</td><td>0,49</td><td>161,09</td></tr>
+<tr><td>Fonseca et al. (2018) — <em>supervisionado</em></td><td>0,44</td><td>0,48</td><td>0,42</td><td>0,47</td><td>0,38</td><td>0,53</td><td>157,33</td></tr>
+<tr><td><strong>este projeto</strong> — DeepSeek 0731, seed 42</td><td>0,29</td><td>0,48</td><td>0,51</td><td>0,58</td><td>0,46</td><td><strong>0,60</strong></td><td>157,57</td></tr>
+<tr><td><strong>este projeto</strong> — DeepSeek 0731, held-out seed 7</td><td>0,27</td><td>0,32</td><td>0,37</td><td>0,34</td><td>0,41</td><td><strong>0,53</strong></td><td>172,36</td></tr>
+</table></div>
+
+<p>Os dois baselines são do próprio paper do corpus — Marinho, J. C.; Anchiêta, R. T.; Moura, R. S. <strong>Essay-BR: a Brazilian Corpus to Automatic Essay Scoring Task</strong>, <em>Journal of Information and Data Management</em>, v. 13, n. 1, 2022, Tabelas XI e XII.</p>
+
+<p><strong>Isto não é um ranking.</strong> Quatro diferenças impedem a leitura direta:</p>
+
+<ul class="ordered">
+<li><strong>Conjunto de teste diferente.</strong> Os baselines usam o split de teste oficial do corpus; aqui são amostras de 30 sorteadas do corpus inteiro — que inclui o split de treino deles. Mesma escala, populações diferentes.</li>
+<li><strong>n=30 contra centenas.</strong> O intervalo de confiança por <em>bootstrap</em> das nossas medições tem largura de 0,3 a 0,8 de kappa. Nessa largura cabem os dois baselines inteiros.</li>
+<li><strong>Supervisionado contra zero-shot.</strong> Os baselines foram <strong>treinados</strong> no corpus; o prompt deste projeto nunca viu uma redação rotulada dele. Isso favorece o nosso número — e o item 4 é o contrapeso.</li>
+<li><strong>Contaminação possível, e assimétrica.</strong> O Essay-BR é público desde 2021. Se o LLM viu pares redação↔nota em pré-treino, o zero-shot deixa de ser zero-shot, e não temos como verificar. Os baselines não têm esse problema: treinam no corpus abertamente, por desenho.</li>
+</ul>
+
+<p><strong>O que a tabela sustenta</strong>, com as quatro ressalvas na frente: um LLM sem nenhum treino no corpus, guiado por um prompt escrito para <em>produto</em> — que além da nota produz feedback por competência com trechos citados —, fica na mesma faixa dos baselines publicados. Acima em C3/C4/C5, claramente abaixo em C1.</p>
+
+<p><strong>C1 é o achado que interessa.</strong> Domínio da norma culta é exatamente onde métodos baseados em contagem de features ganham: contar desvio gramatical é o que eles fazem bem, e é o que um LLM faz com menos consistência. É também a competência mais exposta no produto real, onde o texto chega por <strong>OCR de manuscrito</strong> — um erro de transcrição vira um desvio que o aluno não cometeu. Reforça, por um caminho independente, a decisão de mostrar o preview do OCR antes de qualquer nota (ver <strong>Análise e Limitações</strong>, §3.1).</p>
+
+<p><strong>Quanto é "bom" nesta métrica.</strong> O próprio paper do corpus registra que a área usa <strong>0,6–0,8 de QWK como piso</strong> para uso somativo, e conclui que seus baselines <em>"are not fit for summative student assessment"</em>. Nenhum número desta seção alcança esse piso com folga. Isso não invalida o produto — <strong>sustenta o enquadramento dele</strong>: a ferramenta é <strong>formativa</strong> (devolve diagnóstico por competência com trecho citado, para o aluno treinar), não somativa (não substitui, nem imita, a nota oficial). A nota é o gancho que traz o aluno; o feedback é o valor entregue.</p>
 
 <h3 id="compara-o-com-outro-provedor-gemini-3-5-">Comparação com outro provedor — Gemini 3.5 Flash Lite (medido)</h3>
 
@@ -1664,9 +1767,9 @@ Aluno                         Bot
 
 <p><strong>Custo do Flash Lite não foi medido</strong>, só a acurácia. Um dado relevante apareceu no caminho: o <strong>cache de contexto do Gemini não funciona nesse modelo no free tier</strong> (a API recusa a criação de cache), então os ~6.400 tokens do bloco de sistema vão sem cache em toda chamada — o oposto dos 75% de cache-hit medidos no DeepSeek (§8.4.1). Qualquer comparação de custo teria de partir daí.</p>
 
-<p><strong>Decisão vigente:</strong> manter <code>DeepSeek</code> + <code>CORRECTION_EFFORT=max</code>. O empate não justifica a troca, e o Gemini ainda carrega a questão do cache. A decisão agora se apoia em <strong>dado de acurácia</strong>, não só em custo — o que é uma base melhor do que a anterior.</p>
+<p><strong>Decisão vigente:</strong> manter <code>DeepSeek</code> + <code>CORRECTION_EFFORT=max</code> — mas as duas metades dessa decisão têm hoje bases diferentes. O <strong>provedor</strong> se apoia em dado de acurácia: o empate com o Gemini não justifica a troca, e o Gemini ainda carrega a questão do cache. Já o <strong>effort</strong> perdeu sua justificativa original (a vantagem de 33 pontos sobre o <code>high</code> era do modelo antigo e não se reproduz na 0731); <code>max</code> permanece por não haver evidência suficiente para trocar, não por evidência de que seja melhor. É uma inércia consciente, com revisão pendente de uma amostra maior.</p>
 
-<p><strong>Por que a amostra fica em n=30 (decisão, não pendência).</strong> Ampliar para 100+ apertaria o intervalo de confiança, mas o MAE de ~145–150 pontos já é <strong>aceitável para o propósito do produto</strong> — a própria correção oficial do ENEM admite divergência entre dois avaliadores humanos, e uma nota <em>estimada</em> nunca prometeu equivalência exata (ver <strong>Análise e Limitações</strong>, §3.2). E não há <strong>effort intermediário</strong> a testar no DeepSeek: a API expõe só dois níveis efetivos, <code>high</code> e <code>max</code> (<code>low</code>/<code>medium</code> são mapeados para <code>high</code> internamente) — o espectro completo de effort já foi coberto, não é uma varredura pela metade. A pendência de medição mais relevante que resta <strong>não é ampliar a amostra</strong>, e sim <strong>repetir a mesma rodada duas vezes</strong> para saber quanta variação vem do próprio modelo (ver Limitação 3).</p>
+<p><strong>Por que a amostra fica em n=30 (decisão, não pendência).</strong> Ampliar para 100+ apertaria o intervalo de confiança, mas o MAE de ~145–150 pontos já é <strong>aceitável para o propósito do produto</strong> — a própria correção oficial do ENEM admite divergência entre dois avaliadores humanos, e uma nota <em>estimada</em> nunca prometeu equivalência exata (ver <strong>Análise e Limitações</strong>, §3.2). Os <strong>quatro</strong> níveis de effort já foram varridos na versão atual do modelo (a afirmação anterior, de que a API só expunha <code>high</code> e <code>max</code> efetivos, valia para o modelo antigo e foi corrigida acima). A pendência de <strong>repetir a mesma rodada</strong> foi cumprida (subseção de variância acima) e o resultado reordenou o resto: sabendo que uma execução isolada carrega ±9 pontos de MAE, ampliar a amostra deixou de ser refinamento e virou requisito. A pendência que resta é <strong>rodar o split de teste oficial do corpus</strong> (~987 redações) — ela ancora o resultado contra os baselines publicados e é a única forma de decidir o effort por custo com poder estatístico real.</p>
 
 <hr>
 
@@ -1688,6 +1791,16 @@ Aluno                         Bot
 <blockquote>
 <p><strong>A medir:</strong> a <strong>taxa de sucesso por correção</strong> em regime real (concluídas ÷ tentativas, com N grande) e a <strong>distribuição de falhas por etapa</strong> (download × OCR × LLM) — dados que virão da observabilidade (§6.2) e dos testes de stress. Um piloto de 20+ correções sem falha não substitui isso.</p>
 </blockquote>
+
+<h3 id="dois-defeitos-de-sa-da-encontrados-nas-c">Dois defeitos de saída encontrados nas corridas de avaliação</h3>
+
+<p>"Concluir sem erro" não é o mesmo que "entregar uma resposta bem formada". Reprocessando as ~180 correções salvas nas avaliações contra o Essay-BR, apareceram dois defeitos que <strong>nenhum retry pega</strong>, porque a chamada foi tecnicamente bem-sucedida:</p>
+
+<p><strong>1. Raciocínio vazado para dentro da resposta — ~1% das correções.</strong> Numa das redações, o modelo entregou a resposta completa (nota 520), depois <strong>deliberou em voz alta no próprio texto de saída</strong> (<em>"a nota é 100? Não... Corrijo: C5 = 0/200"</em>) e emitiu um <strong>segundo bloco de nota</strong> (420). Aconteceu em 1 de ~90 correções do DeepSeek. Isso importa por dois motivos: essa resposta iria <strong>inteira para o aluno</strong>, que veria a IA se contradizendo na tela; e o <em>parser</em> da avaliação lê o <strong>primeiro</strong> bloco, então o benchmark registrou 520 quando a resposta final do modelo era 420.</p>
+
+<p><strong>2. Notas de competência fora da escala do ENEM — 1% a 6%.</strong> A matriz só admite 0/40/80/120/160/200, mas o modelo às vezes emite <code>100/200</code> (e, num caso, <code>140/200</code>) — níveis que não existem. Frequência por configuração: DeepSeek <code>low</code> e <code>high</code> 1%, <code>medium</code> e <code>max</code> 3%, Gemini 3–5%. Não é aleatório: a <strong>variante de prompt ancorada</strong> criada para o Gemini (§8.2) elevou o índice para <strong>6%</strong> e introduziu o <code>140</code> — ao mandar o modelo confiar na heurística de "elementos × 40" da C5, ele passou a inventar valores intermediários. É um efeito colateral a considerar antes de reaproveitar aquela variante.</p>
+
+<p>Nenhum dos dois tem correção aplicada ainda. O primeiro é o mais relevante para o produto, por ser visível ao aluno; o segundo afeta sobretudo a fidelidade à matriz.</p>
 
 <hr>
 
@@ -1752,6 +1865,7 @@ tokens_saída    ≈  a correção formatada (competências + feedback + reescri
 <li>Descontando o <em>cooldown</em> do KEDA (mantém a réplica viva alguns minutos após cada rajada antes de dormir), a folga cai, mas para volume <strong>pessoal ou de turma</strong> (dezenas a poucas centenas de correções/mês) o compute continua <strong>integralmente dentro da cota gratuita → US$ 0/mês</strong>.</li>
 <li>A <strong>fila</strong> em si (Azure Storage Queue) custa US$ 0,0004 por 10.000 operações — para esse volume, <strong>frações de centavo por mês</strong>.</li>
 <li>O <strong>Redis externo</strong> obrigatório nesse modo cabe no <em>free tier</em> do Upstash (<strong>US$ 0</strong>).</li>
+<li>A <strong>imagem do contêiner</strong> fica no GitHub Container Registry como pacote público (<strong>US$ 0</strong>). Um Azure Container Registry Basic, usado nas primeiras versões do deploy, cobraria uma diária fixa (cerca de US$ 5/mês) mesmo com o app parado.</li>
 </ul>
 
 <p><strong>Modo simples (<code>minReplicas=1</code>) — uma réplica sempre ligada.</strong> Aqui o contêiner nunca dorme: roda 24/7 (a maior parte do tempo <em>ocioso</em>, cobrado a uma tarifa reduzida, parcialmente abatida pela mesma cota gratuita). O custo é baixo (ordem de <strong>poucos dólares por mês</strong> para um contêiner pequeno), mas <strong>não é zero</strong> como no scale-to-zero. É o modo indicado quando o cold-start não é aceitável (ex.: WhatsApp, com SLA de 200 ms).</p>
@@ -1826,17 +1940,17 @@ tokens_saída    ≈  a correção formatada (competências + feedback + reescri
 </ul>
 
 <blockquote>
-<p><strong>Fora do roadmap (decisões tomadas, não pendências):</strong> ampliar a amostra de acurácia além de n=30 foi <strong>avaliado e descartado</strong>; <code>DeepSeek</code> + <code>CORRECTION_EFFORT=max</code> é a configuração adotada por custo × qualidade (ver §8.2 e §8.4.1). Os efforts de DeepSeek (<code>high</code> e <code>max</code>, os dois únicos efetivos) já foram os dois comparados. O <strong>Gemini 3.5 Flash Lite foi medido</strong> e empatou com o DeepSeek (§8.2) — a decisão de provedor deixou de ser só de custo e passou a ter dado de acurácia. Claude/OpenAI/Maritaca seguem não medidos.</p>
+<p><strong>Fora do roadmap (decisões tomadas, não pendências):</strong> ampliar a amostra de acurácia além de n=30 foi <strong>avaliado e descartado</strong>; <code>DeepSeek</code> + <code>CORRECTION_EFFORT=max</code> é a configuração adotada por custo × qualidade (ver §8.2 e §8.4.1). Os <strong>quatro</strong> efforts do DeepSeek foram comparados na versão atual e <strong>nenhum se distinguiu dos outros</strong> (§8.2) — o que reabre a escolha por custo, não por qualidade. O <strong>Gemini 3.5 Flash Lite foi medido</strong> e empatou com o DeepSeek (§8.2) — a decisão de provedor deixou de ser só de custo e passou a ter dado de acurácia. Claude/OpenAI/Maritaca seguem não medidos.</p>
 </blockquote>
 <p>></p>
 <blockquote>
-<p><strong>Pendência de medição que permanece aberta:</strong> ninguém rodou a mesma configuração <strong>duas vezes</strong> nas mesmas redações. Sem isso não há como separar diferença real de ruído do modelo abaixo de ~15 pontos de MAE (§8.2, Limitação 3). É a medição mais barata e de maior retorno que ainda falta.</p>
+<p><strong>Pendência cumprida — e o resultado mudou a régua:</strong> a mesma configuração foi rodada <strong>3 vezes</strong> nas mesmas redações (§8.2). O MAE de uma execução isolada é <strong>148 ± 9 pontos</strong>, e a mesma redação varia ~123 pontos entre repetições. Diferenças abaixo de ~20 pontos em qualquer comparação desta documentação são possivelmente ruído. A pendência que resta é o <strong>split de teste oficial</strong> (~987 redações), agora não como refinamento e sim como requisito para qualquer conclusão fina.</p>
 </blockquote>
 
 <hr>
 
 <blockquote>
-<p><strong>Resumo executivo:</strong> o corretor troca "custo zero, latência de madrugada" (típico de automação em lote) por <strong>custo marginal por uso e latência sentida em tempo real</strong> — o que desloca o foco de otimização para a <strong>camada de modelos</strong> (provedor, modelo, effort, cache) e para a <strong>contenção de custo</strong> (rate-limit, cache de contexto). Custo, latência e acurácia da nota já têm uma primeira medição real (todas como piloto local); a mesma variável (<code>CORRECTION_EFFORT</code>) que domina a latência (§8.1) também muda o comportamento da nota (§8.2) — não é só um botão de "mais rápido". Taxa de sucesso em regime real e testes em nuvem seguem pendentes de medição.</p>
+<p><strong>Resumo executivo:</strong> o corretor troca "custo zero, latência de madrugada" (típico de automação em lote) por <strong>custo marginal por uso e latência sentida em tempo real</strong> — o que desloca o foco de otimização para a <strong>camada de modelos</strong> (provedor, modelo, effort, cache) e para a <strong>contenção de custo</strong> (rate-limit, cache de contexto). Custo, latência e acurácia da nota já têm uma primeira medição real (todas como piloto local); a variável que domina a latência e o custo (<code>CORRECTION_EFFORT</code>) <strong>deixou de mudar a acurácia da nota</strong> na versão atual do modelo (§8.2) — o que a converte de eixo de qualidade em eixo de economia, e torna a escolha atual (<code>max</code>) uma inércia a revisar, não uma decisão sustentada. Taxa de sucesso em regime real e testes em nuvem seguem pendentes de medição.</p>
 </blockquote>
 </div>
 </div>
@@ -2012,9 +2126,11 @@ tokens_saída    ≈  a correção formatada (competências + feedback + reescri
 <li>Arquitetura mono-contêiner (app + Redis embutido), borda com resposta <200ms e processamento em <em>background</em>.</li>
 <li><strong>Custo efetivo por correção</strong> medido em uso real (DeepSeek V4 Flash) — ver Métricas e ROI, §8.4.1.</li>
 <li><strong>Acurácia da nota</strong> — medida em duas amostras independentes de 30 redações do Essay-BR com o modelo em produção (DeepSeek V4 Flash 0731, <code>CORRECTION_EFFORT=max</code>): <strong>MAE ~145–150 pontos</strong>, viés de <strong>-28 a -39</strong> (subestima) — ver Métricas e ROI, §8.2. Não é a nota oficial do INEP (que não publica o texto das redações), e a amostra ainda é pequena para fechar o número. Três achados que valem a menção:</li>
-<li><strong>O número é datado.</strong> A versão anterior do mesmo modelo media MAE 129,3 com viés neutro; a DeepSeek atualizou o modelo por trás do mesmo id da API e o resultado mudou <strong>sem nenhuma alteração de código</strong>. Métrica de qualidade em produto que depende de LLM de terceiro tem prazo de validade.</li>
+<li><strong>O número é datado.</strong> A versão anterior do mesmo modelo media MAE 129,3 com viés neutro; a DeepSeek atualizou o modelo por trás do mesmo id da API e o comportamento mudou <strong>sem nenhuma alteração de código</strong>. Métrica de qualidade em produto que depende de LLM de terceiro tem prazo de validade.</li>
+<li><strong>A instabilidade pesa mais que o erro médio.</strong> Rodando a mesma configuração 3× nas mesmas redações, uma execução isolada dá <strong>MAE 148 ± 9</strong> e a mesma redação varia <strong>~123 pontos</strong> entre repetições (um caso: 360 / 640 / 760). <code>temperature = 0</code> não mudou nada — é não-determinismo do provedor. Consequência prática: <strong>diferenças abaixo de ~20 pontos em qualquer comparação da documentação são possivelmente ruído</strong>, inclusive a queda entre versões do modelo.</li>
 <li><strong>O erro é regressivo</strong>: infla redação fraca (+91) e pune redação boa (-120), e só ~metade da melhora real do aluno aparece na nota (coeficiente angular 0,47).</li>
-<li><strong><code>CORRECTION_EFFORT</code> não é só um botão de velocidade</strong> — na versão anterior do modelo, trocar <code>max</code> por <code>high</code> levou o MAE a 162,7 e o viés a -64 (comparação não refeita na versão atual).</li>
+<li><strong>Ancorado na literatura:</strong> em QWK (métrica padrão de <em>Automatic Essay Scoring</em>), o corretor fica em <strong>0,53–0,60</strong>, contra <strong>0,49 e 0,53</strong> dos baselines publicados sobre o mesmo corpus — sendo que os baselines foram <strong>treinados</strong> nele e este prompt não. Fraqueza clara em C1 (norma culta).</li>
+<li><strong><code>CORRECTION_EFFORT</code> deixou de mudar a nota.</strong> Na versão anterior, trocar <code>max</code> por <code>high</code> levava o MAE de 129,3 a 162,7. Refeita na 0731 com os quatro níveis, <strong>nenhum se distingue dos outros</strong> (p > 0,3) — o effort virou eixo de custo e latência, não de qualidade.</li>
 <li><strong>Latência por etapa</strong> — piloto local medido (n=5, Telegram): ~99s médios até a nota chegar, dos quais <strong>~93% é só a chamada ao LLM</strong> (~92s) — download+OCR somam só ~4s. Confirma com folga a hipótese de que o gargalo é a camada de modelos, não a infraestrutura — ver Métricas e ROI, §8.1.</li>
 <li><strong>Rajada na borda</strong> — piloto local medido (até 100 webhooks concorrentes): o edge escala (<strong>100 concorrentes a p95 130ms</strong>) e <strong>toda requisição retorna 200</strong> (sem retry-storm); na faixa realista (≤20 concorrentes) o <200ms segura. Sob rajada agressiva (≥50), o que degrada é a contenção das tasks de background no worker único, não o edge — ver Testes de Stress.</li>
 </ul>
@@ -2028,7 +2144,7 @@ tokens_saída    ≈  a correção formatada (competências + feedback + reescri
 </ul>
 
 <blockquote>
-<p>Ampliar a amostra de acurácia, testar outros provedores de LLM e varrer os efforts intermediários <strong>não</strong> estão nesta lista: foram avaliados e descartados por custo × qualidade (DeepSeek/<code>max</code> adotado), não são pendências — ver Métricas e ROI, §8.2 e §8.5.</p>
+<p>Testar outros provedores e varrer os efforts intermediários <strong>saíram</strong> desta lista porque foram <strong>feitos</strong>, não descartados: o Gemini 3.5 Flash Lite empatou com o DeepSeek, e os quatro efforts foram medidos sem diferença detectável entre si (Métricas e ROI, §8.2). Ampliar a amostra, ao contrário, <strong>voltou a ser pendência</strong>: rodar o split de teste oficial do Essay-BR (~987 redações) é hoje a medição de maior retorno — ancora o resultado contra os baselines publicados e dá poder estatístico para escolher o effort por custo.</p>
 </blockquote>
 
 <blockquote>

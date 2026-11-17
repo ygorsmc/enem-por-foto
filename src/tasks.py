@@ -21,6 +21,8 @@ e engole toda exceção pra uma mensagem ruim não derrubar o worker.
 
 import asyncio
 import json
+import re
+import traceback
 from dataclasses import asdict
 
 import structlog
@@ -31,6 +33,9 @@ from src.config import settings
 from src.flow.handlers import handle_message
 
 logger = structlog.get_logger(__name__)
+
+# O str() de um HTTPStatusError do httpx traz a URL, e a do Telegram contém o token do bot.
+_TELEGRAM_TOKEN_RE = re.compile(r"bot\d+:[A-Za-z0-9_-]+")
 
 # Referências fortes: sem isso o GC pode matar uma task em voo (backend memory).
 _background_tasks: set[asyncio.Task] = set()
@@ -53,11 +58,16 @@ async def process_job(channel_name: str, msg: InboundMessage) -> None:
         channel = get_channel(channel_name)
         await handle_message(channel, msg)
     except Exception as e:
+        # Sem exc_info: o traceback do console imprime as variáveis locais (URL com o token do bot,
+        # chaves de API). Tipo + onde (frames de src/) bastam para diagnosticar.
+        frames = [f for f in traceback.extract_tb(e.__traceback__) if "/src/" in f.filename]
         logger.error(
             "flow_unhandled_exception",
             channel=channel_name,
             sender=msg.sender_id,
-            error=str(e)[:300],
+            error_type=type(e).__name__,  # erros de conexão do httpx chegam com str(e) vazio
+            where=" > ".join(f"{f.filename.split('/src/')[-1]}:{f.lineno}" for f in frames[-3:]),
+            error=_TELEGRAM_TOKEN_RE.sub("bot<token>", str(e))[:300],
         )
 
 

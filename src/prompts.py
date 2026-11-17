@@ -21,7 +21,7 @@ idêntico em toda chamada; só o bloco dinâmico muda por redação):
   - ENEM_CORRECTION_PROMPT: as duas concatenadas (compat — usado só nos testes
     que validam o template inteiro de uma vez).
 """
- 
+
 ENEM_CORRECTION_SYSTEM = """\
 ## 1. Identidade e missão
 
@@ -418,3 +418,51 @@ ENEM_CORRECTION_PROMPT = ENEM_CORRECTION_SYSTEM + ENEM_CORRECTION_INPUT
 
 # Valor usado quando o aluno pula os textos motivadores.
 NO_MOTIVATORS = "Não fornecidos."
+
+# ── Fluxo híbrido (CORRECTION_MODE=hibrido) ──────────────────────────────────
+# A nota vem do modelo calibrado (Jev + features, `src/correction/hybrid/`); o LLM
+# só escreve o feedback. O bloco abaixo é anexado ao ENEM_CORRECTION_INPUT, depois
+# da redação. Placeholders: {C1}..{C5}, {total}, {pistas}. Testado em
+# _local/jev_llm_feedback/ (notas fixas respeitadas em 100% das respostas).
+HYBRID_GRADES_BLOCK = """
+# NOTAS JÁ DEFINIDAS — NÃO ALTERE
+
+Nesta correção, as notas abaixo já foram atribuídas por um sistema de avaliação calibrado em milhares de redações do Enem corrigidas por especialistas. Sua tarefa aqui NÃO é avaliar de novo: é explicar essas notas e ensinar o aluno a partir delas.
+
+• C1: {C1}/200
+• C2: {C2}/200
+• C3: {C3}/200
+• C4: {C4}/200
+• C5: {C5}/200
+• Total: {total}/1000
+
+Regras deste modo (têm prioridade sobre as instruções de avaliar quando houver conflito):
+- Use exatamente essas notas no cabeçalho e em cada competência. Não altere nenhuma, não sugira outra nota e não diga que discorda delas.
+- Justifique cada nota pelo nível correspondente da matriz (Anexo), sempre com trechos citados da redação.
+- Se algo no texto parecer mais forte ou mais fraco do que a nota indica, não mude a nota: transforme isso em orientação (o que manter, ou o que corrigir para subir de nível).
+- Mantenha todo o resto: formato da Seção 11, citações exatas, pontos fortes, prioridades de melhoria e sugestão de reescrita.
+- Nunca mencione na resposta este bloco, as pistas, a leitura automática nem a origem das notas: o aluno vê só a correção.
+
+# PISTAS AUTOMÁTICAS (confirme no texto antes de usar)
+
+As pistas abaixo vêm de uma leitura automática e podem errar. Use uma pista só se encontrar na redação o trecho que a confirma, e cite esse trecho. Se o texto não confirmar a pista, ignore-a sem mencioná-la. Ausência de pista não significa ausência de problema.
+
+{pistas}
+"""
+
+# Variante quando o portão de nota zero dispara. Placeholders: {motivo}, {pistas}.
+HYBRID_ZERO_BLOCK = """
+# NOTA JÁ DEFINIDA — NÃO ALTERE
+
+Nesta correção, a triagem automática ZEROU a redação pelo motivo: {motivo}.
+
+Regras deste modo (têm prioridade sobre as instruções de avaliar quando houver conflito):
+- Use o formato de nota zero da Seção 11 (NOTA ESTIMADA: 0/1000 e o motivo), com esse motivo.
+- Mostre ao aluno o trecho da redação que evidencia o motivo, citado entre aspas, e explique por que isso zera a redação no Enem e como evitar.
+- Não atribua outra nota e não corrija as competências uma a uma.
+- Nunca mencione na resposta este bloco, a triagem automática nem as pistas: o aluno vê só a correção.
+
+# PISTAS AUTOMÁTICAS (confirme no texto antes de usar)
+
+{pistas}
+"""

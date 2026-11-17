@@ -70,25 +70,52 @@ ele automaticamente. Você só precisa da config de **Azure**:
 
 ```bash
 cp deploy/.env.deploy.example deploy/.env.deploy
-# edite deploy/.env.deploy: só RESOURCE_GROUP, LOCATION e ACR_NAME (único global).
+# edite deploy/.env.deploy: só RESOURCE_GROUP e LOCATION. O dono da imagem no
+# GHCR é deduzido do `git remote origin` (ou defina GHCR_OWNER).
 # Segredos só entram aqui se quiser um valor DIFERENTE do .env em produção.
 ```
 
-**3. Rode**
+**3. Login no GitHub Container Registry (uma vez)**
+
+A imagem é construída com o **Docker local** e publicada como **pacote público**
+no `ghcr.io` — grátis, ao contrário do Azure Container Registry Basic, que cobra
+uma diária fixa (~US$ 5/mês) mesmo parado. Publicar a imagem não expõe nada: o
+`.dockerignore` deixa de fora `.env`, `_local/` e afins, e os segredos entram como
+secrets do Container App. O push exige um token com o escopo `write:packages`:
+
+```bash
+gh auth refresh -h github.com -s write:packages
+gh auth token | docker login ghcr.io -u <seu-usuario> --password-stdin
+```
+
+**4. Rode**
 
 ```bash
 az login          # assinatura de estudante
 make deploy       # atalho para ./deploy/deploy.sh
 ```
 
-O script cria o resource group, builda a imagem **na nuvem** (`az acr build` — não
-precisa de Docker local), aplica o `main.bicep` e registra o webhook do Telegram.
-É idempotente: rodar de novo atualiza só o que mudou. Ao fim ele imprime a URL do
-app e o comando de logs.
+O script cria o resource group, builda a imagem localmente, envia para o
+`ghcr.io/<dono>/enem-reviewer` com uma tag nova por deploy (data + commit, para o
+Container App sempre subir uma revisão nova), aplica o `main.bicep` e registra o
+webhook do Telegram. Ao fim ele imprime a URL do app, a imagem e o comando de logs.
+
+> **Primeira publicação:** o GitHub cria o pacote como **privado**, e o Container
+> App não conseguiria baixá-lo sem credenciais. O script confere isso como um
+> cliente anônimo e, se estiver privado, para com o link para trocar a
+> visibilidade (só dá pela web: *Package settings → Change visibility → Public*).
+> Depois é só rodar `make deploy` de novo.
 
 > **Sanidade de custo:** o Bicep fixa `minReplicas=0`. Compute em US$0 quando
 > ocioso; o tempo ativo cabe na cota grátis mensal (por assinatura Azure). A
-> fila custa frações de centavo.
+> fila custa frações de centavo, e a imagem no GHCR público, nada.
+
+> **Migrando de um deploy antigo com ACR:** versões anteriores deste script
+> criavam um Azure Container Registry no resource group. O `deploy.sh` avisa se
+> ainda existir um e mostra o comando para apagá-lo
+> (`az acr delete -n <nome> -g <RG> --yes`) — rode depois de conferir que o app
+> subiu com a imagem do GHCR. A variável `ACR_NAME` do `.env.deploy` deixou de ser
+> usada.
 
 ## Verificação
 

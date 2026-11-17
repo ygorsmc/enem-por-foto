@@ -30,6 +30,13 @@ heldout_deepseek_seed7_high
 heldout_deepseek_seed7_medium
 heldout_deepseek_seed7_low
 
+# Corridas de variância (mesma redação N vezes) e datasets de feature gerados
+# a partir do corpus. Mesma razão de tudo acima: saída de laboratório derivada
+# de dataset de terceiro, reproduzível por script, pesada e sem valor no git.
+# A evidência de medição consolidada fica em _local/medicoes/ (já ignorado).
+triplicata_deepseek_*/
+dataset_*.csv
+
 # Ferramental de laboratório/documentação-fonte e docs de referência de
 # terceiros — ficam no disco para desenvolvimento local, mas não são parte
 # do produto publicável. O portal renderizado docs/index.html CONTINUA
@@ -42,3 +49,7 @@ _local/
 AGENTS.md
 CLAUDE.md
 MEMORY.md
+
+# Artefatos do fluxo híbrido (modelo treinado, perguntas do Jev, cortes do checklist).
+# Gerados por _local/scripts/jev_v4_export.py — fora do repo público de propósito.
+src/correction/hybrid/artifacts/

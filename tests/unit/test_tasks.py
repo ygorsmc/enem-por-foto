@@ -49,6 +49,25 @@ class TestProcessJob:
         # Nenhuma exceção pode escapar — o worker/loop tem que continuar de pé.
         run(process_job("telegram", text_msg("x")))
 
+    def test_log_mascara_token_e_diz_onde(self, monkeypatch):
+        async def boom(channel, msg):
+            raise RuntimeError("400 for url 'https://api.telegram.org/bot123456:AAH-x_y9/sendMessage'")
+
+        logged: dict = {}
+
+        class _Log:
+            def error(self, event, **kw):
+                logged.update(kw, event=event)
+
+        monkeypatch.setattr(tasks, "handle_message", boom)
+        monkeypatch.setattr(tasks, "get_channel", lambda name: object())
+        monkeypatch.setattr(tasks, "logger", _Log())
+        run(process_job("telegram", text_msg("x")))
+        assert "123456:AAH" not in logged["error"] and "bot<token>/sendMessage" in logged["error"]
+        assert logged["error_type"] == "RuntimeError"
+        assert logged["where"].startswith("tasks.py:")
+        assert "exc_info" not in logged
+
 
 class TestSubmitJobMemoryBackend:
     def test_dispatches_to_process_job(self, monkeypatch):

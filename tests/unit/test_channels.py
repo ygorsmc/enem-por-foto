@@ -1,5 +1,11 @@
 """Parsing de payloads reais dos provedores + utilitários de texto."""
 
+import asyncio
+
+import httpx
+import pytest
+from tenacity import wait_none
+
 from src.channels.markdown import to_whatsapp_markdown
 from src.channels.telegram import TelegramChannel
 from src.channels.text_utils import chunk_text
@@ -115,3 +121,34 @@ class TestWhatsAppMarkdown:
         out = to_whatsapp_markdown(table)
         assert out.startswith("```")
         assert "|---|" not in out
+
+
+class TestTelegramSendRetry:
+    """Falha de conexão (TLS caindo) repete; timeout de leitura não (o pedido pode ter chegado)."""
+
+    def _patch(self, monkeypatch, erros: list[Exception]) -> list[str]:
+        chamadas: list[str] = []
+
+        async def fake_post(self_client, url, json, timeout):
+            chamadas.append(url)
+            if erros:
+                raise erros.pop(0)
+            return httpx.Response(200, json={"ok": True}, request=httpx.Request("POST", url))
+
+        monkeypatch.setattr(httpx.AsyncClient, "post", fake_post)
+        # Sem espera entre tentativas no teste.
+        monkeypatch.setattr(
+            TelegramChannel, "_send_request", TelegramChannel._send_request.retry_with(wait=wait_none())
+        )
+        return chamadas
+
+    def test_conexao_caida_repete_e_entrega(self, monkeypatch):
+        chamadas = self._patch(monkeypatch, [httpx.ConnectError(""), httpx.ConnectError("")])
+        out = asyncio.run(TelegramChannel().send_buttons("1", "O que fazemos?", [{"id": "a", "title": "A"}]))
+        assert out == {"ok": True} and len(chamadas) == 3
+
+    def test_timeout_de_leitura_nao_repete(self, monkeypatch):
+        chamadas = self._patch(monkeypatch, [httpx.ReadTimeout("")])
+        with pytest.raises(httpx.ReadTimeout):
+            asyncio.run(TelegramChannel().send_text("1", "oi"))
+        assert len(chamadas) == 1

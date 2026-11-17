@@ -1,4 +1,5 @@
-# Mantém o contexto de build enxuto (o `az acr build` faz upload dele pra nuvem).
+# Mantém o contexto de build enxuto e a imagem sem segredos: ela é publicada
+# como pacote PÚBLICO no ghcr.io (deploy/deploy.sh), então nada de .env/_local.
 # A imagem só precisa de: requirements.txt, src/, entrypoint.sh (ver Dockerfile).
 
 .git

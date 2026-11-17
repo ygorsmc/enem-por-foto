@@ -34,10 +34,11 @@ param queueName string = 'essay-jobs'
 @description('Prefixo opcional aplicado a todas as chaves Redis. Útil se este banco Redis for compartilhado entre múltiplos ambientes/deploys, evitando colisão de chave entre eles.')
 param redisNamespace string = ''
 
-@description('Imagem do contêiner (ex.: myacr.azurecr.io/enem-reviewer:latest).')
+@description('Imagem do contêiner (ex.: ghcr.io/<dono>/enem-reviewer:<tag>).')
 param containerImage string
 
-// ── Registry privado (ACR). Deixe em branco para imagem pública. ─────────────
+// ── Registry privado (opcional). Em branco = imagem pública (padrão do       ──
+// ── deploy.sh: pacote público no GHCR, sem credenciais e sem custo).         ──
 param registryServer string = ''
 param registryUsername string = ''
 @secure()
@@ -58,7 +59,7 @@ param mistralApiKey string
 // Provedor de correção plugável — só a chave do provedor escolhido é obrigatória;
 // as demais podem ficar em branco (não viram secret/env se vazias).
 param correctionProvider string = 'deepseek'
-param correctionModel string = 'deepseek-v4-flash'
+param correctionModel string = 'deepseek-flash'
 param correctionEffort string = 'max'
 @secure()
 param deepseekApiKey string = ''

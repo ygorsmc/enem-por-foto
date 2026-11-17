@@ -33,13 +33,24 @@ def build_correction_prompt(theme: str, motivators: str | None, essay_text: str)
 
 @retry(wait=wait_exponential(multiplier=2, min=4, max=60), stop=stop_after_attempt(4), reraise=True)
 async def correct_essay(theme: str, motivators: str | None, essay_text: str) -> str:
-    """Corrige a redação e retorna o feedback formatado para WhatsApp."""
+    """Corrige a redação e retorna o feedback formatado para WhatsApp.
+
+    CORRECTION_MODE=llm (padrão): o LLM dá a nota e escreve o feedback. CORRECTION_MODE=hibrido: a nota vem do
+    modelo calibrado sobre as respostas do Jev e o LLM só escreve o feedback (src/correction/hybrid/)."""
     input_block = build_correction_prompt(theme, motivators, essay_text)
-    feedback = await get_corrector().correct(input_block)
+    if settings.CORRECTION_MODE == "hibrido":
+        from src.correction.hybrid.pipeline import correct_hybrid  # tardio: numpy/sklearn só neste modo
+
+        feedback = await correct_hybrid(
+            input_block, theme.strip()[:MAX_THEME_CHARS], essay_text.strip()[:MAX_ESSAY_CHARS]
+        )
+    else:
+        feedback = await get_corrector().correct(input_block)
     if not feedback:
         raise ValueError("Resposta vazia do modelo de correção")
     logger.info(
         "essay_corrected",
+        mode=settings.CORRECTION_MODE,
         provider=settings.CORRECTION_PROVIDER,
         model=settings.CORRECTION_MODEL,
         chars=len(feedback),
