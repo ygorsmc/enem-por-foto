@@ -377,7 +377,7 @@ Aluno                    Bot
 <ul class="ordered">
 <li><strong>Tema e textos motivadores</strong> entram como texto digitado (o OCR fica reservado para a redação); os motivadores são opcionais.</li>
 <li><strong>A foto da redação</strong> (até 3 imagens, frente/verso) chega ao webhook, que apenas valida, responde <code>200</code> em <200 ms (SLA da Meta) e despacha o trabalho pesado — download da mídia, OCR e LLM — para uma task asyncio. Nunca no handler HTTP.</li>
-<li><strong>O OCR</strong> (Mistral <code>mistral-ocr-latest</code>) transcreve só a foto da redação. Em seguida a <strong>foto é descartada</strong>: apenas o texto segue adiante.</li>
+<li><strong>O OCR</strong> (Mistral <code>mistral-ocr-2512</code>, versão fixa) transcreve só a foto da redação. Em seguida a <strong>foto é descartada</strong>: apenas o texto segue adiante.</li>
 <li><strong>Preview e edição manual</strong>: o aluno vê a transcrição com as palavras de baixa confiança destacadas e pode ajustar o que a letra difícil fez o OCR errar; o bot ecoa a versão final para confirmação antes de corrigir.</li>
 <li><strong>A correção</strong> vai para um LLM com prompt de corretor especialista baseado na Matriz de Referência do INEP (5 competências, triagem de nota zero, checklist da proposta de intervenção). Volta a nota estimada por competência (0–200 cada; 0–1000 no total) e o feedback citando trechos, formatado para o mensageiro (sem tabelas/<code>#</code>).</li>
 </ul>
@@ -539,7 +539,8 @@ make deploy                                        # build da imagem (Docker loc
 │       ├── corrector.py                      # lógica comum de chamada ao provedor
 │       ├── interfaces.py                      # contrato ICorrector
 │       ├── factory.py                          # get_corrector(provider) — troca via CORRECTION_PROVIDER
-│       └── providers/                           # gemini.py, claude.py, openai_compatible.py (openai/deepseek/maritaca)
+│       ├── providers/                           # gemini.py, claude.py, openai_compatible.py (openai/deepseek/maritaca)
+│       └── hybrid/                              # modo experimental CORRECTION_MODE=hibrido (nota por modelo calibrado, feedback pelo LLM)
 │
 ├── scripts/
 │   └── simulate.py            # REPL de conversa com canal fake — E2E local sem provedor real
@@ -1020,7 +1021,7 @@ Meta/Telegram ──POST──▶ verify_signature ──▶ parse_inbound ─�
 <tr><td><strong>Despacho de job</strong></td><td><code>src/tasks.py</code></td><td><code>submit_job</code>/<code>worker_loop</code>: task asyncio (default) ou Azure Storage Queue + worker (scale-to-zero), por <code>QUEUE_BACKEND</code></td></tr>
 <tr><td><strong>Canais</strong></td><td><code>src/channels/</code></td><td><code>IMessagingChannel</code>: WhatsApp e Telegram; <em>parse</em> de entrada, envio de texto/botões, download de mídia, verificação de assinatura</td></tr>
 <tr><td><strong>Máquina de estados</strong></td><td><code>src/flow/</code></td><td>Fluxo da conversa (<code>states.py</code>) e handlers (<code>handlers.py</code>), com estado em Redis</td></tr>
-<tr><td><strong>OCR</strong></td><td><code>src/correction/ocr.py</code></td><td>Transcrição da foto da redação via Mistral OCR (<code>mistral-ocr-latest</code>)</td></tr>
+<tr><td><strong>OCR</strong></td><td><code>src/correction/ocr.py</code></td><td>Transcrição da foto da redação via Mistral OCR (<code>mistral-ocr-2512</code>, versão fixa: o <code>-latest</code> passou a apontar para o OCR 4, que degenera no fim do texto)</td></tr>
 <tr><td><strong>Correção</strong></td><td><code>src/correction/corrector.py</code></td><td>Monta o bloco dinâmico do prompt e delega ao provedor de LLM</td></tr>
 <tr><td><strong>Provedores</strong></td><td><code>src/correction/providers/</code></td><td>Implementações plugáveis: Gemini, Claude, OpenAI, DeepSeek, Maritaca</td></tr>
 <tr><td><strong>Prompt</strong></td><td><code>src/prompts.py</code></td><td>Prompt do corretor ENEM (bloco estático + bloco dinâmico)</td></tr>

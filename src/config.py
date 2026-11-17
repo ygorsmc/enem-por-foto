@@ -75,6 +75,9 @@ class Settings(BaseSettings):
     OCR_PREVIEW_MAX_CHARS: int = Field(default=3000)
     # Palavra do OCR abaixo deste score (0-1) entra na lista de "conferir" do preview.
     OCR_CONFIDENCE_THRESHOLD: float = Field(default=0.85)
+    # Versão FIXA, nunca "-latest": o alias passou a apontar para o OCR 4, que degenera no fim do texto
+    # ("a2282141…", "5,6,7,…,100") e perde as últimas linhas (2 de 3 redações testadas em 2026-11-17).
+    OCR_MODEL: str = Field(default="mistral-ocr-2512")
 
 
 settings = Settings()

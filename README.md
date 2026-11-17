@@ -29,7 +29,7 @@ Aluno                    Bot
 
 1. **Tema e textos motivadores** entram como texto digitado (o OCR fica reservado para a redação); os motivadores são opcionais.
 2. **A foto da redação** (até 3 imagens, frente/verso) chega ao webhook, que apenas valida, responde `200` em <200 ms (SLA da Meta) e despacha o trabalho pesado — download da mídia, OCR e LLM — para uma task asyncio. Nunca no handler HTTP.
-3. **O OCR** (Mistral `mistral-ocr-latest`) transcreve só a foto da redação. Em seguida a **foto é descartada**: apenas o texto segue adiante.
+3. **O OCR** (Mistral `mistral-ocr-2512`, versão fixa) transcreve só a foto da redação. Em seguida a **foto é descartada**: apenas o texto segue adiante.
 4. **Preview e edição manual**: o aluno vê a transcrição com as palavras de baixa confiança destacadas e pode ajustar o que a letra difícil fez o OCR errar; o bot ecoa a versão final para confirmação antes de corrigir.
 5. **A correção** vai para um LLM com prompt de corretor especialista baseado na Matriz de Referência do INEP (5 competências, triagem de nota zero, checklist da proposta de intervenção). Volta a nota estimada por competência (0–200 cada; 0–1000 no total) e o feedback citando trechos, formatado para o mensageiro (sem tabelas/`#`).
 

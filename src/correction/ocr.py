@@ -11,11 +11,12 @@ triagem de atenção: confiança baixa não significa erro, apenas "vale checar"
 """
 
 import base64
+import re
 from dataclasses import dataclass, field
 
 import structlog
 from mistralai.client import Mistral
-from tenacity import retry, stop_after_attempt, wait_exponential
+from tenacity import retry, retry_if_not_exception_type, stop_after_attempt, wait_exponential
 
 from src.config import settings
 
@@ -31,6 +32,19 @@ _MIN_FLAGGED_WORD_LEN = 3
 _MAX_FLAGGED_WORDS = 30
 
 _client: Mistral | None = None
+
+# Saída degenerada: o modelo entra em loop e "lê" números que não estão na folha — uma sequência longa
+# de dígitos ("a228214126211226…") ou uma contagem ("5,6,7,…,100") — e perde o resto do texto. Visto no
+# mistral-ocr-4 (2026-11-17). Redação de verdade não tem 15 dígitos seguidos nem lista de 15 números.
+_DEGENERATE_RE = re.compile(r"\d{15,}|(?:\d{1,3}\s*,\s*){15,}")
+
+
+class OcrDegenerateError(ValueError):
+    """A leitura veio com lixo do modelo. Repetir não adianta (mesmos bytes → mesma saída): nova foto."""
+
+
+def looks_degenerate(text: str) -> bool:
+    return bool(_DEGENERATE_RE.search(text))
 
 
 @dataclass
@@ -80,18 +94,30 @@ def _low_confidence_words(resp) -> list[str]:
     return words
 
 
-@retry(wait=wait_exponential(multiplier=2, min=2, max=30), stop=stop_after_attempt(3), reraise=True)
+@retry(
+    retry=retry_if_not_exception_type(OcrDegenerateError),
+    wait=wait_exponential(multiplier=2, min=2, max=30),
+    stop=stop_after_attempt(3),
+    reraise=True,
+)
 async def ocr_image(image_bytes: bytes, mime_type: str = "image/jpeg") -> OcrResult:
-    """OCR de UMA imagem (foto de redação) → texto markdown + palavras incertas."""
+    """OCR de UMA imagem (foto de redação) → texto markdown + palavras incertas.
+
+    Levanta `OcrDegenerateError` se a leitura vier com lixo do modelo: o fluxo pede outra foto em vez de
+    mostrar o lixo ao aluno como se fosse a leitura dele.
+    """
     b64 = base64.b64encode(image_bytes).decode("utf-8")
     resp = await _get_client().ocr.process_async(
-        model="mistral-ocr-latest",
+        model=settings.OCR_MODEL,
         document={"type": "image_url", "image_url": f"data:{mime_type};base64,{b64}"},
         confidence_scores_granularity="word",
     )
     text = "\n\n".join(
         p.markdown for p in resp.pages if getattr(p, "markdown", "")
     ).strip()
+    if looks_degenerate(text):
+        logger.warning("ocr_degenerate_output", model=settings.OCR_MODEL, chars=len(text))
+        raise OcrDegenerateError(f"leitura degenerada do {settings.OCR_MODEL}")
     low = _low_confidence_words(resp)
     if low:
         logger.info("ocr_low_confidence_words", count=len(low))
