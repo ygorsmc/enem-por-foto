@@ -190,6 +190,10 @@ footer.site-footer{background:#2A2018;color:#C4B6A0;margin-top:64px;border-top:2
 <a href="#o-fluxo-etapa-por-etapa" class="dropdown-link" data-page="inicio">O fluxo, etapa por etapa</a>
 <a href="#arquitetura" class="dropdown-link" data-page="inicio">Arquitetura</a>
 <a href="#por-que-mensageria-e-n-o-um-app-de-ia" class="dropdown-link" data-page="inicio">Por que mensageria, e não um app de IA</a>
+<a href="#modo-h-brido-experimental-" class="dropdown-link" data-page="inicio">Modo híbrido (experimental)</a>
+<a href="#o-modelo-de-ml" class="dropdown-link" data-page="inicio">O modelo de ML</a>
+<a href="#h-brido-s-llm" class="dropdown-link" data-page="inicio">Híbrido × só LLM</a>
+<a href="#como-ativar" class="dropdown-link" data-page="inicio">Como ativar</a>
 <a href="#lgpd-o-p-blico-menor-de-idade-" class="dropdown-link" data-page="inicio">LGPD (o público é menor de idade)</a>
 <a href="#rodando-local" class="dropdown-link" data-page="inicio">Rodando local</a>
 <a href="#testes-e-lint" class="dropdown-link" data-page="inicio">Testes e lint</a>
@@ -379,7 +383,7 @@ Aluno                    Bot
 <li><strong>A foto da redação</strong> (até 3 imagens, frente/verso) chega ao webhook, que apenas valida, responde <code>200</code> em <200 ms (SLA da Meta) e despacha o trabalho pesado — download da mídia, OCR e LLM — para uma task asyncio. Nunca no handler HTTP.</li>
 <li><strong>O OCR</strong> (Mistral <code>mistral-ocr-2512</code>, versão fixa) transcreve só a foto da redação. Em seguida a <strong>foto é descartada</strong>: apenas o texto segue adiante.</li>
 <li><strong>Preview e edição manual</strong>: o aluno vê a transcrição com as palavras de baixa confiança destacadas e pode ajustar o que a letra difícil fez o OCR errar; o bot ecoa a versão final para confirmação antes de corrigir.</li>
-<li><strong>A correção</strong> vai para um LLM com prompt de corretor especialista baseado na Matriz de Referência do INEP (5 competências, triagem de nota zero, checklist da proposta de intervenção). Volta a nota estimada por competência (0–200 cada; 0–1000 no total) e o feedback citando trechos, formatado para o mensageiro (sem tabelas/<code>#</code>).</li>
+<li><strong>A correção</strong> vai para um LLM com prompt de corretor especialista baseado na Matriz de Referência do INEP (5 competências, triagem de nota zero, checklist da proposta de intervenção). Volta a nota estimada por competência (0–200 cada; 0–1000 no total) e o feedback citando trechos, formatado para o mensageiro (sem tabelas/<code>#</code>). No <a href="#modo-híbrido-experimental">modo híbrido</a>, a nota vem de um modelo de ML e o LLM só escreve o feedback.</li>
 </ul>
 
 <h3 id="arquitetura">Arquitetura</h3>
@@ -395,18 +399,111 @@ Aluno                    Bot
 
 <p>A correção chega pelo canal de <strong>menor atrito</strong>: sem instalar aplicativo, sem criar conta, dentro do mensageiro que o aluno já usa todo dia — inclusive no ambiente escolar, onde ferramentas de IA de uso geral raramente estão disponíveis. E como a entrada é uma <em>foto do manuscrito</em> (não texto digitado), o treino continua fiel ao formato real da prova: o aluno escreve à mão, no papel, como no dia do ENEM.</p>
 
+<h2 id="modo-h-brido-experimental-">Modo híbrido (experimental)</h2>
+
+<p>No modo padrão (<code>CORRECTION_MODE=llm</code>), o LLM dá a nota <strong>e</strong> escreve o feedback. No modo híbrido (<code>CORRECTION_MODE=hibrido</code>), a nota vem de um <strong>modelo de ML treinado em 6.475 redações corrigidas</strong>, e o LLM só escreve o feedback, com as notas já fixadas. Foto, OCR, preview e confirmação não mudam.</p>
+
+<pre><code class="lang-text">
+texto confirmado pelo aluno
+   ├─► Jev: 1 chamada com {tema, redação} e 71 perguntas objetivas → probabilidades de 0 a 1
+   ├─► Python: medidas do texto (contagens, estrutura, relação com o tema) e 6 notas de um TF-IDF
+   ▼
+ExtraTrees (C1..C5 e total) → calibração → ajuste para C1+…+C5 = total
+   ├─► portão de nota zero (regras da Cartilha do INEP)
+   ├─► checklist: até 2 pistas por competência, só onde a nota prevista é menor que 160
+   ▼
+LLM (DeepSeek, raciocínio high): recebe a redação, as notas FIXAS e as pistas → escreve o feedback
+</code></pre>
+
+<h3 id="o-modelo-de-ml">O modelo de ML</h3>
+
+<ul>
+<li><strong>O Jev como sensor, não como corretor.</strong> O Jev (<code>jev-1.14.0</code>, da TypeSafe AI) responde perguntas atômicas sobre a redação, como "a proposta tem um agente definido?" ou "o repertório é legitimado?", cada uma com uma probabilidade. Usado direto para dar a nota, ele puxa tudo para o meio da escala (QWK total 0,45). Como entrada de um modelo calibrado, funciona bem.</li>
+<li><strong>Dados.</strong> Corpus <a href="https://github.com/lplnufpi/essay-br">Essay-BR</a> (MIT; redações do Brasil Escola com nota por competência) na divisão oficial: treino 4.529 · validação 970 · teste 976. Os modelos foram escolhidos na validação e medidos <strong>uma única vez</strong> no teste. O modelo de produção é retreinado com as 6.475.</li>
+<li><strong>Entradas (120 colunas):</strong></li>
+</ul>
+
+<div class="table-wrap"><table>
+<tr><th>Grupo</th><th>Colunas</th><th>O que mede</th></tr>
+<tr><td>Respostas do Jev</td><td>60</td><td>55 perguntas (a de tipo textual vira 6 colunas, uma por opção)</td></tr>
+<tr><td>Combinações das respostas do Jev</td><td>10</td><td>médias e mínimos das notas, incerteza média, "portões" (recorte × fuga × tipo textual)</td></tr>
+<tr><td>Medidas determinísticas do texto</td><td>28</td><td>palavras, parágrafos, períodos, tamanhos, pontuação</td></tr>
+<tr><td>Estrutura e relação com o tema</td><td>16</td><td>tema na introdução e na conclusão, conectivos no início dos parágrafos, períodos longos, 1ª pessoa, riqueza lexical</td></tr>
+<tr><td>Notas previstas por TF-IDF</td><td>6</td><td>um Ridge sobre palavras prevê C1..C5 e o total (por validação cruzada, sem vazamento)</td></tr>
+</table></div>
+
+<ul>
+<li><strong>Modelo.</strong> <code>ExtraTreesRegressor</code> (300 árvores, profundidade 10, no mínimo 7 redações por folha), um para cada competência e um para o total.</li>
+<li><strong>Calibração.</strong> Modelos de regressão comprimem as notas para o meio. Um ajuste linear, feito sobre previsões fora da amostra, devolve às notas previstas a média e o desvio-padrão das notas reais.</li>
+<li><strong>Soma exata.</strong> O total é previsto direto, e as 5 competências são projetadas nos níveis inteiros mais próximos (0, 40, …, 200) cuja soma é exatamente o total. Isso corta o erro médio em ~10 pontos.</li>
+<li><strong>Nota zero e pistas.</strong> Um portão aplica as regras da Cartilha do INEP (fuga ao tema, texto não dissertativo, carta, identificação, impropério, texto insuficiente etc.) sobre as respostas do Jev; nas 6.475 redações normais, dispara em 0,6%. Um checklist de 38 itens gera pistas para o LLM e é calibrado para não criticar quem escreve bem: não dá pistas em competência com nota prevista de 160 ou mais.</li>
+<li><strong>71 perguntas enviadas, 55 no modelo.</strong> O registro de perguntas guarda versões antigas e novas de alguns conceitos. O modelo usa uma pergunta por conceito, então nenhum conceito pesa em dobro. O Jev ainda responde as 71 porque as 10 colunas combinadas (como a incerteza média) foram calculadas, no treino, sobre todas as respostas; perguntar menos mudaria essas colunas em produção.</li>
+</ul>
+
+<p><strong>Resultado no teste oficial</strong> (976 redações que o modelo nunca viu):</p>
+
+<div class="table-wrap"><table>
+<tr><th></th><th>C1</th><th>C2</th><th>C3</th><th>C4</th><th>C5</th><th>QWK total</th><th>RMSE</th><th>MAE</th></tr>
+<tr><td><strong>Este modelo</strong></td><td>0,52</td><td>0,59</td><td>0,56</td><td>0,67</td><td>0,60</td><td><strong>0,726</strong></td><td><strong>125</strong></td><td><strong>97</strong></td></tr>
+<tr><td>Amorim & Veloso (2017), mesmo corpus</td><td>0,39</td><td>0,46</td><td>0,40</td><td>0,38</td><td>0,34</td><td>0,49</td><td>161</td><td>—</td></tr>
+<tr><td>Fonseca et al. (2018), mesmo corpus</td><td>0,44</td><td>0,48</td><td>0,42</td><td>0,47</td><td>0,38</td><td>0,53</td><td>157</td><td>—</td></tr>
+</table></div>
+
+<p>Os baselines são do artigo do corpus (Marinho, Anchiêta & Moura, <em>JIDM</em> 2022, Tabelas XI e XII). Como referência, dois corretores humanos concordam entre si com QWK total de 0,69 (Barbosa & Mauá, PROPOR 2026, em outro conjunto de dados). Em temas que o modelo nunca viu, a queda estimada é pequena (0,676 → 0,669, medida com um Ridge).</p>
+
+<p><strong>Limitações:</strong></p>
+<ul>
+<li><strong>Viés nas pontas:</strong> redações de até 440 pontos são superestimadas em +82 em média, e as de 720 ou mais, subestimadas em −38. É regressão à média (correlação 0,70 com a nota real); calibrar as pontas só troca um erro por outro.</li>
+<li><strong>O LLM justifica bem qualquer nota que recebe</strong>, inclusive os erros do modelo: o feedback nunca é melhor que a nota que o alimenta.</li>
+<li><strong>O Essay-BR é texto digitado.</strong> O efeito dos erros de OCR sobre a nota do modelo ainda não foi medido.</li>
+</ul>
+
+<h3 id="h-brido-s-llm">Híbrido × só LLM</h3>
+
+<div class="table-wrap"><table>
+<tr><th></th><th>Só LLM (DeepSeek, raciocínio <code>max</code>)</th><th>Híbrido (Jev + modelo + DeepSeek <code>high</code>)</th></tr>
+<tr><td>Concordância com a nota real (QWK total)</td><td>0,53 e 0,60 (duas amostras de 30 redações)</td><td><strong>0,726</strong> (teste oficial, 976 redações)</td></tr>
+<tr><td>Erro médio na nota total (MAE)</td><td>148 pontos (amostra de 30)</td><td><strong>97</strong> pontos</td></tr>
+<tr><td>Mesma redação corrigida 3 vezes</td><td>nota idêntica em 23% (diferença média de 55 pontos)</td><td>nota idêntica em <strong>93–97%</strong> (diferença média de 1–3 pontos)</td></tr>
+<tr><td>Tokens de saída do LLM por correção</td><td>~19 mil</td><td><strong>~7,5 mil</strong></td></tr>
+<tr><td>Tempo do LLM</td><td>~103 s</td><td><strong>~45 s</strong></td></tr>
+<tr><td>Custo por correção, sem o OCR</td><td>US$ 0,0038</td><td><strong>≈ US$ 0,002</strong> (Jev US$ 0,00045 + DeepSeek ≈ US$ 0,0015)</td></tr>
+<tr><td>O que precisa</td><td>1 API (LLM)</td><td>2 APIs (Jev e LLM) e o modelo treinado (28 MB)</td></tr>
+<tr><td>Para onde vai o texto da redação</td><td>provedor do LLM</td><td>provedor do LLM <strong>e</strong> API do Jev</td></tr>
+</table></div>
+
+<p>Como ler a tabela:</p>
+<ul>
+<li><strong>Conjuntos diferentes.</strong> A acurácia do modo só LLM foi medida em amostras de 30 redações do corpus inteiro (DeepSeek V4 Flash 0731); a do modelo, no teste oficial. Nas 9 redações em que os dois modos rodaram lado a lado, o erro médio foi 138 (só LLM) e 147 (híbrido), numa amostra pequena e difícil para o modelo. A comparação definitiva pede rodar o modo só LLM no teste oficial (⏳ a medir).</li>
+<li><strong>Custo.</strong> O custo do modo só LLM é o medido em uso real em agosto/2026 (DeepSeek V4 Flash). O DeepSeek cobra principalmente pelos tokens de saída, e o híbrido gera ~40% deles; o custo do DeepSeek no híbrido é estimado por essa proporção. O Jev foi medido: ~10,7 mil tokens de entrada por chamada, saída gratuita. O preço do V4.1-Flash, em uso desde 10/09/2026, ainda não foi medido (⏳). O OCR é igual nos dois modos (US$ 0,004 por foto acima da cota gratuita).</li>
+<li><strong>Feedback.</strong> Nos testes, o LLM respeitou as notas fixas em todas as competências (45/45). Com raciocínio <code>high</code>, o feedback do híbrido cita quase tantos trechos da redação quanto o do modo só LLM com <code>max</code> (366 contra 391 nas mesmas 9 redações), em menos da metade do tempo.</li>
+</ul>
+
+<h3 id="como-ativar">Como ativar</h3>
+
+<pre><code class="lang-bash">
+CORRECTION_MODE=hibrido
+JEV_API_KEY=...                 # chave da API do Jev (TypeSafe AI)
+CORRECTION_PROVIDER=deepseek
+CORRECTION_MODEL=deepseek-flash
+CORRECTION_EFFORT=high
+</code></pre>
+
+<p>Os <strong>artefatos do modelo</strong> (<code>src/correction/hybrid/artifacts/</code>: o modelo treinado, as perguntas do Jev e os cortes do checklist) <strong>não estão neste repositório</strong>; são gerados pelo script de treino do laboratório, que também fica fora. Sem eles, use o modo padrão (<code>llm</code>). As versões de <code>numpy</code>, <code>scipy</code>, <code>scikit-learn</code> e <code>joblib</code> em <code>requirements.txt</code> são fixas porque precisam ser as mesmas do treino.</p>
+
 <h2 id="lgpd-o-p-blico-menor-de-idade-">LGPD (o público é menor de idade)</h2>
 
 <ul>
 <li><strong>Consentimento explícito</strong> no primeiro contato, antes de qualquer processamento.</li>
 <li>A <strong>foto é descartada</strong> logo após o OCR; o texto transcrito vive apenas no estado Redis, que <strong>expira em 45 min</strong>. Nada persiste após a correção (não há histórico).</li>
+<li>No <strong>modo híbrido</strong>, o texto da redação (nunca a foto) também é enviado à API do Jev (TypeSafe AI). Confira os termos de tratamento de dados do provedor antes de usar esse modo com alunos.</li>
 <li>O feedback deixa claro que a correção é feita por IA e que a nota é uma <strong>estimativa</strong> (no ENEM oficial são dois corretores humanos).</li>
 <li>Rate-limit diário (<code>ESSAY_DAILY_LIMIT</code>, default 2) — controle de custo do fluxo OCR + LLM.</li>
 </ul>
 
 <h2 id="rodando-local">Rodando local</h2>
 
-<p>Requisitos: Python 3.12, Docker, chaves <code>MISTRAL_API_KEY</code> e <code>GOOGLE_API_KEY</code>.</p>
+<p>Requisitos: Python 3.12, Docker, a chave do OCR (<code>MISTRAL_API_KEY</code>) e a do provedor de correção (no padrão, <code>DEEPSEEK_API_KEY</code>). O <a href="#modo-híbrido-experimental">modo híbrido</a> pede também <code>JEV_API_KEY</code> e os artefatos do modelo.</p>
 
 <p>O <code>Makefile</code> embrulha os comandos multi-passo (<code>make help</code> lista tudo). O único passo manual é preencher as chaves:</p>
 
@@ -510,7 +607,7 @@ make deploy                                        # build da imagem (Docker loc
 │
 ├── deploy/                        # deploy scale-to-zero (IaC) — ver deploy/README.md
 │   ├── main.bicep                    # Storage+fila, Container Apps env, KEDA azure-queue scaler
-│   ├── deploy.sh                      # orquestra: build na nuvem → bicep → setWebhook do Telegram
+│   ├── deploy.sh                      # orquestra: build local → push ghcr.io → bicep → setWebhook do Telegram
 │   └── .env.deploy.example              # config de Azure (segredos herdados do ../.env)
 │
 ├── src/
@@ -540,13 +637,18 @@ make deploy                                        # build da imagem (Docker loc
 │       ├── interfaces.py                      # contrato ICorrector
 │       ├── factory.py                          # get_corrector(provider) — troca via CORRECTION_PROVIDER
 │       ├── providers/                           # gemini.py, claude.py, openai_compatible.py (openai/deepseek/maritaca)
-│       └── hybrid/                              # modo experimental CORRECTION_MODE=hibrido (nota por modelo calibrado, feedback pelo LLM)
+│       └── hybrid/                              # CORRECTION_MODE=hibrido — ver "Modo híbrido"
+│           ├── jev.py                              # cliente da API do Jev (71 perguntas)
+│           ├── features.py, deterministic.py        # medidas do texto, iguais às do treino
+│           ├── model.py                              # previsão + calibração (artefatos fora do repo)
+│           ├── scoring.py                             # soma exata, portão de nota zero, checklist
+│           └── pipeline.py                             # nota do modelo → notas fixas → feedback do LLM
 │
 ├── scripts/
 │   └── simulate.py            # REPL de conversa com canal fake — E2E local sem provedor real
 │
 └── tests/
-    └── unit/                     # 59 testes puros — FakeRedis + FakeChannel, sem I/O
+    └── unit/                     # 89 testes puros — FakeRedis + FakeChannel, sem I/O
 </code></pre>
 </div>
 </div>

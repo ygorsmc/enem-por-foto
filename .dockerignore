@@ -10,11 +10,6 @@ deploy
 docs
 scripts
 tests
-redacoes
-essay_br
-essay_br_results
-ocr_experiments
-prompt_ab_results
 
 .env
 .env.*
