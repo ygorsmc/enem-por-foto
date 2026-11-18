@@ -129,12 +129,15 @@ FQDN=$(az deployment group create \
         mistralApiKey="$MISTRAL_API_KEY" \
         correctionProvider="${CORRECTION_PROVIDER:-deepseek}" \
         correctionModel="${CORRECTION_MODEL:-deepseek-flash}" \
-        correctionEffort="${CORRECTION_EFFORT:-max}" \
+        correctionEffort="${CORRECTION_EFFORT:-high}" \
         deepseekApiKey="${DEEPSEEK_API_KEY:-}" \
         googleApiKey="${GOOGLE_API_KEY:-}" \
         anthropicApiKey="${ANTHROPIC_API_KEY:-}" \
         openaiApiKey="${OPENAI_API_KEY:-}" \
-        maritacaApiKey="${MARITACA_API_KEY:-}")
+        maritacaApiKey="${MARITACA_API_KEY:-}" \
+        langfusePublicKey="${LANGFUSE_PUBLIC_KEY:-}" \
+        langfuseSecretKey="${LANGFUSE_SECRET_KEY:-}" \
+        langfuseHost="${LANGFUSE_HOST:-https://cloud.langfuse.com}")
 
 echo "==> [5/5] setWebhook do Telegram → https://$FQDN/v1/webhook/telegram"
 RESP=$(curl -s "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \

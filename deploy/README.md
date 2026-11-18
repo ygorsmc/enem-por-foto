@@ -66,7 +66,9 @@ Crie um banco em <https://upstash.com> → Redis → copie a connection string T
 
 Os **segredos do app** (REDIS_URL, TELEGRAM_BOT_TOKEN, MISTRAL_API_KEY,
 DEEPSEEK_API_KEY, …) são **herdados do `.env` da raiz** — o `deploy.sh` carrega
-ele automaticamente. Você só precisa da config de **Azure**:
+ele automaticamente. Você só precisa da config de **Azure**. O Langfuse (opcional) também vem do `.env`: com `LANGFUSE_PUBLIC_KEY` e
+`LANGFUSE_SECRET_KEY` preenchidas, viram segredos do Container App; vazias, o
+Langfuse fica desligado.
 
 ```bash
 cp deploy/.env.deploy.example deploy/.env.deploy

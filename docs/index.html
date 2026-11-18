@@ -194,6 +194,7 @@ footer.site-footer{background:#2A2018;color:#C4B6A0;margin-top:64px;border-top:2
 <a href="#o-modelo-de-ml" class="dropdown-link" data-page="inicio">O modelo de ML</a>
 <a href="#h-brido-s-llm" class="dropdown-link" data-page="inicio">Híbrido × só LLM</a>
 <a href="#como-ativar" class="dropdown-link" data-page="inicio">Como ativar</a>
+<a href="#custo-e-observabilidade" class="dropdown-link" data-page="inicio">Custo e observabilidade</a>
 <a href="#lgpd-o-p-blico-menor-de-idade-" class="dropdown-link" data-page="inicio">LGPD (o público é menor de idade)</a>
 <a href="#rodando-local" class="dropdown-link" data-page="inicio">Rodando local</a>
 <a href="#testes-e-lint" class="dropdown-link" data-page="inicio">Testes e lint</a>
@@ -460,23 +461,34 @@ LLM (DeepSeek, raciocínio high): recebe a redação, as notas FIXAS e as pistas
 
 <h3 id="h-brido-s-llm">Híbrido × só LLM</h3>
 
+<p>Medido nas <strong>mesmas 50 redações</strong>, sorteadas do teste oficial, com o código e o prompt do bot, DeepSeek <code>deepseek-flash</code> (V4.1-Flash) com raciocínio <code>high</code> nos dois modos. No híbrido, a nota é a do modelo treinado sem essas redações.</p>
+
 <div class="table-wrap"><table>
-<tr><th></th><th>Só LLM (DeepSeek, raciocínio <code>max</code>)</th><th>Híbrido (Jev + modelo + DeepSeek <code>high</code>)</th></tr>
-<tr><td>Concordância com a nota real (QWK total)</td><td>0,53 e 0,60 (duas amostras de 30 redações)</td><td><strong>0,726</strong> (teste oficial, 976 redações)</td></tr>
-<tr><td>Erro médio na nota total (MAE)</td><td>148 pontos (amostra de 30)</td><td><strong>97</strong> pontos</td></tr>
-<tr><td>Mesma redação corrigida 3 vezes</td><td>nota idêntica em 23% (diferença média de 55 pontos)</td><td>nota idêntica em <strong>93–97%</strong> (diferença média de 1–3 pontos)</td></tr>
-<tr><td>Tokens de saída do LLM por correção</td><td>~19 mil</td><td><strong>~7,5 mil</strong></td></tr>
-<tr><td>Tempo do LLM</td><td>~103 s</td><td><strong>~45 s</strong></td></tr>
-<tr><td>Custo por correção, sem o OCR</td><td>US$ 0,0038</td><td><strong>≈ US$ 0,002</strong> (Jev US$ 0,00045 + DeepSeek ≈ US$ 0,0015)</td></tr>
+<tr><th></th><th>Só LLM</th><th>Híbrido (Jev + modelo + LLM)</th></tr>
+<tr><td>Concordância com a nota real (QWK total)</td><td>0,58</td><td><strong>0,71</strong></td></tr>
+<tr><td>QWK por competência (C1 a C5)</td><td>0,17 · 0,41 · 0,35 · 0,39 · 0,58</td><td><strong>0,42 · 0,52 · 0,50 · 0,67 · 0,76</strong></td></tr>
+<tr><td>Erro médio na nota total (MAE)</td><td>122 pontos</td><td><strong>106</strong> pontos</td></tr>
+<tr><td>Viés nas redações de 720 ou mais</td><td>−111</td><td><strong>−3</strong></td></tr>
+<tr><td>Viés nas redações de até 440</td><td>+102</td><td>+89</td></tr>
+<tr><td>Mesma redação corrigida 3 vezes ¹</td><td>nota idêntica em 23% (diferença média de 55 pontos)</td><td>nota idêntica em <strong>93–97%</strong> (1–3 pontos)</td></tr>
+<tr><td>Tokens de saída do LLM</td><td>10,4 mil</td><td><strong>8,4 mil</strong></td></tr>
+<tr><td>Tempo médio do LLM</td><td>59 s</td><td><strong>49 s</strong></td></tr>
+<tr><td>Custo por correção, fora do pico ²</td><td>US$ 0,0064</td><td><strong>US$ 0,0056</strong> (com o Jev)</td></tr>
+<tr><td>Custo por correção, no pico ²</td><td>US$ 0,0128</td><td><strong>US$ 0,0108</strong> (com o Jev)</td></tr>
 <tr><td>O que precisa</td><td>1 API (LLM)</td><td>2 APIs (Jev e LLM) e o modelo treinado (28 MB)</td></tr>
 <tr><td>Para onde vai o texto da redação</td><td>provedor do LLM</td><td>provedor do LLM <strong>e</strong> API do Jev</td></tr>
 </table></div>
 
+<p>¹ Medido em testes anteriores (o LLM em 30 redações, 3 vezes cada; o modelo com o Jev respondendo de novo).</p>
+<p>² Tabela oficial do <code>deepseek-flash</code> e tokens medidos, com 90% da entrada vindo do cache; sem o OCR, igual nos dois modos (US$ 0,004 por foto acima da cota gratuita). O pico é o horário comercial da China, que no Brasil cai no fim da noite e de madrugada; fora dele, o DeepSeek cobra metade.</p>
+
 <p>Como ler a tabela:</p>
 <ul>
-<li><strong>Conjuntos diferentes.</strong> A acurácia do modo só LLM foi medida em amostras de 30 redações do corpus inteiro (DeepSeek V4 Flash 0731); a do modelo, no teste oficial. Nas 9 redações em que os dois modos rodaram lado a lado, o erro médio foi 138 (só LLM) e 147 (híbrido), numa amostra pequena e difícil para o modelo. A comparação definitiva pede rodar o modo só LLM no teste oficial (⏳ a medir).</li>
-<li><strong>Custo.</strong> O custo do modo só LLM é o medido em uso real em agosto/2026 (DeepSeek V4 Flash). O DeepSeek cobra principalmente pelos tokens de saída, e o híbrido gera ~40% deles; o custo do DeepSeek no híbrido é estimado por essa proporção. O Jev foi medido: ~10,7 mil tokens de entrada por chamada, saída gratuita. O preço do V4.1-Flash, em uso desde 10/09/2026, ainda não foi medido (⏳). O OCR é igual nos dois modos (US$ 0,004 por foto acima da cota gratuita).</li>
-<li><strong>Feedback.</strong> Nos testes, o LLM respeitou as notas fixas em todas as competências (45/45). Com raciocínio <code>high</code>, o feedback do híbrido cita quase tantos trechos da redação quanto o do modo só LLM com <code>max</code> (366 contra 391 nas mesmas 9 redações), em menos da metade do tempo.</li>
+<li><strong>A diferença na concordância é real:</strong> +0,13 no QWK total, com intervalo de confiança de 95% entre +0,03 e +0,23. A diferença no erro médio (−16 pontos) ainda não é conclusiva com 50 redações: o híbrido errou menos em 20, mais em 11 e empatou em 19 (p = 0,15).</li>
+<li><strong>Onde o híbrido ganha:</strong> nas notas altas e médias. O LLM puxa as boas redações para baixo (−111 nas de 720 ou mais), e o modelo, não. Nas redações fracas, os dois superestimam.</li>
+<li><strong>Um falso zero:</strong> a regra de nota zero do híbrido zerou 1 das 50 redações (nota real 400), e ela está incluída. Sem ela, o erro médio do híbrido cai para 100.</li>
+<li><strong>Custo:</strong> com o mesmo nível de raciocínio, o híbrido sai ~12% mais barato e 10 s mais rápido. Com raciocínio <code>max</code> (o padrão do código até 17/11/2026; hoje é <code>high</code>), o modo só LLM gera ~19 mil tokens de saída (≈ US$ 0,012 por correção fora do pico) sem ganho de acurácia medido.</li>
+<li><strong>Feedback:</strong> o LLM respeitou as notas fixas nas 50 redações e nunca mencionou as pistas ao aluno.</li>
 </ul>
 
 <h3 id="como-ativar">Como ativar</h3>
@@ -491,12 +503,21 @@ CORRECTION_EFFORT=high
 
 <p>Os <strong>artefatos do modelo</strong> (<code>src/correction/hybrid/artifacts/</code>: o modelo treinado, as perguntas do Jev e os cortes do checklist) <strong>não estão neste repositório</strong>; são gerados pelo script de treino do laboratório, que também fica fora. Sem eles, use o modo padrão (<code>llm</code>). As versões de <code>numpy</code>, <code>scipy</code>, <code>scikit-learn</code> e <code>joblib</code> em <code>requirements.txt</code> são fixas porque precisam ser as mesmas do treino.</p>
 
+<h2 id="custo-e-observabilidade">Custo e observabilidade</h2>
+
+<ul>
+<li><strong>Custo em US$ de cada chamada paga</strong> no log estruturado: <code>cost_usd</code> em <code>essay_corrected_openai_compatible_usage</code> (LLM) e em <code>jev_answered</code> (Jev), com os tokens por tipo (em cache, fora do cache, saída, raciocínio). A tabela de preços fica em <code>src/correction/pricing.py</code>. O DeepSeek cobra o dobro no horário de pico (dias úteis, 01h–04h e 06h–10h UTC, ou seja, 22h–1h e 3h–7h em Brasília), e o log registra a faixa de cada chamada (<code>price_window</code>). Modelos sem tabela registram só os tokens.</li>
+<li><strong>Langfuse (opcional):</strong> com <code>LANGFUSE_PUBLIC_KEY</code> e <code>LANGFUSE_SECRET_KEY</code> (o plano Hobby do Langfuse Cloud é gratuito), cada correção vira um trace com uma observação por chamada paga, e o painel soma tokens e custo por dia, modelo e modo. Sem as chaves, o SDK nem é carregado.</li>
+<li><strong>O Langfuse recebe só números:</strong> modelo, tokens, custo, tempo e o modo de correção; nunca o texto da redação, o tema, o feedback nem identificador do aluno. Ele também usa um provedor de OpenTelemetry próprio, e não o global: com o global, o SDK do Mistral passaria a gerar spans das chamadas de OCR, que levam a foto, e o Langfuse os exportaria. Ver <code>src/observability.py</code>.</li>
+</ul>
+
 <h2 id="lgpd-o-p-blico-menor-de-idade-">LGPD (o público é menor de idade)</h2>
 
 <ul>
 <li><strong>Consentimento explícito</strong> no primeiro contato, antes de qualquer processamento.</li>
 <li>A <strong>foto é descartada</strong> logo após o OCR; o texto transcrito vive apenas no estado Redis, que <strong>expira em 45 min</strong>. Nada persiste após a correção (não há histórico).</li>
 <li>No <strong>modo híbrido</strong>, o texto da redação (nunca a foto) também é enviado à API do Jev (TypeSafe AI). Confira os termos de tratamento de dados do provedor antes de usar esse modo com alunos.</li>
+<li>O <strong>Langfuse</strong>, se ligado, recebe só números de uso e custo (ver <a href="#custo-e-observabilidade">Custo e observabilidade</a>).</li>
 <li>O feedback deixa claro que a correção é feita por IA e que a nota é uma <strong>estimativa</strong> (no ENEM oficial são dois corretores humanos).</li>
 <li>Rate-limit diário (<code>ESSAY_DAILY_LIMIT</code>, default 2) — controle de custo do fluxo OCR + LLM.</li>
 </ul>
@@ -614,6 +635,7 @@ make deploy                                        # build da imagem (Docker loc
 │   ├── main.py                    # FastAPI: webhooks (valida → submit_job → 200)
 │   ├── tasks.py                     # despacho de job: memory (asyncio.Task) ou azure (Storage Queue + worker)
 │   ├── config.py                   # pydantic-settings — todas as env vars
+│   ├── observability.py             # Langfuse opcional: tokens e custo por chamada, só números
 │   ├── messages.py                  # toda a copy de UX (nenhuma string solta no flow/)
 │   ├── prompts.py                    # prompt do corretor ENEM (Matriz do INEP; str.format, nunca f-string)
 │   ├── rate_limit.py                  # limite diário de correções por aluno
@@ -633,6 +655,7 @@ make deploy                                        # build da imagem (Docker loc
 │   │
 │   └── correction/                       # OCR + correção por LLM
 │       ├── ocr.py                           # Mistral OCR + palavras de baixa confiança
+│       ├── pricing.py                        # custo em US$ por chamada (DeepSeek com pico/fora do pico; Jev)
 │       ├── corrector.py                      # lógica comum de chamada ao provedor
 │       ├── interfaces.py                      # contrato ICorrector
 │       ├── factory.py                          # get_corrector(provider) — troca via CORRECTION_PROVIDER
@@ -648,7 +671,7 @@ make deploy                                        # build da imagem (Docker loc
 │   └── simulate.py            # REPL de conversa com canal fake — E2E local sem provedor real
 │
 └── tests/
-    └── unit/                     # 89 testes puros — FakeRedis + FakeChannel, sem I/O
+    └── unit/                     # 110 testes puros — FakeRedis + FakeChannel, sem I/O
 </code></pre>
 </div>
 </div>
@@ -1870,7 +1893,7 @@ Aluno                         Bot
 
 <p><strong>Custo do Flash Lite não foi medido</strong>, só a acurácia. Um dado relevante apareceu no caminho: o <strong>cache de contexto do Gemini não funciona nesse modelo no free tier</strong> (a API recusa a criação de cache), então os ~6.400 tokens do bloco de sistema vão sem cache em toda chamada — o oposto dos 75% de cache-hit medidos no DeepSeek (§8.4.1). Qualquer comparação de custo teria de partir daí.</p>
 
-<p><strong>Decisão vigente:</strong> manter <code>DeepSeek</code> + <code>CORRECTION_EFFORT=max</code> — mas as duas metades dessa decisão têm hoje bases diferentes. O <strong>provedor</strong> se apoia em dado de acurácia: o empate com o Gemini não justifica a troca, e o Gemini ainda carrega a questão do cache. Já o <strong>effort</strong> perdeu sua justificativa original (a vantagem de 33 pontos sobre o <code>high</code> era do modelo antigo e não se reproduz na 0731); <code>max</code> permanece por não haver evidência suficiente para trocar, não por evidência de que seja melhor. É uma inércia consciente, com revisão pendente de uma amostra maior.</p>
+<p><strong>Decisão (até 17/11/2026; desde então o padrão é <code>high</code>, ver a atualização de custo em §8.4.1):</strong> manter <code>DeepSeek</code> + <code>CORRECTION_EFFORT=max</code> — mas as duas metades dessa decisão têm hoje bases diferentes. O <strong>provedor</strong> se apoia em dado de acurácia: o empate com o Gemini não justifica a troca, e o Gemini ainda carrega a questão do cache. Já o <strong>effort</strong> perdeu sua justificativa original (a vantagem de 33 pontos sobre o <code>high</code> era do modelo antigo e não se reproduz na 0731); <code>max</code> permanece por não haver evidência suficiente para trocar, não por evidência de que seja melhor. É uma inércia consciente, com revisão pendente de uma amostra maior.</p>
 
 <p><strong>Por que a amostra fica em n=30 (decisão, não pendência).</strong> Ampliar para 100+ apertaria o intervalo de confiança, mas o MAE de ~145–150 pontos já é <strong>aceitável para o propósito do produto</strong> — a própria correção oficial do ENEM admite divergência entre dois avaliadores humanos, e uma nota <em>estimada</em> nunca prometeu equivalência exata (ver <strong>Análise e Limitações</strong>, §3.2). Os <strong>quatro</strong> níveis de effort já foram varridos na versão atual do modelo (a afirmação anterior, de que a API só expunha <code>high</code> e <code>max</code> efetivos, valia para o modelo antigo e foi corrigida acima). A pendência de <strong>repetir a mesma rodada</strong> foi cumprida (subseção de variância acima) e o resultado reordenou o resto: sabendo que uma execução isolada carrega ±9 pontos de MAE, ampliar a amostra deixou de ser refinamento e virou requisito. A pendência que resta é <strong>rodar o split de teste oficial do corpus</strong> (~987 redações) — ela ancora o resultado contra os baselines publicados e é a única forma de decidir o effort por custo com poder estatístico real.</p>
 
@@ -1955,6 +1978,26 @@ tokens_saída    ≈  a correção formatada (competências + feedback + reescri
 
 <blockquote>
 <p>O câmbio USD→BRL não está fixado aqui de propósito: Mistral e DeepSeek cobram em dólar, e a conversão exata depende da cotação no momento da compra de créditos — para orçamento, use a cotação comercial vigente.</p>
+</blockquote>
+
+<blockquote>
+<p><strong>Atualização de 2026-11-17: os valores acima são de antes do aumento de preço de agosto/2026.</strong> O DeepSeek passou a cobrar em dois horários. No pico (horário comercial da China, que no Brasil cai no fim da noite e de madrugada), o <code>deepseek-flash</code> (V4.1-Flash) custa US$ 0,30 por milhão de tokens de entrada fora do cache, US$ 0,006 em cache e US$ 1,20 de saída. Fora do pico, metade. Remedido em 50 redações, com 90% da entrada vinda do cache, o custo do LLM por correção é:</p>
+</blockquote>
+<p>></p>
+<blockquote>
+<p>| Modo | Raciocínio | Tokens de saída | Fora do pico | No pico |</p>
+<p>|---|---|---:|---:|---:|</p>
+<p>| Só LLM | <code>high</code> | 10,4 mil | US$ 0,0064 | US$ 0,0128 |</p>
+<p>| Só LLM | <code>max</code> (padrão até 17/11/2026) | ~19 mil ¹ | ≈ US$ 0,012 | ≈ US$ 0,024 |</p>
+<p>| Híbrido (com o Jev) | <code>high</code> | 8,4 mil | US$ 0,0056 | US$ 0,0108 |</p>
+</blockquote>
+<p>></p>
+<blockquote>
+<p>¹ Medido em 9 redações. O custo é ~95% tokens de saída, então o nível de raciocínio é a principal alavanca de custo. A comparação completa entre os modos está no README (Início), em "Híbrido × só LLM".</p>
+</blockquote>
+<p>></p>
+<blockquote>
+<p><strong>Desde 17/11/2026:</strong> o padrão do código passou a ser <code>CORRECTION_EFFORT=high</code>, que tem a mesma acurácia medida do <code>max</code>. O custo em US$ de cada chamada vai para o log (<code>cost_usd</code>, <code>price_window</code>), e o Langfuse, opcional, soma tudo num painel recebendo só números. Ver README, "Custo e observabilidade".</p>
 </blockquote>
 
 <h4 id="custo-de-hospedagem-em-nuvem-azure-conta">Custo de hospedagem em nuvem (Azure Container Apps)</h4>

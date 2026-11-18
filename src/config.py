@@ -54,7 +54,8 @@ class Settings(BaseSettings):
     CORRECTION_PROVIDER: str = Field(default="deepseek")  # gemini | claude | openai | deepseek | maritaca
     CORRECTION_MODEL: str = Field(default="deepseek-flash")  # nome do modelo NO provedor acima
     # claude: low | medium | high | max · deepseek (V4.1): low | high | max
-    CORRECTION_EFFORT: str = Field(default="max")
+    # high: mesma acurácia do max nas medições (p = 0,83) com ~metade dos tokens de saída (o que o DeepSeek cobra)
+    CORRECTION_EFFORT: str = Field(default="high")
     GOOGLE_API_KEY: str = Field(default="")
     ANTHROPIC_API_KEY: str = Field(default="")
     OPENAI_API_KEY: str = Field(default="")
@@ -66,6 +67,12 @@ class Settings(BaseSettings):
     CORRECTION_MODE: str = Field(default="llm")
     JEV_API_KEY: str = Field(default="")  # TypeSafe AI (Jev) — só usado no modo híbrido
     JEV_MODEL: str = Field(default="jev-1.14.0")
+
+    # Observabilidade de custo (opcional — ver src/observability.py): liga com as duas chaves. O Langfuse recebe
+    # só números (tokens, custo, tempo, modo), nunca texto da redação nem identificador do aluno.
+    LANGFUSE_PUBLIC_KEY: str = Field(default="")
+    LANGFUSE_SECRET_KEY: str = Field(default="")
+    LANGFUSE_HOST: str = Field(default="https://cloud.langfuse.com")  # EU; US: https://us.cloud.langfuse.com
 
     # Limites do fluxo
     ESSAY_DAILY_LIMIT: int = Field(default=2)  # correções/aluno/dia (fluxo caro)

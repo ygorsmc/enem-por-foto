@@ -15,6 +15,7 @@ from contextlib import asynccontextmanager
 import structlog
 from fastapi import FastAPI, HTTPException, Request, Response
 
+from src import observability
 from src.channels.factory import get_channel
 from src.config import settings
 from src.redis_client import is_duplicate_message
@@ -42,6 +43,8 @@ async def lifespan(app: FastAPI):
             await worker
         except asyncio.CancelledError:
             pass
+    # Langfuse (se ligado): envia o que ficou pendente antes de o contêiner parar (inclusive ao escalar a zero).
+    await asyncio.to_thread(observability.shutdown)
 
 
 app = FastAPI(title="Corretor ENEM", docs_url=None, redoc_url=None, lifespan=lifespan)

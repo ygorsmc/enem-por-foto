@@ -97,21 +97,32 @@ Os baselines são do artigo do corpus (Marinho, Anchiêta & Moura, *JIDM* 2022, 
 
 ### Híbrido × só LLM
 
-| | Só LLM (DeepSeek, raciocínio `max`) | Híbrido (Jev + modelo + DeepSeek `high`) |
+Medido nas **mesmas 50 redações**, sorteadas do teste oficial, com o código e o prompt do bot, DeepSeek `deepseek-flash` (V4.1-Flash) com raciocínio `high` nos dois modos. No híbrido, a nota é a do modelo treinado sem essas redações.
+
+| | Só LLM | Híbrido (Jev + modelo + LLM) |
 |---|---|---|
-| Concordância com a nota real (QWK total) | 0,53 e 0,60 (duas amostras de 30 redações) | **0,726** (teste oficial, 976 redações) |
-| Erro médio na nota total (MAE) | 148 pontos (amostra de 30) | **97** pontos |
-| Mesma redação corrigida 3 vezes | nota idêntica em 23% (diferença média de 55 pontos) | nota idêntica em **93–97%** (diferença média de 1–3 pontos) |
-| Tokens de saída do LLM por correção | ~19 mil | **~7,5 mil** |
-| Tempo do LLM | ~103 s | **~45 s** |
-| Custo por correção, sem o OCR | US$ 0,0038 | **≈ US$ 0,002** (Jev US$ 0,00045 + DeepSeek ≈ US$ 0,0015) |
+| Concordância com a nota real (QWK total) | 0,58 | **0,71** |
+| QWK por competência (C1 a C5) | 0,17 · 0,41 · 0,35 · 0,39 · 0,58 | **0,42 · 0,52 · 0,50 · 0,67 · 0,76** |
+| Erro médio na nota total (MAE) | 122 pontos | **106** pontos |
+| Viés nas redações de 720 ou mais | −111 | **−3** |
+| Viés nas redações de até 440 | +102 | +89 |
+| Mesma redação corrigida 3 vezes ¹ | nota idêntica em 23% (diferença média de 55 pontos) | nota idêntica em **93–97%** (1–3 pontos) |
+| Tokens de saída do LLM | 10,4 mil | **8,4 mil** |
+| Tempo médio do LLM | 59 s | **49 s** |
+| Custo por correção, fora do pico ² | US$ 0,0064 | **US$ 0,0056** (com o Jev) |
+| Custo por correção, no pico ² | US$ 0,0128 | **US$ 0,0108** (com o Jev) |
 | O que precisa | 1 API (LLM) | 2 APIs (Jev e LLM) e o modelo treinado (28 MB) |
 | Para onde vai o texto da redação | provedor do LLM | provedor do LLM **e** API do Jev |
 
+¹ Medido em testes anteriores (o LLM em 30 redações, 3 vezes cada; o modelo com o Jev respondendo de novo).
+² Tabela oficial do `deepseek-flash` e tokens medidos, com 90% da entrada vindo do cache; sem o OCR, igual nos dois modos (US$ 0,004 por foto acima da cota gratuita). O pico é o horário comercial da China, que no Brasil cai no fim da noite e de madrugada; fora dele, o DeepSeek cobra metade.
+
 Como ler a tabela:
-- **Conjuntos diferentes.** A acurácia do modo só LLM foi medida em amostras de 30 redações do corpus inteiro (DeepSeek V4 Flash 0731); a do modelo, no teste oficial. Nas 9 redações em que os dois modos rodaram lado a lado, o erro médio foi 138 (só LLM) e 147 (híbrido), numa amostra pequena e difícil para o modelo. A comparação definitiva pede rodar o modo só LLM no teste oficial (⏳ a medir).
-- **Custo.** O custo do modo só LLM é o medido em uso real em agosto/2026 (DeepSeek V4 Flash). O DeepSeek cobra principalmente pelos tokens de saída, e o híbrido gera ~40% deles; o custo do DeepSeek no híbrido é estimado por essa proporção. O Jev foi medido: ~10,7 mil tokens de entrada por chamada, saída gratuita. O preço do V4.1-Flash, em uso desde 10/09/2026, ainda não foi medido (⏳). O OCR é igual nos dois modos (US$ 0,004 por foto acima da cota gratuita).
-- **Feedback.** Nos testes, o LLM respeitou as notas fixas em todas as competências (45/45). Com raciocínio `high`, o feedback do híbrido cita quase tantos trechos da redação quanto o do modo só LLM com `max` (366 contra 391 nas mesmas 9 redações), em menos da metade do tempo.
+- **A diferença na concordância é real:** +0,13 no QWK total, com intervalo de confiança de 95% entre +0,03 e +0,23. A diferença no erro médio (−16 pontos) ainda não é conclusiva com 50 redações: o híbrido errou menos em 20, mais em 11 e empatou em 19 (p = 0,15).
+- **Onde o híbrido ganha:** nas notas altas e médias. O LLM puxa as boas redações para baixo (−111 nas de 720 ou mais), e o modelo, não. Nas redações fracas, os dois superestimam.
+- **Um falso zero:** a regra de nota zero do híbrido zerou 1 das 50 redações (nota real 400), e ela está incluída. Sem ela, o erro médio do híbrido cai para 100.
+- **Custo:** com o mesmo nível de raciocínio, o híbrido sai ~12% mais barato e 10 s mais rápido. Com raciocínio `max` (o padrão do código até 17/11/2026; hoje é `high`), o modo só LLM gera ~19 mil tokens de saída (≈ US$ 0,012 por correção fora do pico) sem ganho de acurácia medido.
+- **Feedback:** o LLM respeitou as notas fixas nas 50 redações e nunca mencionou as pistas ao aluno.
 
 ### Como ativar
 
@@ -125,11 +136,18 @@ CORRECTION_EFFORT=high
 
 Os **artefatos do modelo** (`src/correction/hybrid/artifacts/`: o modelo treinado, as perguntas do Jev e os cortes do checklist) **não estão neste repositório**; são gerados pelo script de treino do laboratório, que também fica fora. Sem eles, use o modo padrão (`llm`). As versões de `numpy`, `scipy`, `scikit-learn` e `joblib` em `requirements.txt` são fixas porque precisam ser as mesmas do treino.
 
+## Custo e observabilidade
+
+- **Custo em US$ de cada chamada paga** no log estruturado: `cost_usd` em `essay_corrected_openai_compatible_usage` (LLM) e em `jev_answered` (Jev), com os tokens por tipo (em cache, fora do cache, saída, raciocínio). A tabela de preços fica em `src/correction/pricing.py`. O DeepSeek cobra o dobro no horário de pico (dias úteis, 01h–04h e 06h–10h UTC, ou seja, 22h–1h e 3h–7h em Brasília), e o log registra a faixa de cada chamada (`price_window`). Modelos sem tabela registram só os tokens.
+- **Langfuse (opcional):** com `LANGFUSE_PUBLIC_KEY` e `LANGFUSE_SECRET_KEY` (o plano Hobby do Langfuse Cloud é gratuito), cada correção vira um trace com uma observação por chamada paga, e o painel soma tokens e custo por dia, modelo e modo. Sem as chaves, o SDK nem é carregado.
+- **O Langfuse recebe só números:** modelo, tokens, custo, tempo e o modo de correção; nunca o texto da redação, o tema, o feedback nem identificador do aluno. Ele também usa um provedor de OpenTelemetry próprio, e não o global: com o global, o SDK do Mistral passaria a gerar spans das chamadas de OCR, que levam a foto, e o Langfuse os exportaria. Ver `src/observability.py`.
+
 ## LGPD (o público é menor de idade)
 
 - **Consentimento explícito** no primeiro contato, antes de qualquer processamento.
 - A **foto é descartada** logo após o OCR; o texto transcrito vive apenas no estado Redis, que **expira em 45 min**. Nada persiste após a correção (não há histórico).
 - No **modo híbrido**, o texto da redação (nunca a foto) também é enviado à API do Jev (TypeSafe AI). Confira os termos de tratamento de dados do provedor antes de usar esse modo com alunos.
+- O **Langfuse**, se ligado, recebe só números de uso e custo (ver [Custo e observabilidade](#custo-e-observabilidade)).
 - O feedback deixa claro que a correção é feita por IA e que a nota é uma **estimativa** (no ENEM oficial são dois corretores humanos).
 - Rate-limit diário (`ESSAY_DAILY_LIMIT`, default 2) — controle de custo do fluxo OCR + LLM.
 
@@ -238,6 +256,7 @@ scripts de laboratório não fazem parte deste repositório.
 │   ├── main.py                    # FastAPI: webhooks (valida → submit_job → 200)
 │   ├── tasks.py                     # despacho de job: memory (asyncio.Task) ou azure (Storage Queue + worker)
 │   ├── config.py                   # pydantic-settings — todas as env vars
+│   ├── observability.py             # Langfuse opcional: tokens e custo por chamada, só números
 │   ├── messages.py                  # toda a copy de UX (nenhuma string solta no flow/)
 │   ├── prompts.py                    # prompt do corretor ENEM (Matriz do INEP; str.format, nunca f-string)
 │   ├── rate_limit.py                  # limite diário de correções por aluno
@@ -257,6 +276,7 @@ scripts de laboratório não fazem parte deste repositório.
 │   │
 │   └── correction/                       # OCR + correção por LLM
 │       ├── ocr.py                           # Mistral OCR + palavras de baixa confiança
+│       ├── pricing.py                        # custo em US$ por chamada (DeepSeek com pico/fora do pico; Jev)
 │       ├── corrector.py                      # lógica comum de chamada ao provedor
 │       ├── interfaces.py                      # contrato ICorrector
 │       ├── factory.py                          # get_corrector(provider) — troca via CORRECTION_PROVIDER
@@ -272,5 +292,5 @@ scripts de laboratório não fazem parte deste repositório.
 │   └── simulate.py            # REPL de conversa com canal fake — E2E local sem provedor real
 │
 └── tests/
-    └── unit/                     # 89 testes puros — FakeRedis + FakeChannel, sem I/O
+    └── unit/                     # 110 testes puros — FakeRedis + FakeChannel, sem I/O
 ```

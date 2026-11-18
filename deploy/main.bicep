@@ -60,7 +60,7 @@ param mistralApiKey string
 // as demais podem ficar em branco (não viram secret/env se vazias).
 param correctionProvider string = 'deepseek'
 param correctionModel string = 'deepseek-flash'
-param correctionEffort string = 'max'
+param correctionEffort string = 'high'
 @secure()
 param deepseekApiKey string = ''
 @secure()
@@ -71,6 +71,13 @@ param anthropicApiKey string = ''
 param openaiApiKey string = ''
 @secure()
 param maritacaApiKey string = ''
+
+// Observabilidade de custo (opcional): sem as duas chaves, o Langfuse fica desligado.
+@secure()
+param langfusePublicKey string = ''
+@secure()
+param langfuseSecretKey string = ''
+param langfuseHost string = 'https://cloud.langfuse.com'
 
 // ── Escala / recursos ────────────────────────────────────────────────────────
 @description('0 = scale-to-zero (o ponto de toda a economia). Só suba se souber o porquê.')
@@ -174,7 +181,9 @@ var providerSecrets = concat(
   empty(googleApiKey) ? [] : [ { name: 'google-api-key', value: googleApiKey } ],
   empty(anthropicApiKey) ? [] : [ { name: 'anthropic-api-key', value: anthropicApiKey } ],
   empty(openaiApiKey) ? [] : [ { name: 'openai-api-key', value: openaiApiKey } ],
-  empty(maritacaApiKey) ? [] : [ { name: 'maritaca-api-key', value: maritacaApiKey } ]
+  empty(maritacaApiKey) ? [] : [ { name: 'maritaca-api-key', value: maritacaApiKey } ],
+  empty(langfusePublicKey) ? [] : [ { name: 'langfuse-public-key', value: langfusePublicKey } ],
+  empty(langfuseSecretKey) ? [] : [ { name: 'langfuse-secret-key', value: langfuseSecretKey } ]
 )
 var allSecrets = concat(baseSecrets, registrySecret, providerSecrets)
 
@@ -210,7 +219,10 @@ var providerEnv = concat(
   empty(googleApiKey) ? [] : [ { name: 'GOOGLE_API_KEY', secretRef: 'google-api-key' } ],
   empty(anthropicApiKey) ? [] : [ { name: 'ANTHROPIC_API_KEY', secretRef: 'anthropic-api-key' } ],
   empty(openaiApiKey) ? [] : [ { name: 'OPENAI_API_KEY', secretRef: 'openai-api-key' } ],
-  empty(maritacaApiKey) ? [] : [ { name: 'MARITACA_API_KEY', secretRef: 'maritaca-api-key' } ]
+  empty(maritacaApiKey) ? [] : [ { name: 'MARITACA_API_KEY', secretRef: 'maritaca-api-key' } ],
+  empty(langfusePublicKey) ? [] : [ { name: 'LANGFUSE_PUBLIC_KEY', secretRef: 'langfuse-public-key' } ],
+  empty(langfuseSecretKey) ? [] : [ { name: 'LANGFUSE_SECRET_KEY', secretRef: 'langfuse-secret-key' } ],
+  [ { name: 'LANGFUSE_HOST', value: langfuseHost } ]
 )
 var allEnv = concat(baseEnv, webhookSecretEnv, providerEnv)
 

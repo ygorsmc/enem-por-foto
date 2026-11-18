@@ -21,3 +21,9 @@ numpy==2.5.5
 scipy==1.18.1
 scikit-learn==1.9.1
 joblib==1.6.0
+# Observabilidade de custo (opcional, só com LANGFUSE_* configurado — ver src/observability.py). A 4.15.6 é a
+# mais nova compatível com o mistralai (que exige opentelemetry-semantic-conventions < 0,61): a 5.x pede
+# OpenTelemetry ≥ 1.45. OpenTelemetry fixado para o pip não ter de adivinhar a combinação.
+langfuse==4.15.6
+opentelemetry-sdk==1.39.1
+opentelemetry-exporter-otlp-proto-http==1.39.1

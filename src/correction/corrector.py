@@ -7,6 +7,7 @@ provedor."""
 import structlog
 from tenacity import retry, stop_after_attempt, wait_exponential
 
+from src import observability
 from src.config import settings
 from src.correction.factory import get_corrector
 from src.prompts import ENEM_CORRECTION_INPUT, NO_MOTIVATORS
@@ -38,14 +39,21 @@ async def correct_essay(theme: str, motivators: str | None, essay_text: str) -> 
     CORRECTION_MODE=llm (padrão): o LLM dá a nota e escreve o feedback. CORRECTION_MODE=hibrido: a nota vem do
     modelo calibrado sobre as respostas do Jev e o LLM só escreve o feedback (src/correction/hybrid/)."""
     input_block = build_correction_prompt(theme, motivators, essay_text)
-    if settings.CORRECTION_MODE == "hibrido":
-        from src.correction.hybrid.pipeline import correct_hybrid  # tardio: numpy/sklearn só neste modo
+    # Langfuse (opcional): um trace por correção, com as chamadas pagas dentro; só rótulos e números.
+    with observability.correction_trace(
+        mode=settings.CORRECTION_MODE,
+        provider=settings.CORRECTION_PROVIDER,
+        model=settings.CORRECTION_MODEL,
+        effort=settings.CORRECTION_EFFORT,
+    ):
+        if settings.CORRECTION_MODE == "hibrido":
+            from src.correction.hybrid.pipeline import correct_hybrid  # tardio: numpy/sklearn só neste modo
 
-        feedback = await correct_hybrid(
-            input_block, theme.strip()[:MAX_THEME_CHARS], essay_text.strip()[:MAX_ESSAY_CHARS]
-        )
-    else:
-        feedback = await get_corrector().correct(input_block)
+            feedback = await correct_hybrid(
+                input_block, theme.strip()[:MAX_THEME_CHARS], essay_text.strip()[:MAX_ESSAY_CHARS]
+            )
+        else:
+            feedback = await get_corrector().correct(input_block)
     if not feedback:
         raise ValueError("Resposta vazia do modelo de correção")
     logger.info(

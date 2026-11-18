@@ -10,7 +10,9 @@ import httpx
 import structlog
 from tenacity import retry, stop_after_attempt, wait_exponential
 
+from src import observability
 from src.config import settings
+from src.correction import pricing
 from src.correction.hybrid.artifacts import TEMA_SENTINELA, questions_template
 
 logger = structlog.get_logger(__name__)
@@ -58,14 +60,31 @@ async def ask_jev(tema: str, redacao: str) -> dict:
         "state": {"tema": tema, "redacao": redacao},
         "questions": questions,
     }
-    async with httpx.AsyncClient(timeout=TIMEOUT_S) as client:
-        r = await client.post(
-            API_URL,
-            json=payload,
-            headers={"Authorization": f"Bearer {settings.JEV_API_KEY}", "Accept": "application/json"},
+    with observability.generation("jev", settings.JEV_MODEL, questions=len(questions)) as gen:
+        async with httpx.AsyncClient(timeout=TIMEOUT_S) as client:
+            r = await client.post(
+                API_URL,
+                json=payload,
+                headers={"Authorization": f"Bearer {settings.JEV_API_KEY}", "Accept": "application/json"},
+            )
+            r.raise_for_status()
+            resp = r.json()
+        usage = resp.get("usage") or {}
+        input_tokens = int(usage.get("input_tokens") or 0)
+        output_tokens = int(usage.get("output_tokens") or 0)  # gratuitos
+        cost = pricing.jev_cost(input_tokens)
+        gen.update(
+            usage_details={
+                "input": input_tokens,
+                "output": output_tokens,
+                "total": input_tokens + output_tokens,
+            },
+            cost_details=cost,
         )
-        r.raise_for_status()
-        resp = r.json()
-    usage = resp.get("usage") or {}
-    logger.info("jev_answered", questions=len(questions), input_tokens=usage.get("input_tokens"))
+    logger.info(
+        "jev_answered",
+        questions=len(questions),
+        input_tokens=input_tokens,
+        cost_usd=round(cost["total"], 6),
+    )
     return parse_answers(resp, set(questions))

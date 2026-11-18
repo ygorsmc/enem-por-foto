@@ -30,13 +30,35 @@ Medido antes, no V4 Flash 0731 (2026-08-04), e não reconferido no V4.1:
   _local/docs_src/08_metricas_performance_e_roi.md.
 """
 
+from datetime import UTC, datetime
+from typing import Any
+
 import structlog
 from openai import AsyncOpenAI
 
+from src import observability
+from src.correction import pricing
 from src.correction.interfaces import ICorrector
 from src.prompts import ENEM_CORRECTION_SYSTEM
 
 logger = structlog.get_logger(__name__)
+
+
+def _usage_and_cost(model: str, usage: Any, when: datetime) -> tuple[dict[str, int], dict[str, float] | None]:
+    """Tokens no formato do Langfuse e custo em US$ (None se o modelo não tem tabela em `pricing`)."""
+    if usage is None:
+        return {}, None
+    prompt = getattr(usage, "prompt_tokens", 0) or 0
+    output = getattr(usage, "completion_tokens", 0) or 0
+    hit = getattr(usage, "prompt_cache_hit_tokens", None)  # DeepSeek
+    if hit is None:  # OpenAI informa o cache em prompt_tokens_details
+        hit = getattr(getattr(usage, "prompt_tokens_details", None), "cached_tokens", None)
+    hit = hit or 0
+    reasoning = getattr(getattr(usage, "completion_tokens_details", None), "reasoning_tokens", None) or 0
+    details = {"input": prompt - hit, "input_cached_tokens": hit, "output": output, "total": prompt + output}
+    if reasoning:
+        details["output_reasoning_tokens"] = reasoning  # já contido em "output" (cobrado como saída)
+    return details, pricing.llm_cost(model, hit, prompt - hit, output, when)
 
 
 class OpenAICompatibleCorrector(ICorrector):
@@ -61,27 +83,34 @@ class OpenAICompatibleCorrector(ICorrector):
             extra_kwargs["reasoning_effort"] = self._reasoning_effort
             extra_kwargs["extra_body"] = {"thinking": {"type": "enabled"}}
 
-        response = await self._client.chat.completions.create(
-            model=self._model,
-            messages=[
-                {"role": "system", "content": ENEM_CORRECTION_SYSTEM},
-                {"role": "user", "content": input_block},
-            ],
-            **extra_kwargs,
-        )
+        started = datetime.now(UTC)  # o preço do DeepSeek depende do horário (pico/fora do pico)
+        with observability.generation(
+            "llm", self._model, provider=self.provider_name, effort=self._reasoning_effort
+        ) as gen:
+            response = await self._client.chat.completions.create(
+                model=self._model,
+                messages=[
+                    {"role": "system", "content": ENEM_CORRECTION_SYSTEM},
+                    {"role": "user", "content": input_block},
+                ],
+                **extra_kwargs,
+            )
+            tokens, cost = _usage_and_cost(self._model, response.usage, started)
+            window = pricing.price_window(started) if cost else None
+            gen.update(usage_details=tokens, cost_details=cost, metadata={"price_window": window})
 
-        usage = response.usage
-        details = getattr(usage, "completion_tokens_details", None)
         logger.info(
             "essay_corrected_openai_compatible_usage",
             provider=self.provider_name,
             model=self._model,
             reasoning_effort=self._reasoning_effort,
-            prompt_tokens=getattr(usage, "prompt_tokens", None),
-            prompt_cache_hit_tokens=getattr(usage, "prompt_cache_hit_tokens", None),
-            prompt_cache_miss_tokens=getattr(usage, "prompt_cache_miss_tokens", None),
-            completion_tokens=getattr(usage, "completion_tokens", None),
-            reasoning_tokens=getattr(details, "reasoning_tokens", None) if details else None,
+            prompt_tokens=tokens.get("input", 0) + tokens.get("input_cached_tokens", 0),
+            prompt_cache_hit_tokens=tokens.get("input_cached_tokens"),
+            prompt_cache_miss_tokens=tokens.get("input"),
+            completion_tokens=tokens.get("output"),
+            reasoning_tokens=tokens.get("output_reasoning_tokens"),
+            cost_usd=round(cost["total"], 6) if cost else None,
+            price_window=window,
         )
 
         text = response.choices[0].message.content
