@@ -10,7 +10,7 @@ from src.config import settings
 
 
 class FakeRedis:
-    """Só o que o projeto usa: get/set(nx,ex)/delete/incr/decr/expire."""
+    """Só o que o projeto usa: get/set(nx,ex)/delete/incr/decr/incrby/incrbyfloat/expire."""
 
     def __init__(self):
         self.store: dict[str, str] = {}
@@ -35,6 +35,16 @@ class FakeRedis:
     async def decr(self, key):
         val = int(self.store.get(key, "0")) - 1
         self.store[key] = str(val)
+        return val
+
+    async def incrby(self, key, amount):
+        val = int(self.store.get(key, "0")) + int(amount)
+        self.store[key] = str(val)
+        return val
+
+    async def incrbyfloat(self, key, amount):
+        val = float(self.store.get(key, "0")) + float(amount)
+        self.store[key] = repr(val)
         return val
 
     async def expire(self, key, seconds):

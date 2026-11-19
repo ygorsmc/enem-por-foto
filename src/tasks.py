@@ -105,41 +105,77 @@ async def _enqueue_azure(channel_name: str, msg: InboundMessage) -> None:
         await client.send_message(serialize_job(channel_name, msg))
 
 
+async def _receive_one(client):
+    """Próxima mensagem da fila (invisível aos outros por QUEUE_VISIBILITY_TIMEOUT) ou None se vazia."""
+    async for message in client.receive_messages(
+        max_messages=1, visibility_timeout=settings.QUEUE_VISIBILITY_TIMEOUT
+    ):
+        return message
+    return None
+
+
+async def _run_queued_job(client, message, slots: asyncio.Semaphore) -> None:
+    """Roda UMA mensagem da fila e a apaga depois. Sempre devolve a vaga do worker."""
+    try:
+        try:
+            channel_name, msg = deserialize_job(message.content)
+        except Exception as e:
+            # Payload malformado: loga e descarta (delete abaixo) — reentregar uma
+            # mensagem que nem dá pra parsear ficaria em loop pra sempre.
+            logger.error("queue_job_failed", error=str(e)[:300])
+        else:
+            await process_job(channel_name, msg)
+        # Apaga só APÓS o job ter RODADO. process_job engole erros do fluxo, então uma
+        # mensagem que executou (mesmo terminando numa falha tratada) não pode reentregar
+        # e cobrar OCR/LLM em dobro. Só um crash bruto antes deste delete reentrega (após
+        # o visibility_timeout) — raro e aceito num bot de escala pessoal.
+        await client.delete_message(message)
+    except Exception as e:
+        logger.error("queue_delete_failed", error_type=type(e).__name__, error=str(e)[:300])
+    finally:
+        slots.release()
+
+
 async def worker_loop() -> None:
     """Drena a Azure Storage Queue. Iniciado no lifespan da app quando
-    QUEUE_BACKEND == "azure". Roda até ser cancelado (shutdown da app)."""
-    logger.info("queue_worker_started", queue=settings.ESSAY_QUEUE_NAME)
+    QUEUE_BACKEND == "azure". Roda até ser cancelado (shutdown da app).
+
+    Até QUEUE_MAX_CONCURRENCY mensagens em paralelo, cada uma numa task — o mesmo
+    comportamento do backend "memory". Toda mensagem do aluno (texto, botão, foto)
+    passa pela fila; processando uma por vez, a correção de um aluno (~50-90 s,
+    quase tudo espera de rede: OCR, Jev, LLM) travava a conversa de todos os outros.
+    """
+    slots = asyncio.Semaphore(settings.QUEUE_MAX_CONCURRENCY)
+    logger.info(
+        "queue_worker_started", queue=settings.ESSAY_QUEUE_NAME, concurrency=settings.QUEUE_MAX_CONCURRENCY
+    )
     async with _queue_client() as client:
         try:
             await client.create_queue()  # no-op se já existir
         except Exception:
             pass
         while True:
+            holding = False  # esta volta do laço segura uma vaga ainda não entregue a uma task?
             try:
-                received_any = False
-                async for message in client.receive_messages(
-                    messages_per_page=1,
-                    visibility_timeout=settings.QUEUE_VISIBILITY_TIMEOUT,
-                ):
-                    received_any = True
-                    try:
-                        channel_name, msg = deserialize_job(message.content)
-                        await process_job(channel_name, msg)
-                    except Exception as e:
-                        # Payload malformado: loga e descarta (delete abaixo) — reentregar
-                        # uma mensagem que nem dá pra parsear ficaria em loop pra sempre.
-                        logger.error("queue_job_failed", error=str(e)[:300])
-                    # Apaga só APÓS o job ter RODADO. process_job engole erros do fluxo,
-                    # então uma mensagem que executou (mesmo terminando numa falha
-                    # tratada) não pode reentregar e cobrar OCR/LLM em dobro. Só um crash
-                    # bruto antes deste delete reentrega (após o visibility_timeout) —
-                    # raro e aceito num bot de escala pessoal.
-                    await client.delete_message(message)
-                if not received_any:
+                await slots.acquire()  # espera vaga: no máximo QUEUE_MAX_CONCURRENCY jobs em voo
+                holding = True
+                message = await _receive_one(client)
+                if message is None:
+                    slots.release()
+                    holding = False
                     await asyncio.sleep(settings.QUEUE_POLL_INTERVAL)
+                    continue
+                task = asyncio.create_task(_run_queued_job(client, message, slots))
+                holding = False  # a vaga agora é da task (devolvida no finally dela)
+                _background_tasks.add(task)
+                task.add_done_callback(_background_tasks.discard)
             except asyncio.CancelledError:
+                if holding:
+                    slots.release()
                 logger.info("queue_worker_stopped")
                 raise
             except Exception as e:
+                if holding:
+                    slots.release()
                 logger.error("queue_worker_error", error=str(e)[:300])
                 await asyncio.sleep(settings.QUEUE_POLL_INTERVAL)

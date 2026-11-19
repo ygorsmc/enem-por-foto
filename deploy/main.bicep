@@ -53,6 +53,14 @@ param redisUrl string
 param telegramBotToken string
 @secure()
 param telegramWebhookSecret string = ''
+@description('Chat do Telegram do dono do bot: recebe o alerta de uso a cada usageAlertEveryTokens tokens do LLM. Vazio = sem alerta.')
+param adminTelegramChatId string = ''
+param usageAlertEveryTokens int = 1000000
+@description('Únicas origens aceitas na entrada HTTP do app. Padrão: as faixas de onde o Telegram chama webhooks (core.telegram.org/bots/webhooks; o Telegram avisa que podem mudar). Sem elas, qualquer um que descobrisse a URL podia manter a réplica acordada (custo de compute). Para WhatsApp, troque pelas faixas da Meta; lista vazia = aberto a todos.')
+param ingressAllowedCidrs array = [
+  '149.154.160.0/20'
+  '91.108.4.0/22'
+]
 @secure()
 param mistralApiKey string
 
@@ -61,6 +69,15 @@ param mistralApiKey string
 param correctionProvider string = 'deepseek'
 param correctionModel string = 'deepseek-flash'
 param correctionEffort string = 'high'
+// Modo da correção: 'llm' (o LLM dá a nota) ou 'hibrido' (a nota vem do modelo calibrado sobre as respostas do
+// Jev e o LLM só escreve o feedback — README, "Modo híbrido"). O híbrido exige JEV_API_KEY e os artefatos do modelo.
+@allowed([ 'llm', 'hibrido' ])
+param correctionMode string = 'llm'
+param jevModel string = 'jev-1.14.0'
+@secure()
+param jevApiKey string = ''
+// Validade do link SAS (só leitura) dos artefatos do modelo; renovado a cada deploy.
+param artifactsSasExpiry string = dateTimeAdd(utcNow(), 'P2Y')
 @secure()
 param deepseekApiKey string = ''
 @secure()
@@ -84,6 +101,8 @@ param langfuseHost string = 'https://cloud.langfuse.com'
 param minReplicas int = 0
 @description('1 para volume pessoal/escolar moderado — evita múltiplos workers concorrentes.')
 param maxReplicas int = 1
+@description('Segundos ocioso (sem requisição e com a fila vazia) até escalar a zero. 600 cobre o aluno conferindo a prévia do OCR antes de confirmar: com o padrão da plataforma (300), quem demorava mais de 5 min pagava um novo cold start (~45 s, a imagem é baixada de novo do GHCR) antes da correção. Custo: ~5 min a mais de réplica por sessão, dentro da cota grátis mensal.')
+param cooldownSeconds int = 600
 param cpu string = '0.5'
 param memory string = '1.0Gi'
 param queueVisibilityTimeout int = 300
@@ -113,6 +132,32 @@ resource essayQueue 'Microsoft.Storage/storageAccounts/queueServices/queues@2023
   name: queueName
 }
 
+// Artefatos do modo híbrido (modelo treinado, perguntas do Jev, checklist): contêiner PRIVADO no Blob — fora
+// da imagem, que é pública no GHCR. O deploy.sh envia os arquivos; o app baixa por um link SAS só de leitura.
+var artifactsContainerName = 'hybrid-artifacts'
+
+resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2023-01-01' = {
+  parent: storageAccount
+  name: 'default'
+}
+
+resource artifactsContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
+  parent: blobService
+  name: artifactsContainerName
+  properties: {
+    publicAccess: 'None'
+  }
+}
+
+var artifactsSas = storageAccount.listServiceSas('2023-01-01', {
+  canonicalizedResource: '/blob/${storageAccount.name}/${artifactsContainerName}'
+  signedResource: 'c'
+  signedPermission: 'r'
+  signedProtocol: 'https'
+  signedExpiry: artifactsSasExpiry
+}).serviceSasToken
+var artifactsUrl = 'https://${storageAccount.name}.blob.${environment().suffixes.storage}/${artifactsContainer.name}?${artifactsSas}'
+
 var storageConnectionString = 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccount.listKeys().keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
 
 // ── Observabilidade / Container Apps Environment ────────────────────────────
@@ -131,10 +176,24 @@ resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2022-10-01' = if
   }
 }
 
-resource newEnvironment 'Microsoft.App/managedEnvironments@2024-03-01' = if (createEnvironment) {
+// Tipo do Environment EXPLÍCITO: sem `environmentMode`, a plataforma passou a criar Environments
+// "Express", que não aceitam regra de escala customizada (KEDA) — e a regra azure-queue abaixo é
+// essencial (mantém a réplica viva enquanto há redação na fila). Hoje o campo só existe na API
+// preview; nas GA ele é ignorado e o Environment nasce Express. "WorkloadProfiles" com só o perfil
+// Consumption = cobrança por consumo, sem custo fixo (perfis dedicados é que cobram por hora).
+#disable-next-line BCP081
+resource newEnvironment 'Microsoft.App/managedEnvironments@2026-03-02-preview' = if (createEnvironment) {
   name: '${appName}-env'
   location: location
   properties: {
+    #disable-next-line BCP037
+    environmentMode: 'WorkloadProfiles'
+    workloadProfiles: [
+      {
+        name: 'Consumption'
+        workloadProfileType: 'Consumption'
+      }
+    ]
     appLogsConfiguration: {
       destination: 'log-analytics'
       logAnalyticsConfiguration: {
@@ -183,7 +242,9 @@ var providerSecrets = concat(
   empty(openaiApiKey) ? [] : [ { name: 'openai-api-key', value: openaiApiKey } ],
   empty(maritacaApiKey) ? [] : [ { name: 'maritaca-api-key', value: maritacaApiKey } ],
   empty(langfusePublicKey) ? [] : [ { name: 'langfuse-public-key', value: langfusePublicKey } ],
-  empty(langfuseSecretKey) ? [] : [ { name: 'langfuse-secret-key', value: langfuseSecretKey } ]
+  empty(langfuseSecretKey) ? [] : [ { name: 'langfuse-secret-key', value: langfuseSecretKey } ],
+  empty(jevApiKey) ? [] : [ { name: 'jev-api-key', value: jevApiKey } ],
+  correctionMode == 'hibrido' ? [ { name: 'hybrid-artifacts-url', value: artifactsUrl } ] : []
 )
 var allSecrets = concat(baseSecrets, registrySecret, providerSecrets)
 
@@ -206,6 +267,10 @@ var baseEnv = [
   { name: 'CORRECTION_PROVIDER', value: correctionProvider }
   { name: 'CORRECTION_MODEL', value: correctionModel }
   { name: 'CORRECTION_EFFORT', value: correctionEffort }
+  { name: 'CORRECTION_MODE', value: correctionMode }
+  { name: 'JEV_MODEL', value: jevModel }
+  { name: 'ADMIN_TELEGRAM_CHAT_ID', value: adminTelegramChatId }
+  { name: 'USAGE_ALERT_EVERY_TOKENS', value: string(usageAlertEveryTokens) }
   { name: 'REDIS_URL', secretRef: 'redis-url' }
   { name: 'AZURE_STORAGE_CONNECTION_STRING', secretRef: 'queue-connection' }
   { name: 'TELEGRAM_BOT_TOKEN', secretRef: 'telegram-bot-token' }
@@ -222,12 +287,15 @@ var providerEnv = concat(
   empty(maritacaApiKey) ? [] : [ { name: 'MARITACA_API_KEY', secretRef: 'maritaca-api-key' } ],
   empty(langfusePublicKey) ? [] : [ { name: 'LANGFUSE_PUBLIC_KEY', secretRef: 'langfuse-public-key' } ],
   empty(langfuseSecretKey) ? [] : [ { name: 'LANGFUSE_SECRET_KEY', secretRef: 'langfuse-secret-key' } ],
-  [ { name: 'LANGFUSE_HOST', value: langfuseHost } ]
+  [ { name: 'LANGFUSE_HOST', value: langfuseHost } ],
+  empty(jevApiKey) ? [] : [ { name: 'JEV_API_KEY', secretRef: 'jev-api-key' } ],
+  correctionMode == 'hibrido' ? [ { name: 'HYBRID_ARTIFACTS_URL', secretRef: 'hybrid-artifacts-url' } ] : []
 )
 var allEnv = concat(baseEnv, webhookSecretEnv, providerEnv)
 
 // ── Container App ────────────────────────────────────────────────────────────
-resource app 'Microsoft.App/containerApps@2024-03-01' = {
+// API 2025-01-01: GA que já aceita scale.cooldownPeriod (a 2024-03-01 não aceita).
+resource app 'Microsoft.App/containerApps@2025-01-01' = {
   name: appName
   location: location
   properties: {
@@ -238,6 +306,14 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
         external: true
         targetPort: 8000
         transport: 'auto'
+        // Com ao menos uma regra Allow, toda origem fora da lista é recusada pela plataforma (antes do app).
+        ipSecurityRestrictions: [
+          for (cidr, i) in ingressAllowedCidrs: {
+            name: 'permitido-${i}'
+            ipAddressRange: cidr
+            action: 'Allow'
+          }
+        ]
       }
       secrets: allSecrets
       registries: registries
@@ -257,6 +333,7 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
       scale: {
         minReplicas: minReplicas
         maxReplicas: maxReplicas
+        cooldownPeriod: cooldownSeconds
         rules: [
           {
             // Acorda o contêiner do 0 quando chega o webhook (cold-start).
@@ -294,3 +371,4 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
 output fqdn string = app.properties.configuration.ingress.fqdn
 output appUrl string = 'https://${app.properties.configuration.ingress.fqdn}'
 output storageAccountNameOut string = storageAccount.name
+output artifactsContainerOut string = artifactsContainer.name

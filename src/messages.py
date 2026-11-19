@@ -8,17 +8,53 @@ WhatsApp — todos os títulos aqui respeitam isso.
 
 # ── Consentimento (LGPD — alunos são menores de idade) ─────────────────────
 
-CONSENT_REQUEST = (
-    "Olá! 👋 Eu sou o *Corretor ENEM*, um assistente que corrige redações "
-    "no modelo do ENEM, com nota estimada por competência e dicas de melhoria.\n\n"
+# Serviços externos por onde a redação passa: o termo precisa nomeá-los (LGPD — transparência e transferência
+# internacional). O handler escolhe a variante pelo CORRECTION_MODE e preenche {llm} com o rótulo do provedor.
+LLM_PROVIDER_LABELS = {
+    "deepseek": "*DeepSeek* (China)",
+    "gemini": "*Gemini* (Google, EUA)",
+    "claude": "*Claude* (Anthropic, EUA)",
+    "openai": "*ChatGPT* (OpenAI, EUA)",
+    "maritaca": "*Sabiá* (Maritaca AI, Brasil)",
+}
+
+_CONSENT_INTRO = (
+    "Olá! 👋 Eu sou o *Corretor ENEM*: corrijo redações no modelo do ENEM, com "
+    "nota estimada por competência e dicas de melhoria.\n\n"
     "Antes de começar, preciso do seu aceite:\n"
-    "• Vou processar o *texto da sua redação* e o *tema* que você enviar, "
-    "apenas para gerar a correção.\n"
-    "• A foto é descartada logo após a leitura — *nada fica guardado* depois "
-    "da correção (só um contador de uso diário).\n"
-    "• A correção é feita por inteligência artificial e a nota é uma "
-    "*estimativa* — não substitui a avaliação oficial.\n\n"
-    "Você aceita?"
+)
+# {minutos} = FLOW_TTL_SECONDS em minutos (preenchido no handler): o estado da conversa expira no próprio Redis.
+_CONSENT_STORAGE = (
+    "• Eu descarto a foto logo depois da leitura. Enquanto a correção não "
+    "termina, o texto lido fica guardado por até {minutos} minutos num banco de "
+    "dados em São Paulo. Depois da correção eu apago tudo: só ficam o registro "
+    "do seu aceite e contadores de uso diário. Os serviços externos podem "
+    "manter cópias por um tempo, conforme as regras de cada um.\n"
+)
+_CONSENT_OUTRO = "• Se você tem menos de 18 anos, leia este aviso com um responsável.\n\nVocê aceita?"
+
+# Modo híbrido: a nota vem do modelo de machine learning (sobre as respostas do Jev) e o LLM só escreve o feedback.
+CONSENT_REQUEST_HIBRIDO = (
+    _CONSENT_INTRO
+    + "• Para corrigir, sua redação passa por três serviços externos: o *Mistral* "
+    "(França) lê a foto, o *Jev* (TypeSafe AI, EUA) analisa o texto e o {llm} "
+    "escreve os comentários.\n"
+    + _CONSENT_STORAGE
+    + "• A nota vem de um modelo de aprendizado de máquina treinado com milhares de "
+    "redações reais corrigidas, e os comentários são escritos por inteligência "
+    "artificial. A nota é uma *estimativa*: não substitui a avaliação oficial.\n"
+    + _CONSENT_OUTRO
+)
+
+# Modo llm: o próprio LLM dá a nota e escreve o feedback (o Jev não é usado).
+CONSENT_REQUEST_LLM = (
+    _CONSENT_INTRO
+    + "• Para corrigir, sua redação passa por dois serviços externos: o *Mistral* "
+    "(França) lê a foto e o {llm} faz a correção.\n"
+    + _CONSENT_STORAGE
+    + "• A correção é feita por inteligência artificial e a nota é uma "
+    "*estimativa*: não substitui a avaliação oficial.\n"
+    + _CONSENT_OUTRO
 )
 
 CONSENT_BTN_YES = {"id": "consent_yes", "title": "Aceito ✅"}
@@ -209,12 +245,24 @@ CORRECTING = (
     "ENEM — isso leva um minutinho..."
 )
 
+_FOOTER_NEXT = (
+    "_Quer corrigir outra redação (ou uma nova versão desta)? É só tocar no "
+    "botão ou mandar /corrigir._"
+)
+
 CORRECTION_FOOTER = (
     "\n\n─────────────\n"
     "_🤖 Correção automática por IA. A nota é uma estimativa: no ENEM oficial, "
-    "sua redação é avaliada por dois corretores humanos._\n"
-    "_Quer corrigir outra redação (ou uma nova versão desta)? É só tocar no "
-    "botão ou mandar /corrigir._"
+    "sua redação é avaliada por dois corretores humanos._\n" + _FOOTER_NEXT
+)
+
+# Modo híbrido: a nota é do modelo de machine learning, não do LLM.
+CORRECTION_FOOTER_HIBRIDO = (
+    "\n\n─────────────\n"
+    "_🤖 Nota calculada por um modelo de machine learning treinado com milhares de "
+    "redações reais corrigidas; os comentários são escritos por IA. A nota é uma "
+    "estimativa: no ENEM oficial, sua redação é avaliada por dois corretores "
+    "humanos._\n" + _FOOTER_NEXT
 )
 
 CORRECTION_FAILED = (
@@ -229,6 +277,13 @@ RATE_LIMITED = (
     "feedback que já recebeu! 💪"
 )
 
+PHOTO_LIMIT_REACHED = (
+    "Você já mandou {limit} fotos hoje, o máximo do dia. 📸⏳\n\n"
+    "Cada foto passa por uma leitura automática que tem custo, por isso o "
+    "limite é de {per_essay} fotos para cada correção do dia. Amanhã você "
+    "pode mandar de novo!"
+)
+
 # ── Diversos ────────────────────────────────────────────────────────────────
 
 CANCELLED = "Correção cancelada. 🗑️ Quando quiser recomeçar, é só mandar /corrigir."
@@ -241,4 +296,21 @@ PHOTO_UNEXPECTED = (
 UNSUPPORTED_MESSAGE = (
     "Por enquanto eu só trabalho com *texto* e *foto de redação*. 🙂\n\n"
     "Manda /corrigir para começar uma correção!"
+)
+
+# ── Alerta de uso (para o dono do bot, não para o aluno) ────────────────────
+# Mandado por src/usage_alerts.py ao ADMIN_TELEGRAM_CHAT_ID a cada USAGE_ALERT_EVERY_TOKENS tokens do LLM.
+
+PROVIDER_NAMES = {
+    "deepseek": "DeepSeek",
+    "gemini": "Gemini",
+    "claude": "Claude",
+    "openai": "OpenAI",
+    "maritaca": "Maritaca",
+}
+
+USAGE_ALERT = (
+    "📊 *Alerta de uso do Corretor ENEM*\n\n"
+    "O {provider} passou de *{milestone} tokens*.\n"
+    "Acumulado: {total} tokens em {calls} correções, cerca de US$ {cost}."
 )

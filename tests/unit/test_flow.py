@@ -61,7 +61,9 @@ class TestConsentGate:
 
 
 class TestHappyPath:
-    def test_full_flow_delivers_feedback_and_clears_state(self, channel):
+    def test_full_flow_delivers_feedback_and_clears_state(self, channel, monkeypatch):
+        monkeypatch.setattr(settings, "CORRECTION_MODE", "llm")
+
         async def scenario():
             await _advance_to_confirming(channel)
             await handlers.handle_message(channel, button_msg("confirm_correct"))
@@ -428,3 +430,79 @@ class TestCommands:
 
         run(scenario())
         assert any(s[0] == "buttons" and s[1] == m.PHOTO_UNEXPECTED for s in channel.sent)
+
+
+class TestTermoERodape:
+    """O termo nomeia os serviços externos por onde a redação passa (LGPD) e o rodapé diz de onde vem a nota."""
+
+    def test_termo_hibrido_nomeia_os_tres_servicos(self, channel, monkeypatch):
+        monkeypatch.setattr(settings, "CORRECTION_MODE", "hibrido")
+        monkeypatch.setattr(settings, "CORRECTION_PROVIDER", "deepseek")
+        run(handlers.handle_message(channel, text_msg("oi")))
+        _, body, _ = channel.sent[0]
+        for trecho in ("Mistral", "França", "Jev", "TypeSafe AI, EUA", "DeepSeek", "China", "aprendizado de máquina"):
+            assert trecho in body
+        # O prazo do texto no banco vem do TTL real do estado (expira no próprio Redis).
+        assert f"até {settings.FLOW_TTL_SECONDS // 60} minutos" in body and "registro do seu aceite" in body
+        assert "{" not in body and "}" not in body
+
+    def test_termo_llm_cita_o_provedor_e_nao_o_jev(self, channel, monkeypatch):
+        monkeypatch.setattr(settings, "CORRECTION_MODE", "llm")
+        monkeypatch.setattr(settings, "CORRECTION_PROVIDER", "gemini")
+        run(handlers.handle_message(channel, text_msg("oi")))
+        _, body, _ = channel.sent[0]
+        assert "Gemini" in body and "Mistral" in body
+        assert "Jev" not in body and "aprendizado de máquina" not in body
+        assert "{" not in body
+
+    def test_rodape_hibrido_cita_machine_learning(self, channel, monkeypatch):
+        monkeypatch.setattr(settings, "CORRECTION_MODE", "hibrido")
+
+        async def scenario():
+            await _advance_to_confirming(channel)
+            await handlers.handle_message(channel, button_msg("confirm_correct"))
+
+        run(scenario())
+        texts = [s[1] for s in channel.sent if s[0] == "text"]
+        assert any(m.CORRECTION_FOOTER_HIBRIDO in t for t in texts)
+        assert "machine learning" in m.CORRECTION_FOOTER_HIBRIDO
+
+
+class TestPhotoLimit:
+    """Cada foto é uma leitura paga do OCR: PHOTOS_PER_ESSAY por correção permitida no dia."""
+
+    def test_foto_alem_do_limite_e_barrada_sem_chamar_o_ocr(self, channel, monkeypatch):
+        monkeypatch.setattr(settings, "ESSAY_DAILY_LIMIT", 2)
+        monkeypatch.setattr(settings, "PHOTOS_PER_ESSAY", 3)
+        ocr_calls = 0
+
+        async def counting_ocr(image_bytes, mime_type="image/jpeg"):
+            nonlocal ocr_calls
+            ocr_calls += 1
+            return OcrResult(text=FAKE_OCR_TEXT)
+
+        monkeypatch.setattr(handlers, "ocr_image", counting_ocr)
+
+        async def scenario():
+            await _advance_to_confirming(channel)  # 1ª foto
+            for _ in range(6):  # 2ª a 7ª: refaz e manda de novo, sem nunca confirmar
+                await handlers.handle_message(channel, button_msg("redo_photo"))
+                await handlers.handle_message(channel, image_msg())
+
+        run(scenario())
+        texts = [s[1] for s in channel.sent if s[0] == "text"]
+        assert ocr_calls == 6  # a 7ª não chegou ao OCR
+        assert texts[-1] == m.PHOTO_LIMIT_REACHED.format(limit=6, per_essay=3)
+
+    def test_correcoes_nao_consomem_o_limite_de_fotos(self, channel, monkeypatch):
+        monkeypatch.setattr(settings, "ESSAY_DAILY_LIMIT", 2)
+        monkeypatch.setattr(settings, "PHOTOS_PER_ESSAY", 3)
+
+        async def scenario():
+            for _ in range(2):  # 2 correções com 1 foto cada = 2 leituras de 6
+                await _advance_to_confirming(channel)
+                await handlers.handle_message(channel, button_msg("confirm_correct"))
+
+        run(scenario())
+        texts = [s[1] for s in channel.sent if s[0] == "text"]
+        assert not any("fotos hoje" in t for t in texts)

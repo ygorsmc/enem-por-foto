@@ -28,7 +28,13 @@ from src.flow.states import (
     load_flow,
     save_flow,
 )
-from src.rate_limit import check_and_increment, daily_count_key, has_quota
+from src.rate_limit import (
+    check_and_increment,
+    consume_photo_read,
+    daily_count_key,
+    daily_photo_limit,
+    has_quota,
+)
 from src.redis_client import get_redis
 
 logger = structlog.get_logger(__name__)
@@ -51,6 +57,22 @@ def _merge_flagged(existing: list[str], new: list[str]) -> list[str]:
             seen.add(w.lower())
             merged.append(w)
     return merged[:MAX_FLAGGED_WORDS_STORED]
+
+
+def _consent_text() -> str:
+    """Termo de consentimento do modo e do provedor em uso: nomeia os serviços por onde a redação passa."""
+    hibrido = settings.CORRECTION_MODE == "hibrido"
+    template = m.CONSENT_REQUEST_HIBRIDO if hibrido else m.CONSENT_REQUEST_LLM
+    provider = settings.CORRECTION_PROVIDER
+    return template.format(
+        llm=m.LLM_PROVIDER_LABELS.get(provider, f"*{provider}*"),
+        minutos=settings.FLOW_TTL_SECONDS // 60,
+    )
+
+
+def _correction_footer() -> str:
+    """No modo híbrido a nota vem do modelo de machine learning; no modo llm, do próprio LLM."""
+    return m.CORRECTION_FOOTER_HIBRIDO if settings.CORRECTION_MODE == "hibrido" else m.CORRECTION_FOOTER
 
 
 def _button_id(msg: InboundMessage) -> str | None:
@@ -81,7 +103,7 @@ async def handle_message(channel: IMessagingChannel, msg: InboundMessage) -> Non
         elif btn == "consent_no":
             await channel.send_text(sender, m.CONSENT_DECLINED)
         else:
-            await channel.send_buttons(sender, m.CONSENT_REQUEST, [m.CONSENT_BTN_YES, m.CONSENT_BTN_NO])
+            await channel.send_buttons(sender, _consent_text(), [m.CONSENT_BTN_YES, m.CONSENT_BTN_NO])
         return
 
     # ── Comandos globais (valem em qualquer estado) ──────────────────────────
@@ -180,6 +202,13 @@ async def _process_essay_photo(
 
     if not await has_quota(ch, sender):
         await channel.send_text(sender, m.RATE_LIMITED.format(limit=settings.ESSAY_DAILY_LIMIT))
+        return
+    # Cada foto é uma leitura paga do OCR: conta antes de chamar (inclusive as que falharem).
+    if not await consume_photo_read(ch, sender):
+        await channel.send_text(
+            sender,
+            m.PHOTO_LIMIT_REACHED.format(limit=daily_photo_limit(), per_essay=settings.PHOTOS_PER_ESSAY),
+        )
         return
 
     await channel.send_text(sender, m.ESSAY_PROCESSING)
@@ -360,7 +389,7 @@ async def _run_correction(channel: IMessagingChannel, sender: str, flow: FlowDat
     # Estado morre ANTES da entrega: se o envio falhar no meio dos chunks, o
     # aluno recomeça limpo em vez de ficar preso num CONFIRMING fantasma.
     await clear_flow(ch, sender)
-    await channel.send_text(sender, feedback + m.CORRECTION_FOOTER)
+    await channel.send_text(sender, feedback + _correction_footer())
     await channel.send_buttons(sender, "Quer corrigir outra redação?", [m.BTN_START])
     task_ms = round((time.perf_counter() - t_task) * 1000)
     logger.info(

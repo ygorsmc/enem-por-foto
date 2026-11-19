@@ -38,6 +38,13 @@ _client: Mistral | None = None
 # mistral-ocr-4 (2026-11-17). Redação de verdade não tem 15 dígitos seguidos nem lista de 15 números.
 _DEGENERATE_RE = re.compile(r"\d{15,}|(?:\d{1,3}\s*,\s*){15,}")
 
+# O OCR 4.x às vezes devolve a redação como tabela markdown de UMA coluna: cada parágrafo em "| … |" e uma
+# linha "| --- |" depois do primeiro. As barras são marcação do OCR, não texto do aluno: removê-las não altera
+# nada do que ele escreveu (invariante 5) e deixa a prévia, o LLM e o modo híbrido com parágrafos limpos.
+# Linhas com mais de uma célula ("| 1 | texto |", linhas numeradas de modelos antigos) ficam como estão.
+_ONE_COLUMN_ROW_RE = re.compile(r"^\|(?P<cell>[^|]*)\|$")
+_ONE_COLUMN_SEPARATOR_RE = re.compile(r"^\|\s*:?-{3,}:?\s*\|$")
+
 
 class OcrDegenerateError(ValueError):
     """A leitura veio com lixo do modelo. Repetir não adianta (mesmos bytes → mesma saída): nova foto."""
@@ -45,6 +52,28 @@ class OcrDegenerateError(ValueError):
 
 def looks_degenerate(text: str) -> bool:
     return bool(_DEGENERATE_RE.search(text))
+
+
+def unwrap_single_column_table(text: str) -> str:
+    """Tabela markdown de uma coluna → um parágrafo por linha da tabela (separados por linha em branco)."""
+    out: list[str] = []
+    changed = False
+    for line in text.splitlines():
+        stripped = line.strip()
+        if _ONE_COLUMN_SEPARATOR_RE.match(stripped):
+            changed = True
+            continue
+        row = _ONE_COLUMN_ROW_RE.match(stripped)
+        if row:
+            changed = True
+            cell = row.group("cell").strip()
+            if cell:
+                out.extend([cell, ""])
+            continue
+        out.append(line)
+    if not changed:
+        return text
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(out)).strip()
 
 
 @dataclass
@@ -115,6 +144,7 @@ async def ocr_image(image_bytes: bytes, mime_type: str = "image/jpeg") -> OcrRes
     text = "\n\n".join(
         p.markdown for p in resp.pages if getattr(p, "markdown", "")
     ).strip()
+    text = unwrap_single_column_table(text)
     if looks_degenerate(text):
         logger.warning("ocr_degenerate_output", model=settings.OCR_MODEL, chars=len(text))
         raise OcrDegenerateError(f"leitura degenerada do {settings.OCR_MODEL}")

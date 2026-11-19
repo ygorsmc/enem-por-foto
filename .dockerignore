@@ -10,6 +10,9 @@ deploy
 docs
 scripts
 tests
+# Modelo do modo híbrido: nunca na imagem (pacote público). Local: montado pelo
+# docker-compose; nuvem: Blob privado, baixado pelo app (ver deploy/deploy.sh).
+src/correction/hybrid/artifacts
 
 .env
 .env.*

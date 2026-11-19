@@ -4,6 +4,16 @@
 
 Bot multicanal (**WhatsApp + Telegram**) que corrige redações do ENEM a partir de uma **foto do manuscrito**: o aluno informa o tema, cola os textos motivadores (se tiver) e manda a foto — e recebe de volta a nota estimada (0 a 1000) por competência, com feedback pedagógico citando trechos exatos do próprio texto.
 
+## Teste o bot
+
+Ele está no ar no Telegram: **[@asn_corretor_bot](https://t.me/asn_corretor_bot)**. Mande `/start`, aceite o termo e siga os passos: tema, textos motivadores (opcional) e a foto da redação.
+
+- **Limites por conta:** 2 correções e 6 fotos por dia (3 fotos para cada correção).
+- **A primeira mensagem pode levar ~45 s:** o bot desliga depois de 10 minutos sem uso e precisa acordar. Depois responde na hora, e cada correção leva cerca de 1 minuto.
+- **De onde vem a nota:** de um modelo de machine learning treinado com milhares de redações corrigidas ([modo híbrido](#modo-híbrido-experimental)); o comentário é escrito por IA.
+- **Para onde vai a redação:** o Mistral (França) lê a foto, o Jev (TypeSafe AI, EUA) analisa o texto e o DeepSeek (China) escreve o comentário. A foto é descartada logo após a leitura e nada fica guardado depois da correção; esses serviços podem manter cópias conforme as regras de cada um.
+- A nota é uma **estimativa**: no ENEM oficial, a redação é avaliada por dois corretores humanos.
+
 
 ## Como funciona
 
@@ -29,7 +39,7 @@ Aluno                    Bot
 
 1. **Tema e textos motivadores** entram como texto digitado (o OCR fica reservado para a redação); os motivadores são opcionais.
 2. **A foto da redação** (até 3 imagens, frente/verso) chega ao webhook, que apenas valida, responde `200` em <200 ms (SLA da Meta) e despacha o trabalho pesado — download da mídia, OCR e LLM — para uma task asyncio. Nunca no handler HTTP.
-3. **O OCR** (Mistral `mistral-ocr-2512`, versão fixa) transcreve só a foto da redação. Em seguida a **foto é descartada**: apenas o texto segue adiante.
+3. **O OCR** (Mistral `mistral-ocr-latest`) transcreve só a foto da redação. Em seguida a **foto é descartada**: apenas o texto segue adiante.
 4. **Preview e edição manual**: o aluno vê a transcrição com as palavras de baixa confiança destacadas e pode ajustar o que a letra difícil fez o OCR errar; o bot ecoa a versão final para confirmação antes de corrigir.
 5. **A correção** vai para um LLM com prompt de corretor especialista baseado na Matriz de Referência do INEP (5 competências, triagem de nota zero, checklist da proposta de intervenção). Volta a nota estimada por competência (0–200 cada; 0–1000 no total) e o feedback citando trechos, formatado para o mensageiro (sem tabelas/`#`). No [modo híbrido](#modo-híbrido-experimental), a nota vem de um modelo de ML e o LLM só escreve o feedback.
 
@@ -106,7 +116,7 @@ Medido nas **mesmas 50 redações**, sorteadas do teste oficial, com o código e
 | Erro médio na nota total (MAE) | 122 pontos | **106** pontos |
 | Viés nas redações de 720 ou mais | −111 | **−3** |
 | Viés nas redações de até 440 | +102 | +89 |
-| Mesma redação corrigida 3 vezes ¹ | nota idêntica em 23% (diferença média de 55 pontos) | nota idêntica em **93–97%** (1–3 pontos) |
+| Mesma redação corrigida de novo ¹ | nota idêntica em 23%; diferença média de 55 pontos, até 240 | nota idêntica em **93%**; diferença média de **3** pontos, até 40 |
 | Tokens de saída do LLM | 10,4 mil | **8,4 mil** |
 | Tempo médio do LLM | 59 s | **49 s** |
 | Custo por correção, fora do pico ² | US$ 0,0064 | **US$ 0,0056** (com o Jev) |
@@ -114,11 +124,12 @@ Medido nas **mesmas 50 redações**, sorteadas do teste oficial, com o código e
 | O que precisa | 1 API (LLM) | 2 APIs (Jev e LLM) e o modelo treinado (28 MB) |
 | Para onde vai o texto da redação | provedor do LLM | provedor do LLM **e** API do Jev |
 
-¹ Medido em testes anteriores (o LLM em 30 redações, 3 vezes cada; o modelo com o Jev respondendo de novo).
+¹ Reteste em 30 redações do teste, com o texto digitado (sem foto): o LLM corrigiu cada uma 3 vezes (DeepSeek V4 Flash, raciocínio `max`, antes do V4.1); no híbrido, o Jev respondeu 2 vezes e o modelo deu a nota (versão treinada em 600 redações, com a calibração de produção). Tabela completa e ressalvas na página de métricas, em "O modo híbrido resolve a instabilidade".
 ² Tabela oficial do `deepseek-flash` e tokens medidos, com 90% da entrada vindo do cache; sem o OCR, igual nos dois modos (US$ 0,004 por foto acima da cota gratuita). O pico é o horário comercial da China, que no Brasil cai no fim da noite e de madrugada; fora dele, o DeepSeek cobra metade.
 
 Como ler a tabela:
 - **A diferença na concordância é real:** +0,13 no QWK total, com intervalo de confiança de 95% entre +0,03 e +0,23. A diferença no erro médio (−16 pontos) ainda não é conclusiva com 50 redações: o híbrido errou menos em 20, mais em 11 e empatou em 19 (p = 0,15).
+- **Estabilidade:** reenviar a mesma redação quase não muda a nota no híbrido. O modelo é determinístico (as mesmas respostas do Jev dão sempre a mesma nota), e as respostas do Jev mudam pouco entre execuções. No só LLM, 1 em cada 3 redações mudou 80 pontos ou mais só por ser corrigida de novo; no híbrido, nenhuma.
 - **Onde o híbrido ganha:** nas notas altas e médias. O LLM puxa as boas redações para baixo (−111 nas de 720 ou mais), e o modelo, não. Nas redações fracas, os dois superestimam.
 - **Um falso zero:** a regra de nota zero do híbrido zerou 1 das 50 redações (nota real 400), e ela está incluída. Sem ela, o erro médio do híbrido cai para 100.
 - **Custo:** com o mesmo nível de raciocínio, o híbrido sai ~12% mais barato e 10 s mais rápido. Com raciocínio `max` (o padrão do código até 17/11/2026; hoje é `high`), o modo só LLM gera ~19 mil tokens de saída (≈ US$ 0,012 por correção fora do pico) sem ganho de acurácia medido.
@@ -134,22 +145,27 @@ CORRECTION_MODEL=deepseek-flash
 CORRECTION_EFFORT=high
 ```
 
-Os **artefatos do modelo** (`src/correction/hybrid/artifacts/`: o modelo treinado, as perguntas do Jev e os cortes do checklist) **não estão neste repositório**; são gerados pelo script de treino do laboratório, que também fica fora. Sem eles, use o modo padrão (`llm`). As versões de `numpy`, `scipy`, `scikit-learn` e `joblib` em `requirements.txt` são fixas porque precisam ser as mesmas do treino.
+Os **artefatos do modelo** (`src/correction/hybrid/artifacts/`: o modelo treinado, as perguntas do Jev e os cortes do checklist) **não estão neste repositório nem na imagem Docker**; são gerados pelo script de treino do laboratório, que também fica fora. Sem eles, use o modo padrão (`llm`). Localmente, o `docker-compose` monta a pasta no contêiner, só para leitura. No deploy, o `deploy.sh` envia os arquivos para um contêiner privado do Blob Storage, e o app os baixa por um link SAS só de leitura (ver [deploy/README.md](deploy/README.md)). As versões de `numpy`, `scipy`, `scikit-learn` e `joblib` em `requirements.txt` são fixas porque precisam ser as mesmas do treino.
 
 ## Custo e observabilidade
 
 - **Custo em US$ de cada chamada paga** no log estruturado: `cost_usd` em `essay_corrected_openai_compatible_usage` (LLM) e em `jev_answered` (Jev), com os tokens por tipo (em cache, fora do cache, saída, raciocínio). A tabela de preços fica em `src/correction/pricing.py`. O DeepSeek cobra o dobro no horário de pico (dias úteis, 01h–04h e 06h–10h UTC, ou seja, 22h–1h e 3h–7h em Brasília), e o log registra a faixa de cada chamada (`price_window`). Modelos sem tabela registram só os tokens.
 - **Langfuse (opcional):** com `LANGFUSE_PUBLIC_KEY` e `LANGFUSE_SECRET_KEY` (o plano Hobby do Langfuse Cloud é gratuito), cada correção vira um trace com uma observação por chamada paga, e o painel soma tokens e custo por dia, modelo e modo. Sem as chaves, o SDK nem é carregado.
+- **Travas de custo para o bot aberto ao público:**
+  - **Fotos por dia:** `PHOTOS_PER_ESSAY` (3) por correção permitida. Cada foto é uma leitura paga do OCR, e o contador de correção só sobe na confirmação.
+  - **Teto de saída do LLM:** `LLM_MAX_OUTPUT_TOKENS` (32 mil, raciocínio incluído; o dobro do máximo medido em 100 correções). Sem ele, uma imagem com instruções para "escrever sem parar" levaria a chamada ao limite da API.
+  - **Alerta de uso:** com `ADMIN_TELEGRAM_CHAT_ID`, o bot avisa o dono no Telegram a cada `USAGE_ALERT_EVERY_TOKENS` (1 milhão, ~60 correções) tokens do LLM, com o custo acumulado (`src/usage_alerts.py`). Só contadores agregados, nada do aluno.
+  - **Entrada só do Telegram:** no deploy, o app só aceita requisições das faixas de IP de onde o Telegram chama webhooks; ninguém mais consegue acordar a réplica.
 - **O Langfuse recebe só números:** modelo, tokens, custo, tempo e o modo de correção; nunca o texto da redação, o tema, o feedback nem identificador do aluno. Ele também usa um provedor de OpenTelemetry próprio, e não o global: com o global, o SDK do Mistral passaria a gerar spans das chamadas de OCR, que levam a foto, e o Langfuse os exportaria. Ver `src/observability.py`.
 
 ## LGPD (o público é menor de idade)
 
-- **Consentimento explícito** no primeiro contato, antes de qualquer processamento.
+- **Consentimento explícito** no primeiro contato, antes de qualquer processamento. O termo nomeia os serviços externos por onde a redação passa e o país de cada um (Mistral, França; Jev, EUA, no modo híbrido; o provedor do LLM), avisa que eles podem manter cópias conforme as regras próprias e pede que menores de 18 leiam com um responsável.
 - A **foto é descartada** logo após o OCR; o texto transcrito vive apenas no estado Redis, que **expira em 45 min**. Nada persiste após a correção (não há histórico).
 - No **modo híbrido**, o texto da redação (nunca a foto) também é enviado à API do Jev (TypeSafe AI). Confira os termos de tratamento de dados do provedor antes de usar esse modo com alunos.
 - O **Langfuse**, se ligado, recebe só números de uso e custo (ver [Custo e observabilidade](#custo-e-observabilidade)).
 - O feedback deixa claro que a correção é feita por IA e que a nota é uma **estimativa** (no ENEM oficial são dois corretores humanos).
-- Rate-limit diário (`ESSAY_DAILY_LIMIT`, default 2) — controle de custo do fluxo OCR + LLM.
+- Rate-limit diário (`ESSAY_DAILY_LIMIT`, default 2, e `PHOTOS_PER_ESSAY` fotos por correção) — controle de custo do fluxo OCR + LLM.
 
 ## Rodando local
 
@@ -259,7 +275,8 @@ scripts de laboratório não fazem parte deste repositório.
 │   ├── observability.py             # Langfuse opcional: tokens e custo por chamada, só números
 │   ├── messages.py                  # toda a copy de UX (nenhuma string solta no flow/)
 │   ├── prompts.py                    # prompt do corretor ENEM (Matriz do INEP; str.format, nunca f-string)
-│   ├── rate_limit.py                  # limite diário de correções por aluno
+│   ├── rate_limit.py                  # limites diários por aluno (correções e fotos)
+│   ├── usage_alerts.py                # alerta de uso ao dono no Telegram a cada N tokens do LLM
 │   ├── redis_client.py                 # conexão + idempotência de webhook
 │   │
 │   ├── channels/                        # IMessagingChannel — canais plugáveis
@@ -292,5 +309,5 @@ scripts de laboratório não fazem parte deste repositório.
 │   └── simulate.py            # REPL de conversa com canal fake — E2E local sem provedor real
 │
 └── tests/
-    └── unit/                     # 110 testes puros — FakeRedis + FakeChannel, sem I/O
+    └── unit/                     # 144 testes puros — FakeRedis + FakeChannel, sem I/O
 ```

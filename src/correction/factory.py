@@ -24,7 +24,13 @@ def get_corrector(provider: str | None = None) -> ICorrector:
         elif p == "openai":
             from src.correction.providers.openai_compatible import OpenAICompatibleCorrector
 
-            _correctors[p] = OpenAICompatibleCorrector("openai", settings.OPENAI_API_KEY, settings.CORRECTION_MODEL)
+            _correctors[p] = OpenAICompatibleCorrector(
+                "openai",
+                settings.OPENAI_API_KEY,
+                settings.CORRECTION_MODEL,
+                max_output_tokens=settings.LLM_MAX_OUTPUT_TOKENS,
+                max_tokens_param="max_completion_tokens",  # modelos de raciocínio da OpenAI recusam max_tokens
+            )
         elif p == "deepseek":
             from src.correction.providers.openai_compatible import OpenAICompatibleCorrector
 
@@ -34,6 +40,7 @@ def get_corrector(provider: str | None = None) -> ICorrector:
                 settings.CORRECTION_MODEL,
                 base_url="https://api.deepseek.com",
                 reasoning_effort=settings.CORRECTION_EFFORT,
+                max_output_tokens=settings.LLM_MAX_OUTPUT_TOKENS,
             )
         elif p == "maritaca":
             from src.correction.providers.openai_compatible import OpenAICompatibleCorrector

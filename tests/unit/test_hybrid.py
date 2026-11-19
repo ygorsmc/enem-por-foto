@@ -215,3 +215,78 @@ class TestModeDispatch:
         monkeypatch.setattr(pipeline, "correct_hybrid", fake_hybrid)
         assert run(corrector.correct_essay("Tema X", None, "texto")) == "feedback híbrido"
         assert chamado["tema"] == "Tema X"
+
+
+class TestArtifactsDownload:
+    """Nuvem: artefatos baixados do Blob privado por link SAS (src/correction/hybrid/artifacts.py)."""
+
+    SAS = "https://conta.blob.core.windows.net/hybrid-artifacts?sv=2023&sig=SEGREDO"
+
+    def _fake_client(self, monkeypatch, pedidos: list, falha: bool = False):
+        import httpx
+
+        class _Resp:
+            def __init__(self, url):
+                self.url, self.content = url, b"conteudo"
+
+            def raise_for_status(self):
+                if falha:
+                    req = httpx.Request("GET", self.url)
+                    raise httpx.HTTPStatusError("403", request=req, response=httpx.Response(403, request=req))
+
+        class _Client:
+            def __init__(self, **kw):
+                pass
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                return False
+
+            def get(self, url):
+                pedidos.append(url)
+                return _Resp(url)
+
+        monkeypatch.setattr(httpx, "Client", _Client)
+
+    def _setup(self, monkeypatch, tmp_path, url: str):
+        from src.correction.hybrid import artifacts
+
+        monkeypatch.setattr(artifacts, "ARTIFACTS_DIR", tmp_path / "artifacts")
+        monkeypatch.setattr(settings, "HYBRID_ARTIFACTS_URL", url)
+        return artifacts
+
+    def test_sem_link_nao_faz_nada(self, monkeypatch, tmp_path):
+        artifacts = self._setup(monkeypatch, tmp_path, "")
+        pedidos: list = []
+        self._fake_client(monkeypatch, pedidos)
+        assert artifacts.ensure_downloaded() is False and pedidos == []
+
+    def test_baixa_o_que_falta_mantendo_a_assinatura(self, monkeypatch, tmp_path):
+        artifacts = self._setup(monkeypatch, tmp_path, self.SAS)
+        (tmp_path / "artifacts").mkdir()
+        (tmp_path / "artifacts" / "meta.json").write_text("{}")  # já existe: não baixa de novo
+        pedidos: list = []
+        self._fake_client(monkeypatch, pedidos)
+        assert artifacts.ensure_downloaded() is True
+        assert len(pedidos) == 3
+        assert (
+            pedidos[0]
+            == "https://conta.blob.core.windows.net/hybrid-artifacts/model.joblib?sv=2023&sig=SEGREDO"
+        )
+        assert (tmp_path / "artifacts" / "model.joblib").read_bytes() == b"conteudo"
+        assert artifacts.ensure_downloaded() is True and len(pedidos) == 3  # tudo no disco: nenhuma chamada
+
+    def test_falha_nao_deixa_arquivo_pela_metade_nem_vaza_o_link(self, monkeypatch, tmp_path):
+        artifacts = self._setup(monkeypatch, tmp_path, self.SAS)
+        logs: list = []
+        monkeypatch.setattr(
+            artifacts,
+            "logger",
+            type("L", (), {"error": lambda s, ev, **kw: logs.append(kw), "info": lambda s, *a, **k: None})(),
+        )
+        self._fake_client(monkeypatch, [], falha=True)
+        assert artifacts.ensure_downloaded() is False
+        assert list((tmp_path / "artifacts").iterdir()) == []
+        assert logs and "SEGREDO" not in str(logs) and logs[0]["status"] == 403

@@ -30,6 +30,9 @@ _VAZAMENTO = re.compile(r"pista|leitura automática|triagem automática", re.I)
 
 async def grade(tema: str, essay_text: str) -> tuple[list[int], str | None, str]:
     """→ (níveis C1..C5, motivo de zero ou None, texto das pistas para o LLM)."""
+    # Na nuvem, se o download da inicialização falhou (ou o app subiu antes do upload do deploy), tenta de novo
+    # aqui; com os arquivos já no disco é só uma checagem de existência.
+    await asyncio.to_thread(artifacts.ensure_downloaded)
     redacao = normalize_ocr_text(essay_text)
     t0 = time.perf_counter()
     answers = await ask_jev(tema, redacao)

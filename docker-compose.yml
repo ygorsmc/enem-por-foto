@@ -6,6 +6,8 @@ services:
     env_file: .env
     volumes:
       - redis-data:/data
+      # Modelo do modo híbrido: fora da imagem (que é pública), montado do disco só para leitura.
+      - ./src/correction/hybrid/artifacts:/app/src/correction/hybrid/artifacts:ro
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 10s

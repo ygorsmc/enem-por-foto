@@ -34,6 +34,11 @@ async def lifespan(app: FastAPI):
     quando ociosa. O backend "memory" não tem worker (tasks rodam em processo),
     então isso é um no-op nesse caso."""
     worker: asyncio.Task | None = None
+    if settings.CORRECTION_MODE == "hibrido":
+        # Na nuvem, baixa os artefatos do modelo do Blob privado antes de atender (local: já vêm montados).
+        from src.correction.hybrid import artifacts
+
+        await asyncio.to_thread(artifacts.ensure_downloaded)
     if settings.QUEUE_BACKEND == "azure":
         worker = asyncio.create_task(worker_loop())
     yield
@@ -52,6 +57,15 @@ app = FastAPI(title="Corretor ENEM", docs_url=None, redoc_url=None, lifespan=lif
 
 def _setup_logging() -> None:
     logging.basicConfig(level=settings.LOG_LEVEL, format="%(message)s")
+    # Bibliotecas HTTP que logam em INFO cada requisição: silenciadas abaixo de WARNING.
+    #   - httpx/httpcore: a linha "HTTP Request: GET <url>" leva a URL INTEIRA, e as nossas URLs carregam
+    #     segredo: o token do bot no caminho do Telegram (/bot<token>/sendMessage) e a assinatura do link
+    #     SAS do Blob dos artefatos (?...&sig=...). Visto no Log Analytics em 2026-11-18.
+    #   - azure: o SDK loga cada requisição com os cabeçalhos; com o worker consultando a fila a cada
+    #     QUEUE_POLL_INTERVAL s, afogava os eventos do app (e enchia o Log Analytics).
+    # Avisos e erros dessas bibliotecas continuam aparecendo.
+    for noisy in ("httpx", "httpcore", "azure"):
+        logging.getLogger(noisy).setLevel(logging.WARNING)
     structlog.configure(
         wrapper_class=structlog.make_filtering_bound_logger(
             getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO)

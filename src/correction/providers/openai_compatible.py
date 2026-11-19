@@ -36,7 +36,7 @@ from typing import Any
 import structlog
 from openai import AsyncOpenAI
 
-from src import observability
+from src import observability, usage_alerts
 from src.correction import pricing
 from src.correction.interfaces import ICorrector
 from src.prompts import ENEM_CORRECTION_SYSTEM
@@ -69,12 +69,18 @@ class OpenAICompatibleCorrector(ICorrector):
         model: str,
         base_url: str | None = None,
         reasoning_effort: str | None = None,
+        max_output_tokens: int | None = None,
+        max_tokens_param: str = "max_tokens",
     ) -> None:
+        """`max_output_tokens`: teto de saída por chamada (raciocínio incluído); None = padrão da API.
+        `max_tokens_param`: nome do campo no provedor (DeepSeek: max_tokens; OpenAI: max_completion_tokens)."""
         if not api_key:
             raise ValueError(f"Chave de API não configurada para o provedor '{provider_name}'.")
         self.provider_name = provider_name
         self._model = model
         self._reasoning_effort = reasoning_effort
+        self._max_output_tokens = max_output_tokens
+        self._max_tokens_param = max_tokens_param
         self._client = AsyncOpenAI(api_key=api_key, base_url=base_url)
 
     async def correct(self, input_block: str) -> str:
@@ -82,6 +88,8 @@ class OpenAICompatibleCorrector(ICorrector):
         if self._reasoning_effort:
             extra_kwargs["reasoning_effort"] = self._reasoning_effort
             extra_kwargs["extra_body"] = {"thinking": {"type": "enabled"}}
+        if self._max_output_tokens:
+            extra_kwargs[self._max_tokens_param] = self._max_output_tokens
 
         started = datetime.now(UTC)  # o preço do DeepSeek depende do horário (pico/fora do pico)
         with observability.generation(
@@ -112,7 +120,16 @@ class OpenAICompatibleCorrector(ICorrector):
             cost_usd=round(cost["total"], 6) if cost else None,
             price_window=window,
         )
+        await usage_alerts.record_llm_usage(self.provider_name, tokens.get("total", 0), cost["total"] if cost else None)
 
+        if getattr(response.choices[0], "finish_reason", None) == "length":
+            # Bateu no teto de saída: o feedback chega cortado. Raro com 32 mil (2× o máximo medido).
+            logger.warning(
+                "llm_output_truncated",
+                provider=self.provider_name,
+                model=self._model,
+                max_output_tokens=self._max_output_tokens,
+            )
         text = response.choices[0].message.content
         if not text:
             raise ValueError("Resposta vazia do modelo de correção")
