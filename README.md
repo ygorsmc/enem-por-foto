@@ -2,7 +2,7 @@
 
 <p><a href="https://github.com/ygorsmc/enem-por-foto/actions/workflows/ci.yml"><img src="https://github.com/ygorsmc/enem-por-foto/actions/workflows/ci.yml/badge.svg" alt="CI"></a> <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a></p>
 
-Bot multicanal (**WhatsApp + Telegram**) que corrige redações do ENEM a partir de uma **foto do manuscrito**: o aluno informa o tema, cola os textos motivadores (se tiver) e manda a foto (ou digita o texto) — e recebe de volta a nota estimada (0 a 1000) por competência, com feedback pedagógico citando trechos exatos do próprio texto.
+Bot multicanal (**WhatsApp + Telegram**) que corrige redações do ENEM a partir de uma **foto do manuscrito**: o aluno informa o tema, cola os textos motivadores (se tiver) e manda a foto (ou digita o texto) — e recebe de volta a nota estimada (0 a 1000) por competência, dada por um modelo de machine learning ou pela IA generativa (o aluno escolhe), com feedback pedagógico citando trechos exatos do próprio texto.
 
 ## Teste o bot
 
@@ -10,8 +10,8 @@ Ele está no ar no Telegram: **[@asn_corretor_bot](https://t.me/asn_corretor_bot
 
 - **Limites por conta:** 10 correções e 30 fotos por dia (3 fotos para cada correção). O contador zera à meia-noite UTC (21h em Brasília).
 - **A primeira mensagem pode levar ~45 s:** o bot desliga depois de 10 minutos sem uso e precisa acordar. Depois responde na hora, e cada correção leva cerca de 1 minuto.
-- **De onde vem a nota:** de um modelo de machine learning treinado com milhares de redações corrigidas ([modo híbrido](#modo-híbrido-experimental)); o comentário é escrito por IA.
-- **Para onde vai a redação:** o Mistral (França) lê a foto, o Jev (TypeSafe AI, EUA) analisa o texto e o DeepSeek (China) escreve o comentário. A foto é descartada logo após a leitura e nada fica guardado depois da correção; esses serviços podem manter cópias conforme as regras de cada um.
+- **Você escolhe quem dá a nota:** o **modelo treinado** (machine learning, aprendeu com milhares de redações corrigidas — [modo híbrido](#modo-híbrido-experimental)) ou a **IA generativa** sozinha. Nos dois, o comentário é escrito por IA. Dá para mandar a mesma redação duas vezes e comparar: o modelo quase sempre repete a nota, e a IA varia mais.
+- **Para onde vai a redação:** o Mistral (França) lê a foto, o Jev (TypeSafe AI, EUA) analisa o texto quando a nota é pelo modelo treinado e o DeepSeek (China) escreve o comentário. A foto é descartada logo após a leitura e nada fica guardado depois da correção; esses serviços podem manter cópias conforme as regras de cada um.
 - A nota é uma **estimativa**: no ENEM oficial, a redação é avaliada por dois corretores humanos.
 
 
@@ -38,9 +38,9 @@ O projeto é um **workflow**, não um agente: o código define a ordem das etapa
  ┌───────────────────────────────────────────┐
  │ 3. OCR (Mistral)                          │  a foto é descartada; só o texto segue
  └─────────────────────┬─────────────────────┘
-                       │  o aluno confere o texto (edita, se precisar) e confirma
+                       │  o aluno confere o texto e escolhe quem dá a nota
            ┌───────────┴────────────┐
-       modo llm               modo híbrido
+     IA generativa           modelo treinado
            │                        ▼
            │    ┌───────────────────────────────────────┐
            │    │ 4. Jev: 71 perguntas sobre a redação  │
@@ -50,8 +50,8 @@ O projeto é um **workflow**, não um agente: o código define a ordem das etapa
            │                        │
            ▼                        ▼
  ┌───────────────────────────────────────────┐
- │ 5. LLM (DeepSeek): feedback citando       │  modo llm: o LLM também dá a nota
- │    trechos da própria redação             │  modo híbrido: recebe a nota pronta
+ │ 5. LLM (DeepSeek): feedback citando       │  IA generativa: o LLM também dá a nota
+ │    trechos da própria redação             │  modelo treinado: recebe a nota pronta
  └─────────────────────┬─────────────────────┘
                        ▼
           nota + feedback para o aluno
@@ -73,7 +73,7 @@ Aluno                    Bot
   │◀── preview do OCR ────┤   foto descartada; texto digitado pula o OCR
   │  [Editar texto]       │   opcional: aluno cola o texto ajustado
   │◀── eco p/ confirmar ──┤   (letra difícil → OCR imperfeito)
-  │  [Corrigir agora]     │──▶ LLM + matriz de correção do ENEM
+  │  [Modelo] ou [IA]     │──▶ nota pelo modelo de ML ou pelo LLM
   │◀── nota + feedback ───┤   5 competências, trechos citados
 ```
 
@@ -83,7 +83,7 @@ Aluno                    Bot
 2. **A foto da redação** (até 2 imagens, frente e verso) chega ao webhook, que apenas valida, responde `200` em <200 ms (SLA da Meta) e despacha o trabalho pesado — download da mídia, OCR e LLM — para uma task asyncio. Nunca no handler HTTP.
 3. **O OCR** (Mistral `mistral-ocr-latest`) transcreve só a foto da redação. Em seguida a **foto é descartada**: apenas o texto segue adiante. Sem uma foto boa, o aluno pode **digitar ou colar o texto** no lugar dela: não passa pelo OCR nem gasta leitura de foto, e o bot avisa para manter os erros da folha, porque o corretor automático do celular deixaria a nota de C1 mais alta do que seria.
 4. **Preview e edição manual**: o aluno vê a transcrição com as palavras de baixa confiança destacadas e pode ajustar o que a letra difícil fez o OCR errar; o bot ecoa a versão final para confirmação antes de corrigir.
-5. **A correção** vai para um LLM com prompt de corretor especialista baseado na Matriz de Referência do INEP (5 competências, triagem de nota zero, checklist da proposta de intervenção). Volta a nota estimada por competência (0–200 cada; 0–1000 no total) e o feedback citando trechos, formatado para o mensageiro (sem tabelas/`#`). No [modo híbrido](#modo-híbrido-experimental), a nota vem de um modelo de ML e o LLM só escreve o feedback.
+5. **A correção** segue o modo que o aluno escolheu num botão: **IA generativa** ou **modelo treinado**. Na IA generativa, ela vai para um LLM com prompt de corretor especialista baseado na Matriz de Referência do INEP (5 competências, triagem de nota zero, checklist da proposta de intervenção). Volta a nota estimada por competência (0–200 cada; 0–1000 no total) e o feedback citando trechos, formatado para o mensageiro (sem tabelas/`#`). No modelo treinado ([modo híbrido](#modo-híbrido-experimental)), a nota vem de um modelo de ML e o LLM só escreve o feedback. Como o WhatsApp aceita no máximo 3 botões por mensagem, a tela da leitura mostra os dois modos e "Editar texto", e refazer a foto virou o comando `/refazer`.
 
 ### Arquitetura
 
@@ -98,7 +98,7 @@ A correção chega pelo canal de **menor atrito**: sem instalar aplicativo, sem 
 
 ## Modo híbrido (experimental)
 
-No modo padrão (`CORRECTION_MODE=llm`), o LLM dá a nota **e** escreve o feedback. No modo híbrido (`CORRECTION_MODE=hibrido`), a nota vem de um **modelo de ML treinado em 6.475 redações corrigidas**, e o LLM só escreve o feedback, com as notas já fixadas. Foto, OCR, preview e confirmação não mudam.
+No modo padrão (`CORRECTION_MODE=llm`), o LLM dá a nota **e** escreve o feedback. No modo híbrido (`CORRECTION_MODE=hibrido`), a nota vem de um **modelo de ML treinado em 6.475 redações corrigidas**, e o LLM só escreve o feedback, com as notas já fixadas. Foto, OCR, preview e confirmação não mudam. Com `CORRECTION_MODE=ambos` (a configuração do bot no ar), o aluno escolhe a cada correção, com um botão para cada modo, e o termo de consentimento cobre os dois caminhos.
 
 ```
 texto confirmado pelo aluno
@@ -182,7 +182,7 @@ Como ler a tabela:
 ### Como ativar
 
 ```bash
-CORRECTION_MODE=hibrido
+CORRECTION_MODE=ambos           # o aluno escolhe; ou hibrido (só o modelo treinado)
 JEV_API_KEY=...                 # chave da API do Jev (TypeSafe AI)
 CORRECTION_PROVIDER=deepseek
 CORRECTION_MODEL=deepseek-flash
@@ -206,7 +206,7 @@ Os **artefatos do modelo** (`src/correction/hybrid/artifacts/`: o modelo treinad
 
 - **Consentimento explícito** no primeiro contato, antes de qualquer processamento. O aceite fica guardado junto com a versão do termo (um hash do texto): o termo só volta a aparecer quando o texto muda, por exemplo ao trocar o provedor do LLM, e quem recusa a versão nova perde o aceite antigo. O termo nomeia os serviços externos por onde a redação passa e o país de cada um (Mistral, França; Jev, EUA, no modo híbrido; o provedor do LLM), avisa que eles podem manter cópias conforme as regras próprias e pede que menores de 18 leiam com um responsável.
 - A **foto é descartada** logo após o OCR; o texto transcrito vive apenas no estado Redis, que **expira em 45 min**. Nada persiste após a correção (não há histórico).
-- No **modo híbrido**, o texto da redação (nunca a foto) também é enviado à API do Jev (TypeSafe AI). Confira os termos de tratamento de dados do provedor antes de usar esse modo com alunos.
+- Na nota pelo **modelo treinado** (modos `hibrido` e `ambos`), o texto da redação (nunca a foto) também é enviado à API do Jev (TypeSafe AI). Confira os termos de tratamento de dados do provedor antes de usar esse modo com alunos.
 - O **Langfuse**, se ligado, recebe só números de uso e custo (ver [Custo e observabilidade](#custo-e-observabilidade)).
 - O feedback deixa claro que a correção é feita por IA e que a nota é uma **estimativa** (no ENEM oficial são dois corretores humanos).
 - Rate-limit diário (`ESSAY_DAILY_LIMIT`, default 10, e `PHOTOS_PER_ESSAY` fotos por correção) — controle de custo do fluxo OCR + LLM.
@@ -342,7 +342,7 @@ gera e os scripts de laboratório não fazem parte deste repositório.
 │       ├── interfaces.py                      # contrato ICorrector
 │       ├── factory.py                          # get_corrector(provider) — troca via CORRECTION_PROVIDER
 │       ├── providers/                           # gemini.py, claude.py, openai_compatible.py (openai/deepseek/maritaca)
-│       └── hybrid/                              # CORRECTION_MODE=hibrido — ver "Modo híbrido"
+│       └── hybrid/                              # CORRECTION_MODE=hibrido ou ambos — ver "Modo híbrido"
 │           ├── jev.py                              # cliente da API do Jev (71 perguntas)
 │           ├── features.py, deterministic.py        # medidas do texto, iguais às do treino
 │           ├── model.py                              # previsão + calibração (artefatos fora do repo)
@@ -359,5 +359,5 @@ gera e os scripts de laboratório não fazem parte deste repositório.
 │   └── simulate.py            # REPL de conversa com canal fake — E2E local sem provedor real
 │
 └── tests/
-    └── unit/                     # 163 testes puros — FakeRedis + FakeChannel, sem I/O
+    └── unit/                     # 174 testes puros — FakeRedis + FakeChannel, sem I/O
 ```

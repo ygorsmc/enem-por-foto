@@ -419,9 +419,9 @@ ENEM_CORRECTION_PROMPT = ENEM_CORRECTION_SYSTEM + ENEM_CORRECTION_INPUT
 # Valor usado quando o aluno pula os textos motivadores.
 NO_MOTIVATORS = "Não fornecidos."
 
-# ── Fluxo híbrido (CORRECTION_MODE=hibrido) ──────────────────────────────────
+# ── Fluxo híbrido ("Modelo treinado": CORRECTION_MODE=hibrido ou ambos) ──────
 # A nota vem do modelo calibrado (Jev + features, `src/correction/hybrid/`); o LLM
-# só escreve o feedback. O bloco abaixo é anexado ao ENEM_CORRECTION_INPUT, depois
+# só escreve o feedback. O modo "IA generativa" usa só o SYSTEM + INPUT acima. O bloco abaixo é anexado ao ENEM_CORRECTION_INPUT, depois
 # da redação. Placeholders: {C1}..{C5}, {total}, {pistas}. Testado em
 # _local/jev_llm_feedback/ (notas fixas respeitadas em 100% das respostas).
 HYBRID_GRADES_BLOCK = """

@@ -81,9 +81,10 @@ param mistralApiKey string
 param correctionProvider string = 'deepseek'
 param correctionModel string = 'deepseek-flash'
 param correctionEffort string = 'high'
-// Modo da correção: 'llm' (o LLM dá a nota) ou 'hibrido' (a nota vem do modelo calibrado sobre as respostas do
-// Jev e o LLM só escreve o feedback — README, "Modo híbrido"). O híbrido exige JEV_API_KEY e os artefatos do modelo.
-@allowed([ 'llm', 'hibrido' ])
+// Modo da correção: 'llm' (o LLM dá a nota), 'hibrido' (a nota vem do modelo calibrado sobre as respostas do
+// Jev e o LLM só escreve o feedback — README, "Modo híbrido") ou 'ambos' (o aluno escolhe a cada correção). O híbrido
+// e o 'ambos' exigem JEV_API_KEY e os artefatos do modelo.
+@allowed([ 'llm', 'hibrido', 'ambos' ])
 param correctionMode string = 'llm'
 param jevModel string = 'jev-1.14.0'
 @secure()
@@ -256,7 +257,7 @@ var providerSecrets = concat(
   empty(langfusePublicKey) ? [] : [ { name: 'langfuse-public-key', value: langfusePublicKey } ],
   empty(langfuseSecretKey) ? [] : [ { name: 'langfuse-secret-key', value: langfuseSecretKey } ],
   empty(jevApiKey) ? [] : [ { name: 'jev-api-key', value: jevApiKey } ],
-  correctionMode == 'hibrido' ? [ { name: 'hybrid-artifacts-url', value: artifactsUrl } ] : []
+  correctionMode != 'llm' ? [ { name: 'hybrid-artifacts-url', value: artifactsUrl } ] : []
 )
 var whatsappOn = !empty(whatsappToken)
 var whatsappSecrets = whatsappOn ? [
@@ -307,7 +308,7 @@ var providerEnv = concat(
   empty(langfuseSecretKey) ? [] : [ { name: 'LANGFUSE_SECRET_KEY', secretRef: 'langfuse-secret-key' } ],
   [ { name: 'LANGFUSE_HOST', value: langfuseHost } ],
   empty(jevApiKey) ? [] : [ { name: 'JEV_API_KEY', secretRef: 'jev-api-key' } ],
-  correctionMode == 'hibrido' ? [ { name: 'HYBRID_ARTIFACTS_URL', secretRef: 'hybrid-artifacts-url' } ] : []
+  correctionMode != 'llm' ? [ { name: 'HYBRID_ARTIFACTS_URL', secretRef: 'hybrid-artifacts-url' } ] : []
 )
 var whatsappEnv = whatsappOn ? [
   { name: 'WHATSAPP_TOKEN', secretRef: 'whatsapp-token' }

@@ -23,11 +23,13 @@ def fake_correction(monkeypatch):
     async def fake_ocr(image_bytes, mime_type="image/jpeg"):
         return OcrResult(text=FAKE_OCR_TEXT)
 
-    async def fake_correct(theme, motivators, essay_text):
+    async def fake_correct(theme, motivators, essay_text, mode=None):
         return FAKE_FEEDBACK
 
     monkeypatch.setattr(handlers, "ocr_image", fake_ocr)
     monkeypatch.setattr(handlers, "correct_essay", fake_correct)
+    # Um modo só por padrão (botão "Corrigir agora"); TestDoisModos liga o "ambos". Não depende do .env do dev.
+    monkeypatch.setattr(settings, "CORRECTION_MODE", "llm")
 
 
 async def _consent(channel):
@@ -218,7 +220,7 @@ class TestManualTextEdit:
     def test_correction_uses_edited_text(self, channel, monkeypatch):
         seen = {}
 
-        async def spy_correct(theme, motivators, essay_text):
+        async def spy_correct(theme, motivators, essay_text, mode=None):
             seen["essay"] = essay_text
             return FAKE_FEEDBACK
 
@@ -377,7 +379,7 @@ class TestRateLimitAndFailures:
         assert flow.essay_parts == []
 
     def test_correction_failure_refunds_credit_and_keeps_state(self, channel, monkeypatch):
-        async def broken_correct(theme, motivators, essay_text):
+        async def broken_correct(theme, motivators, essay_text, mode=None):
             raise RuntimeError("boom")
 
         monkeypatch.setattr(handlers, "correct_essay", broken_correct)
@@ -393,7 +395,7 @@ class TestRateLimitAndFailures:
         assert flow.state == FlowState.CONFIRMING
 
     def test_refund_leaves_counter_at_zero(self, channel, fake_redis, monkeypatch):
-        async def broken_correct(theme, motivators, essay_text):
+        async def broken_correct(theme, motivators, essay_text, mode=None):
             raise RuntimeError("boom")
 
         monkeypatch.setattr(handlers, "correct_essay", broken_correct)
@@ -553,7 +555,7 @@ class TestTypedEssay:
     def test_typed_essay_is_what_gets_corrected(self, channel, monkeypatch):
         seen = {}
 
-        async def fake_correct(theme, motivators, essay_text):
+        async def fake_correct(theme, motivators, essay_text, mode=None):
             seen["essay"] = essay_text
             return FAKE_FEEDBACK
 
@@ -675,3 +677,108 @@ class TestTermoVersionado:
     def test_first_contact_uses_greeting(self, channel):
         run(handlers.handle_message(channel, text_msg("oi")))
         assert channel.sent[0][1].startswith(m.CONSENT_INTRO)
+
+
+class TestDoisModos:
+    """CORRECTION_MODE=ambos: um botão por modo (modelo treinado ou IA) no lugar de "Corrigir agora"."""
+
+    @pytest.fixture(autouse=True)
+    def ambos(self, monkeypatch):
+        monkeypatch.setattr(settings, "CORRECTION_MODE", "ambos")
+        self.calls = []
+
+        async def fake_correct(theme, motivators, essay_text, mode=None):
+            self.calls.append(mode)
+            return FAKE_FEEDBACK
+
+        monkeypatch.setattr(handlers, "correct_essay", fake_correct)
+
+    def test_preview_offers_both_modes_and_edit(self, channel):
+        run(_advance_to_confirming(channel))
+        kind, body, ids = channel.sent[-1]
+        assert ids == ["correct_ml", "correct_llm", "edit_text"]  # 3 botões: o limite do WhatsApp
+        assert body.endswith(m.CHOOSE_MODE + m.REDO_COMMAND_HINT)
+        assert "Refazer foto" not in body
+
+    def test_typed_essay_offers_both_modes_without_redo_hint(self, channel):
+        async def scenario():
+            await _advance_to_essay_step(channel)
+            await handlers.handle_message(channel, text_msg(LONG_TYPED))
+
+        run(scenario())
+        _, body, ids = channel.sent[-1]
+        assert ids == ["correct_ml", "correct_llm", "edit_text"]
+        assert m.CHOOSE_MODE in body and "/refazer" not in body
+
+    @pytest.mark.parametrize(("btn", "mode", "footer"), [
+        ("correct_ml", "hibrido", m.CORRECTION_FOOTER_HIBRIDO),
+        ("correct_llm", "llm", m.CORRECTION_FOOTER),
+    ])
+    def test_each_button_runs_its_mode(self, channel, btn, mode, footer):
+        async def scenario():
+            await _advance_to_confirming(channel)
+            await handlers.handle_message(channel, button_msg(btn))
+
+        run(scenario())
+        assert self.calls == [mode]
+        assert channel.sent[-1][1].endswith(footer)
+
+    def test_old_confirm_button_uses_default_mode(self, channel):
+        async def scenario():
+            await _advance_to_confirming(channel)
+            await handlers.handle_message(channel, button_msg("confirm_correct"))
+
+        run(scenario())
+        assert self.calls == ["hibrido"]
+
+    def test_mode_not_offered_falls_back_to_configured(self, channel, monkeypatch):
+        async def scenario():
+            await _advance_to_confirming(channel)
+            monkeypatch.setattr(settings, "CORRECTION_MODE", "llm")  # botão de quando havia dois modos
+            # O termo mudou junto com o modo: aceita a versão nova antes de tocar o botão antigo.
+            await handlers.grant_consent("fake", "aluno1", handlers._consent_version())
+            await handlers.handle_message(channel, button_msg("correct_ml"))
+
+        run(scenario())
+        assert self.calls == ["llm"]
+
+    def test_refazer_command_goes_back_to_photo(self, channel):
+        async def scenario():
+            await _advance_to_confirming(channel)
+            await handlers.handle_message(channel, text_msg("/refazer"))
+            return await load_flow("fake", "aluno1")
+
+        flow = run(scenario())
+        assert flow.state == FlowState.AWAITING_ESSAY_PHOTO and flow.essay_parts == []
+        assert channel.sent[-1] == ("text", m.ASK_ESSAY_PHOTO)
+
+    def test_refazer_without_essay_shows_help(self, channel):
+        async def scenario():
+            await _consent(channel)
+            await handlers.handle_message(channel, text_msg("/refazer"))  # ainda no tema
+
+        run(scenario())
+        assert channel.sent[-1] == ("buttons", m.HELP_MENU, ["start_correction"])
+
+    def test_consent_names_both_paths(self, channel):
+        run(handlers.handle_message(channel, text_msg("oi")))
+        body = channel.sent[0][1]
+        assert "Mistral" in body and "Jev" in body and "Você escolhe quem dá a nota" in body
+
+    def test_updated_consent_fits_one_whatsapp_message(self):
+        # Quem já usava o bot vê o aviso de termo novo numa mensagem só. No primeiro contato o termo dos dois modos
+        # passa de 1.024 caracteres e o WhatsApp o divide em texto + botões (uma vez por aluno).
+        from src.channels.markdown import to_whatsapp_markdown
+
+        assert len(to_whatsapp_markdown(handlers._consent_text(updated=True))) <= 1024
+
+    def test_max_photos_keeps_three_buttons(self, channel, monkeypatch):
+        monkeypatch.setattr(settings, "MAX_ESSAY_PHOTOS", 1)
+
+        async def scenario():
+            await _advance_to_confirming(channel)
+            await handlers.handle_message(channel, image_msg(msg_id="m9"))
+
+        run(scenario())
+        _, body, ids = channel.sent[-1]
+        assert ids == ["correct_ml", "correct_llm", "edit_text"] and "/refazer" in body

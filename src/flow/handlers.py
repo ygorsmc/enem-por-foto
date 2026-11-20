@@ -61,10 +61,42 @@ def _merge_flagged(existing: list[str], new: list[str]) -> list[str]:
     return merged[:MAX_FLAGGED_WORDS_STORED]
 
 
+def _two_modes() -> bool:
+    """CORRECTION_MODE=ambos: o aluno escolhe a cada correção quem dá a nota (modelo treinado ou IA)."""
+    return len(settings.correction_modes()) > 1
+
+
+# Botão de correção → modo. "confirm_correct" (um modo só, ou botão antigo no histórico) usa o modo padrão.
+_MODE_BY_BUTTON = {"correct_ml": "hibrido", "correct_llm": "llm"}
+CORRECT_BUTTONS = {"confirm_correct", *_MODE_BY_BUTTON}
+
+
+def _mode_for(btn: str | None) -> str:
+    """Modo pedido pelo botão, se estiver oferecido; senão o padrão (botão de uma configuração anterior)."""
+    modes = settings.correction_modes()
+    wanted = _MODE_BY_BUTTON.get(btn or "")
+    return wanted if wanted in modes else modes[0]
+
+
+def _correct_buttons() -> list[dict]:
+    return [m.BTN_CORRECT_ML, m.BTN_CORRECT_LLM] if _two_modes() else [m.BTN_CONFIRM_CORRECT]
+
+
+def _preview_buttons() -> list[dict]:
+    """Depois da leitura da foto. O WhatsApp aceita no máximo 3 botões: com dois modos, "Refazer foto" vira o
+    comando /refazer."""
+    if _two_modes():
+        return [m.BTN_CORRECT_ML, m.BTN_CORRECT_LLM, m.BTN_EDIT_TEXT]
+    return [m.BTN_CONFIRM_CORRECT, m.BTN_EDIT_TEXT, m.BTN_REDO_PHOTO]
+
+
 def _consent_terms() -> str:
     """Corpo do termo para o modo e o provedor em uso: nomeia os serviços por onde a redação passa."""
-    hibrido = settings.CORRECTION_MODE == "hibrido"
-    template = m.CONSENT_TERMS_HIBRIDO if hibrido else m.CONSENT_TERMS_LLM
+    modes = settings.correction_modes()
+    if len(modes) > 1:
+        template = m.CONSENT_TERMS_AMBOS
+    else:
+        template = m.CONSENT_TERMS_HIBRIDO if modes[0] == "hibrido" else m.CONSENT_TERMS_LLM
     provider = settings.CORRECTION_PROVIDER
     return template.format(
         llm=m.LLM_PROVIDER_LABELS.get(provider, f"*{provider}*"),
@@ -83,9 +115,9 @@ def _consent_text(updated: bool = False) -> str:
     return (m.CONSENT_INTRO_UPDATED if updated else m.CONSENT_INTRO) + _consent_terms()
 
 
-def _correction_footer() -> str:
+def _correction_footer(mode: str) -> str:
     """No modo híbrido a nota vem do modelo de machine learning; no modo llm, do próprio LLM."""
-    return m.CORRECTION_FOOTER_HIBRIDO if settings.CORRECTION_MODE == "hibrido" else m.CORRECTION_FOOTER
+    return m.CORRECTION_FOOTER_HIBRIDO if mode == "hibrido" else m.CORRECTION_FOOTER
 
 
 def _button_id(msg: InboundMessage) -> str | None:
@@ -139,6 +171,14 @@ async def handle_message(channel: IMessagingChannel, msg: InboundMessage) -> Non
         return
     if command == "/ajuda":
         await channel.send_buttons(sender, m.HELP_MENU, [m.BTN_START])
+        return
+    if command == "/refazer":
+        flow = await load_flow(ch, sender)
+        refazivel = (FlowState.AWAITING_ESSAY_PHOTO, FlowState.CONFIRMING, FlowState.EDITING_TEXT)
+        if flow is not None and FlowState(flow.state) in refazivel:
+            await _redo_photo(channel, sender, flow)
+        else:
+            await channel.send_buttons(sender, m.HELP_MENU, [m.BTN_START])
         return
 
     flow = await load_flow(ch, sender)
@@ -233,10 +273,11 @@ async def _accept_typed_essay(channel: IMessagingChannel, sender: str, flow: Flo
     await save_flow(ch, sender, flow)
     logger.info("essay_typed_received", channel=ch, chars=len(text))
     preview = flow.essay_text[: settings.OCR_PREVIEW_MAX_CHARS]
+    acoes = m.TYPED_ACTIONS_TWO if _two_modes() else m.TYPED_ACTIONS_ONE
     await channel.send_buttons(
         sender,
-        m.TYPED_TEXT_PREVIEW.format(essay_text=preview),
-        [m.BTN_CONFIRM_CORRECT, m.BTN_EDIT_TEXT],
+        m.TYPED_TEXT_PREVIEW.format(essay_text=preview, acoes=acoes),
+        [*_correct_buttons(), m.BTN_EDIT_TEXT],
     )
 
 
@@ -302,6 +343,8 @@ async def _process_essay_photo(
 
     preview = flow.essay_text[: settings.OCR_PREVIEW_MAX_CHARS]
     preview_msg = m.OCR_PREVIEW.format(ocr_text=preview)
+    if not _two_modes():
+        preview_msg += m.OCR_REDO_BUTTON_HINT
     # Destaca as palavras que o OCR leu com baixa confiança (triagem de atenção —
     # o aluno tem a folha em mãos e decide o que ajustar). Poucas palavras: aponta
     # cada uma. Muitas (letra difícil no geral): pede releitura do texto todo e
@@ -317,11 +360,8 @@ async def _process_essay_photo(
     # Preview e botões numa mensagem só (no WhatsApp, corpo acima de 1024 caracteres vira texto + botões).
     # WhatsApp aceita no máximo 3 botões: "adicionar foto" não vira botão —
     # mandar outra foto direto já acrescenta uma parte (ver _handle_confirming).
-    await channel.send_buttons(
-        sender,
-        preview_msg + "\n\n" + m.CHOOSE_ACTION,
-        [m.BTN_CONFIRM_CORRECT, m.BTN_EDIT_TEXT, m.BTN_REDO_PHOTO],
-    )
+    fecho = m.CHOOSE_MODE + m.REDO_COMMAND_HINT if _two_modes() else m.CHOOSE_ACTION
+    await channel.send_buttons(sender, preview_msg + "\n\n" + fecho, _preview_buttons())
 
 
 async def _handle_confirming(
@@ -330,20 +370,17 @@ async def _handle_confirming(
     ch = channel.channel_name
 
     if btn == "redo_photo":
-        flow.essay_parts = []
-        flow.flagged_words = []
-        flow.state = FlowState.AWAITING_ESSAY_PHOTO
-        await save_flow(ch, sender, flow)
-        await channel.send_text(sender, m.ASK_ESSAY_PHOTO)
+        await _redo_photo(channel, sender, flow)
         return
 
     # "add_photo" cobre botões antigos ainda tocáveis no histórico da conversa.
     if btn == "add_photo" or msg.message_type == "image":
         if len(flow.essay_parts) >= settings.MAX_ESSAY_PHOTOS:
+            acoes = m.MAX_PHOTOS_ACTIONS_TWO if _two_modes() else m.MAX_PHOTOS_ACTIONS_ONE
             await channel.send_buttons(
                 sender,
-                m.MAX_PHOTOS_REACHED.format(max_photos=settings.MAX_ESSAY_PHOTOS),
-                [m.BTN_CONFIRM_CORRECT, m.BTN_EDIT_TEXT, m.BTN_REDO_PHOTO],
+                m.MAX_PHOTOS_REACHED.format(max_photos=settings.MAX_ESSAY_PHOTOS, acoes=acoes),
+                _preview_buttons(),
             )
             return
         if msg.message_type == "image" and msg.media_id:
@@ -359,11 +396,20 @@ async def _handle_confirming(
         await _start_text_edit(channel, sender, flow)
         return
 
-    if btn == "confirm_correct":
-        await _run_correction(channel, sender, flow, msg.message_id)
+    if btn in CORRECT_BUTTONS:
+        await _run_correction(channel, sender, flow, msg.message_id, _mode_for(btn))
         return
 
     await channel.send_text(sender, m.CONFIRMING_REMINDER)
+
+
+async def _redo_photo(channel: IMessagingChannel, sender: str, flow: FlowData) -> None:
+    """Descarta a leitura atual e volta a pedir a foto (botão "Refazer foto" ou comando /refazer)."""
+    flow.essay_parts = []
+    flow.flagged_words = []
+    flow.state = FlowState.AWAITING_ESSAY_PHOTO
+    await save_flow(channel.channel_name, sender, flow)
+    await channel.send_text(sender, m.ASK_ESSAY_PHOTO)
 
 
 async def _start_text_edit(channel: IMessagingChannel, sender: str, flow: FlowData) -> None:
@@ -401,15 +447,16 @@ async def _handle_editing_text(
     await save_flow(channel.channel_name, sender, flow)
 
     preview = flow.essay_text[: settings.OCR_PREVIEW_MAX_CHARS]
+    acoes = m.EDITED_ACTIONS_TWO if _two_modes() else m.EDITED_ACTIONS_ONE
     await channel.send_buttons(
         sender,
-        m.EDITED_TEXT_PREVIEW.format(essay_text=preview),
-        [m.BTN_CONFIRM_CORRECT, m.BTN_EDIT_TEXT],
+        m.EDITED_TEXT_PREVIEW.format(essay_text=preview, acoes=acoes),
+        [*_correct_buttons(), m.BTN_EDIT_TEXT],
     )
 
 
 async def _run_correction(
-    channel: IMessagingChannel, sender: str, flow: FlowData, message_id: str | None = None
+    channel: IMessagingChannel, sender: str, flow: FlowData, message_id: str | None = None, mode: str | None = None
 ) -> None:
     """Rate-limit → LLM → feedback. Falha técnica devolve o crédito do dia e
     mantém o estado (o aluno pode tentar de novo sem repetir o fluxo)."""
@@ -425,7 +472,8 @@ async def _run_correction(
     t_task = time.perf_counter()
     try:
         t0 = time.perf_counter()
-        feedback = await correct_essay(flow.theme, flow.motivators_text, flow.essay_text)
+        mode = mode or settings.correction_modes()[0]
+        feedback = await correct_essay(flow.theme, flow.motivators_text, flow.essay_text, mode=mode)
         llm_ms = round((time.perf_counter() - t0) * 1000)
     except Exception as e:
         logger.error("essay_correction_failed", channel=ch, error=str(e)[:300])
@@ -438,11 +486,12 @@ async def _run_correction(
     # aluno recomeça limpo em vez de ficar preso num CONFIRMING fantasma.
     await clear_flow(ch, sender)
     # Sem botão "corrigir outra" (seria mais uma mensagem): o rodapé diz como começar outra correção.
-    await channel.send_text(sender, feedback + _correction_footer())
+    await channel.send_text(sender, feedback + _correction_footer(mode))
     task_ms = round((time.perf_counter() - t_task) * 1000)
     logger.info(
         "essay_flow_completed",
         channel=ch,
+        mode=mode,
         llm_ms=llm_ms,
         overhead_ms=task_ms - llm_ms,
         task_ms=task_ms,

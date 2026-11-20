@@ -34,7 +34,7 @@ async def lifespan(app: FastAPI):
     quando ociosa. O backend "memory" não tem worker (tasks rodam em processo),
     então isso é um no-op nesse caso."""
     worker: asyncio.Task | None = None
-    if settings.CORRECTION_MODE == "hibrido":
+    if "hibrido" in settings.correction_modes():
         # Na nuvem, baixa os artefatos do modelo do Blob privado antes de atender (local: já vêm montados).
         from src.correction.hybrid import artifacts
 

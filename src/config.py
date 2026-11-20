@@ -69,8 +69,9 @@ class Settings(BaseSettings):
     DEEPSEEK_API_KEY: str = Field(default="")
     MARITACA_API_KEY: str = Field(default="")
 
-    # Modo da correção: "llm" (o LLM dá a nota e o feedback — padrão) ou "hibrido" (a nota vem do modelo
-    # calibrado sobre as respostas do Jev, ver src/correction/hybrid/, e o LLM só escreve o feedback).
+    # Modo da correção: "llm" (o LLM dá a nota e o feedback — padrão), "hibrido" (a nota vem do modelo
+    # calibrado sobre as respostas do Jev, ver src/correction/hybrid/, e o LLM só escreve o feedback) ou "ambos"
+    # (o aluno escolhe a cada correção, com um botão para cada modo).
     CORRECTION_MODE: str = Field(default="llm")
     JEV_API_KEY: str = Field(default="")  # TypeSafe AI (Jev) — só usado no modo híbrido
     JEV_MODEL: str = Field(default="jev-1.14.0")
@@ -106,6 +107,10 @@ class Settings(BaseSettings):
     # difícil pode entrar em loop no fim do texto ("5,6,7,…,100") — barrado por ocr.looks_degenerate, e o
     # aluno é orientado a mandar outra foto. Para fixar a versão: OCR_MODEL=mistral-ocr-2512.
     OCR_MODEL: str = Field(default="mistral-ocr-latest")
+
+    def correction_modes(self) -> list[str]:
+        """Modos oferecidos ao aluno, o primeiro é o padrão: "ambos" = modelo treinado (híbrido) e IA (llm)."""
+        return ["hibrido", "llm"] if self.CORRECTION_MODE == "ambos" else [self.CORRECTION_MODE]
 
 
 settings = Settings()

@@ -33,20 +33,22 @@ def build_correction_prompt(theme: str, motivators: str | None, essay_text: str)
 
 
 @retry(wait=wait_exponential(multiplier=2, min=4, max=60), stop=stop_after_attempt(4), reraise=True)
-async def correct_essay(theme: str, motivators: str | None, essay_text: str) -> str:
+async def correct_essay(theme: str, motivators: str | None, essay_text: str, mode: str | None = None) -> str:
     """Corrige a redação e retorna o feedback formatado para WhatsApp.
 
-    CORRECTION_MODE=llm (padrão): o LLM dá a nota e escreve o feedback. CORRECTION_MODE=hibrido: a nota vem do
-    modelo calibrado sobre as respostas do Jev e o LLM só escreve o feedback (src/correction/hybrid/)."""
+    `mode` = "llm": o LLM dá a nota e escreve o feedback. "hibrido": a nota vem do modelo calibrado sobre as
+    respostas do Jev e o LLM só escreve o feedback (src/correction/hybrid/). Sem `mode`, vale o primeiro modo
+    oferecido pela configuração (CORRECTION_MODE)."""
+    mode = mode or settings.correction_modes()[0]
     input_block = build_correction_prompt(theme, motivators, essay_text)
     # Langfuse (opcional): um trace por correção, com as chamadas pagas dentro; só rótulos e números.
     with observability.correction_trace(
-        mode=settings.CORRECTION_MODE,
+        mode=mode,
         provider=settings.CORRECTION_PROVIDER,
         model=settings.CORRECTION_MODEL,
         effort=settings.CORRECTION_EFFORT,
     ):
-        if settings.CORRECTION_MODE == "hibrido":
+        if mode == "hibrido":
             from src.correction.hybrid.pipeline import correct_hybrid  # tardio: numpy/sklearn só neste modo
 
             feedback = await correct_hybrid(
@@ -58,7 +60,7 @@ async def correct_essay(theme: str, motivators: str | None, essay_text: str) -> 
         raise ValueError("Resposta vazia do modelo de correção")
     logger.info(
         "essay_corrected",
-        mode=settings.CORRECTION_MODE,
+        mode=mode,
         provider=settings.CORRECTION_PROVIDER,
         model=settings.CORRECTION_MODEL,
         chars=len(feedback),

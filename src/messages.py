@@ -61,6 +61,19 @@ CONSENT_TERMS_LLM = (
     + _CONSENT_OUTRO
 )
 
+# Modo "ambos": o aluno escolhe a cada correção quem dá a nota (o Jev só entra na nota pelo modelo treinado).
+CONSENT_TERMS_AMBOS = (
+    "• Para corrigir, sua redação passa por serviços externos: o *Mistral* "
+    "(França) lê a foto e o {llm} escreve os comentários. Se você escolher a nota "
+    "pelo modelo treinado, o *Jev* (TypeSafe AI, EUA) também analisa o texto.\n"
+    + _CONSENT_STORAGE
+    + "• Você escolhe quem dá a nota: um modelo de aprendizado de máquina treinado "
+    "com milhares de redações reais corrigidas, ou a própria inteligência "
+    "artificial. Nos dois casos a nota é uma *estimativa*: não substitui a "
+    "avaliação oficial.\n"
+    + _CONSENT_OUTRO
+)
+
 CONSENT_REQUEST_HIBRIDO = CONSENT_INTRO + CONSENT_TERMS_HIBRIDO
 CONSENT_REQUEST_LLM = CONSENT_INTRO + CONSENT_TERMS_LLM
 
@@ -181,9 +194,10 @@ OCR_PREVIEW = (
     "• Se a redação tem *mais de uma foto* (verso, segunda folha), é só "
     "mandar a próxima foto agora.\n"
     "• Se a leitura errou algumas palavras, toque em *Editar texto* para "
-    "ajustar você mesmo.\n"
-    "• Se saiu muito ruim, toque em *Refazer foto*."
+    "ajustar você mesmo."
 )
+# Um modo só: há o botão "Refazer foto". Dois modos: os 3 botões do WhatsApp vão para os modos e "Editar texto".
+OCR_REDO_BUTTON_HINT = "\n• Se saiu muito ruim, toque em *Refazer foto*."
 
 OCR_FLAGGED_NOTE = (
     "\n\n⚠️ *Palavras a conferir* — a leitura ficou em dúvida nestas: {words}.\n"
@@ -201,16 +215,22 @@ OCR_FLAGGED_MANY_NOTE = (
 )
 
 BTN_CONFIRM_CORRECT = {"id": "confirm_correct", "title": "Corrigir agora ✅"}
+# Modo "ambos": um botão por modo (o WhatsApp limita o título a 20 caracteres).
+BTN_CORRECT_ML = {"id": "correct_ml", "title": "Modelo treinado 📊"}
+BTN_CORRECT_LLM = {"id": "correct_llm", "title": "IA generativa 🤖"}
 BTN_EDIT_TEXT = {"id": "edit_text", "title": "Editar texto ✏️"}
 BTN_REDO_PHOTO = {"id": "redo_photo", "title": "Refazer foto 🔄"}
 
 ASK_NEXT_PHOTO = "Manda a próxima foto da redação. 📸 (mesmas dicas: luz boa e folha inteira)"
 
-MAX_PHOTOS_REACHED = (
-    "Você chegou ao máximo de {max_photos} fotos por redação. 🙂\n\n"
-    "Vou seguir com o texto que já li — toque em *Corrigir agora*, "
-    "*Editar texto* para ajustar a leitura, ou *Refazer foto* para começar "
-    "as fotos de novo."
+MAX_PHOTOS_REACHED = "Você chegou ao máximo de {max_photos} fotos por redação. 🙂\n\nVou seguir com o texto que já li: {acoes}"
+MAX_PHOTOS_ACTIONS_ONE = (
+    "toque em *Corrigir agora*, *Editar texto* para ajustar a leitura, ou "
+    "*Refazer foto* para começar as fotos de novo."
+)
+MAX_PHOTOS_ACTIONS_TWO = (
+    "escolha nos botões quem dá a nota, toque em *Editar texto* para ajustar a "
+    "leitura, ou mande /refazer para começar as fotos de novo."
 )
 
 # ── Fluxo: edição manual do texto OCR ───────────────────────────────────────
@@ -230,9 +250,9 @@ EDITED_TEXT_PREVIEW = (
     "{essay_text}\n"
     "─────────────\n\n"
     "Está fiel ao que você escreveu na folha?\n"
-    "• Se sim, toque em *Corrigir agora*.\n"
-    "• Se ainda tem ajuste, toque em *Editar texto* de novo."
+    "{acoes}"
 )
+EDITED_ACTIONS_ONE = "• Se sim, toque em *Corrigir agora*.\n• Se ainda tem ajuste, toque em *Editar texto* de novo."
 
 EDITED_TEXT_MUST_BE_TEXT = (
     "Nesta etapa eu espero o *texto ajustado* da redação, colado como "
@@ -253,12 +273,26 @@ TYPED_TEXT_PREVIEW = (
     "{essay_text}\n"
     "─────────────\n\n"
     "Está igual ao que você escreveu na folha, com os mesmos erros?\n"
-    "• Se sim, toque em *Corrigir agora*.\n"
-    "• Se precisar ajustar, toque em *Editar texto*."
+    "{acoes}"
 )
+TYPED_ACTIONS_ONE = "• Se sim, toque em *Corrigir agora*.\n• Se precisar ajustar, toque em *Editar texto*."
 
-# Fecho do preview da leitura, que vai junto com os botões.
+# Fecho do preview da leitura, que vai junto com os botões (um modo só).
 CHOOSE_ACTION = "O que fazemos?"
+
+# Modo "ambos": fecho com a escolha de quem dá a nota (texto aprovado pelo dono). A diferença descrita é a medida:
+# corrigindo a mesma redação de novo, o modelo repetiu a nota total em 93% dos casos; a IA sozinha, em 23%.
+CHOOSE_MODE = (
+    "Quem dá a nota?\n"
+    "📊 *Modelo treinado*: aprendeu com milhares de redações corrigidas; a nota "
+    "quase não muda se você corrigir de novo.\n"
+    "🤖 *IA generativa*: lê e avalia a redação sozinha; a nota pode variar de "
+    "uma correção para outra.\n"
+    "Nos dois, os comentários são escritos por IA."
+)
+REDO_COMMAND_HINT = " Se a leitura saiu ruim, mande /refazer."
+EDITED_ACTIONS_TWO = "Se ainda tem ajuste, toque em *Editar texto* de novo.\n\n" + CHOOSE_MODE
+TYPED_ACTIONS_TWO = "Se precisar ajustar, toque em *Editar texto*.\n\n" + CHOOSE_MODE
 
 CONFIRMING_REMINDER = (
     "Sua redação está pronta para correção. 👇 Escolha uma opção nos botões "
@@ -293,7 +327,7 @@ CORRECTION_FOOTER_HIBRIDO = _FOOTER_ML + _FOOTER_NEXT
 
 CORRECTION_FAILED = (
     "Tive um problema técnico na hora de corrigir. 😔 Sua redação não foi "
-    "perdida — espera um instante e toca em *Corrigir agora* de novo."
+    "perdida — espera um instante e toca de novo no botão de correção."
 )
 
 RATE_LIMITED = (

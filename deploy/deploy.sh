@@ -71,14 +71,15 @@ if ! python3 -c "import socket, sys; socket.getaddrinfo(sys.argv[1], None)" "$RE
     exit 1
 fi
 
-# Modo híbrido: chave do Jev e artefatos do modelo (gerados no laboratório, fora do git).
+# Modo híbrido (ou "ambos", em que o aluno escolhe): chave do Jev e artefatos do modelo (gerados no laboratório,
+# fora do git).
 CORRECTION_MODE="${CORRECTION_MODE:-llm}"
 ARTIFACTS_DIR=../src/correction/hybrid/artifacts
-if [ "$CORRECTION_MODE" = "hibrido" ]; then
-    : "${JEV_API_KEY:?CORRECTION_MODE=hibrido exige JEV_API_KEY no .env}"
+if [ "$CORRECTION_MODE" != "llm" ]; then
+    : "${JEV_API_KEY:?CORRECTION_MODE=$CORRECTION_MODE exige JEV_API_KEY no .env}"
     for f in model.joblib questions.json checklist.json meta.json; do
         if [ ! -f "$ARTIFACTS_DIR/$f" ]; then
-            echo "ERRO: CORRECTION_MODE=hibrido, mas falta $ARTIFACTS_DIR/$f" >&2
+            echo "ERRO: CORRECTION_MODE=$CORRECTION_MODE, mas falta $ARTIFACTS_DIR/$f" >&2
             echo "      (gere com _local/scripts/jev_v4_export.py ou use CORRECTION_MODE=llm)" >&2
             exit 1
         fi
@@ -239,7 +240,7 @@ OUTPUTS=$(az deployment group create \
         langfuseHost="${LANGFUSE_HOST:-https://cloud.langfuse.com}")
 read -r FQDN STORAGE_ACCOUNT ARTIFACTS_CONTAINER <<< "$(echo "$OUTPUTS" | tr '\n' ' ')"
 
-if [ "$CORRECTION_MODE" = "hibrido" ]; then
+if [ "$CORRECTION_MODE" != "llm" ]; then
     echo "==> [5/6] Artefatos do modelo → Blob PRIVADO ($STORAGE_ACCOUNT/$ARTIFACTS_CONTAINER)"
     # O app baixa ao iniciar e, se ainda não houver, antes da 1ª correção híbrida
     # (ver src/correction/hybrid/artifacts.py) — por isso pode subir antes do upload.
