@@ -2,7 +2,7 @@
 
 <p><a href="https://github.com/ygorsmc/enem-por-foto/actions/workflows/ci.yml"><img src="https://github.com/ygorsmc/enem-por-foto/actions/workflows/ci.yml/badge.svg" alt="CI"></a> <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a></p>
 
-Bot multicanal (**WhatsApp + Telegram**) que corrige redações do ENEM a partir de uma **foto do manuscrito**: o aluno informa o tema, cola os textos motivadores (se tiver) e manda a foto (ou digita o texto) — e recebe de volta a nota estimada (0 a 1000) por competência, dada por um modelo de machine learning ou pela IA generativa (o aluno escolhe), com feedback pedagógico citando trechos exatos do próprio texto.
+Bot multicanal (**WhatsApp + Telegram**) que corrige redações do ENEM a partir de uma **foto do manuscrito**: o aluno informa o tema, cola os textos motivadores (se tiver) e manda a foto (ou digita o texto) — e recebe de volta a nota estimada (0 a 1000) por competência, dada por um modelo de machine learning ou pela IA generativa (útil para comparação), com feedback pedagógico citando trechos exatos do próprio texto.
 
 ## Teste o bot
 
@@ -244,7 +244,7 @@ make lint                  # ruff check; `make fmt` para auto-corrigir e formata
 
 ## Conectando os canais
 
-> **Telegram é o canal recomendado.** A partir de **01/10/2026**, o WhatsApp Business Platform passa a cobrar por mensagem de serviço (a categoria de conversa que este bot usa) — o Telegram Bot API continua gratuito. Para manter o custo operacional no menor patamar possível, prefira o Telegram como canal principal; o WhatsApp fica como opção para quem já opera nesse canal e absorve o custo por mensagem.
+> **Telegram é o canal recomendado.** A partir de **01/10/2026**, o WhatsApp Business Platform passa a cobrar por mensagem de serviço (a categoria de conversa que este bot usa), mas ainda mantém uma cota mensal gratuita de 1000 mensagens — o Telegram Bot API continua gratuito sem limitações. Para manter o custo operacional no menor patamar possível, prefira o Telegram como canal principal; o WhatsApp fica como opção para quem já opera nesse canal e absorve o custo por mensagem ou não ultrapassa a cota mensal de 1000 mensagens de serviço.
 
 O teste real mais barato é o **Telegram** (token grátis no @BotFather) com um túnel local:
 
