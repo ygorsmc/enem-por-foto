@@ -149,6 +149,19 @@ webhook do Telegram. Ao fim ele imprime a URL do app, a imagem e o comando de lo
 > subiu com a imagem do GHCR. A variável `ACR_NAME` do `.env.deploy` deixou de ser
 > usada.
 
+### WhatsApp (opcional)
+
+Com `WHATSAPP_TOKEN`, `PHONE_NUMBER_ID`, `META_APP_SECRET` e `META_VERIFY_TOKEN` no `.env`, o deploy liga o canal na
+nuvem. Como a entrada HTTP só aceita IPs liberados, o `deploy.sh` busca a cada deploy as faixas IPv4 da Meta
+(AS32934, via RIPEstat), junta as vizinhas e as libera junto com as do Telegram. A Meta pode mudar essas faixas: se o
+WhatsApp parar de receber mensagens, rode o deploy de novo (a Meta também avisa por e-mail quando as entregas do
+webhook falham).
+
+O callback é configurado uma vez no painel da Meta (app → WhatsApp → Configuração → Webhook):
+`https://<app>/v1/webhook/whatsapp`, com o `META_VERIFY_TOKEN` e o campo `messages` assinado. Acorde o app antes
+(uma mensagem ao bot do Telegram), porque a validação da Meta não espera o cold start. Só existe um callback por app
+da Meta: apontá-lo para o Azure tira o teste local pelo ngrok do ar.
+
 ## Verificação
 
 ```bash

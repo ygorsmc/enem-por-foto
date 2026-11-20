@@ -5,7 +5,8 @@ abandonado evapora sozinho, junto com o texto OCR (LGPD — nada persiste após
 a correção). Ausência de chave = IDLE.
 
 O consentimento LGPD (`consent:{canal}:{sender}`) fica FORA do FlowData e sem
-TTL: é um aceite, não um passo do fluxo.
+TTL: é um aceite, não um passo do fluxo. O valor é a versão do termo aceito; se o
+texto do termo mudar, a versão muda e o aceite é pedido de novo.
 """
 
 import json
@@ -76,11 +77,17 @@ async def clear_flow(channel_name: str, sender_id: str) -> None:
     await redis.delete(_flow_key(channel_name, sender_id))
 
 
-async def has_consent(channel_name: str, sender_id: str) -> bool:
+async def accepted_consent_version(channel_name: str, sender_id: str) -> str | None:
+    """Versão do termo que o aluno aceitou, ou None se nunca aceitou. Aceites antigos guardavam "1"."""
     redis = await get_redis()
-    return bool(await redis.get(_consent_key(channel_name, sender_id)))
+    return await redis.get(_consent_key(channel_name, sender_id))
 
 
-async def grant_consent(channel_name: str, sender_id: str) -> None:
+async def grant_consent(channel_name: str, sender_id: str, version: str) -> None:
     redis = await get_redis()
-    await redis.set(_consent_key(channel_name, sender_id), "1")
+    await redis.set(_consent_key(channel_name, sender_id), version)
+
+
+async def revoke_consent(channel_name: str, sender_id: str) -> None:
+    redis = await get_redis()
+    await redis.delete(_consent_key(channel_name, sender_id))

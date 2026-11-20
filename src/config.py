@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     QUEUE_MAX_CONCURRENCY: int = Field(default=8)
 
     # WhatsApp Cloud API (Meta)
-    WHATSAPP_API_URL: str = Field(default="https://graph.facebook.com/v21.0")
+    WHATSAPP_API_URL: str = Field(default="https://graph.facebook.com/v25.0")
     PHONE_NUMBER_ID: str = Field(default="")
     WHATSAPP_TOKEN: str = Field(default="")
     META_APP_SECRET: str = Field(default="")
@@ -85,7 +85,7 @@ class Settings(BaseSettings):
     LANGFUSE_HOST: str = Field(default="https://cloud.langfuse.com")  # EU; US: https://us.cloud.langfuse.com
 
     # Limites do fluxo
-    ESSAY_DAILY_LIMIT: int = Field(default=2)  # correções/aluno/dia (fluxo caro)
+    ESSAY_DAILY_LIMIT: int = Field(default=10)  # correções/aluno/dia (fluxo caro)
     # Leituras de foto (OCR, pago) por correção permitida: o limite diário de fotos é isto × ESSAY_DAILY_LIMIT.
     # Sem ele, quem ainda tem cota mandava fotos sem fim sem nunca confirmar (o contador de correção só sobe
     # na confirmação).

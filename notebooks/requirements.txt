@@ -1,0 +1,9 @@
+# Dependências do notebook do modelo (modelo_hibrido.ipynb). numpy, scipy, scikit-learn e joblib têm as mesmas
+# versões do bot (../requirements.txt): com elas, o modelo treinado aqui é idêntico ao que roda em produção.
+numpy==2.5.5
+scipy==1.18.1
+scikit-learn==1.9.1
+joblib==1.6.0
+pandas==3.1.1
+matplotlib==3.11.2
+jupyterlab

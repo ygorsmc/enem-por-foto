@@ -179,6 +179,28 @@ EOF
     exit 1
 fi
 
+# WhatsApp (opcional): ligado quando o .env tem WHATSAPP_TOKEN. A entrada HTTP só aceita IPs liberados, então as
+# faixas da Meta entram junto com as do Telegram. Buscadas a cada deploy (a Meta não publica uma lista fixa de
+# webhooks; a doc indica as rotas do AS32934) e juntadas quando vizinhas. Falhou a busca → o deploy para, em vez de
+# subir um WhatsApp que a entrada bloquearia.
+META_CIDRS='[]'
+if [ -n "${WHATSAPP_TOKEN:-}" ]; then
+    : "${PHONE_NUMBER_ID:?WhatsApp ligado (WHATSAPP_TOKEN) exige PHONE_NUMBER_ID no .env}"
+    : "${META_APP_SECRET:?WhatsApp ligado exige META_APP_SECRET no .env (assinatura dos webhooks)}"
+    : "${META_VERIFY_TOKEN:?WhatsApp ligado exige META_VERIFY_TOKEN no .env (validação do callback)}"
+    META_CIDRS=$(curl -fsS -m 30 "https://stat.ripe.net/data/announced-prefixes/data.json?resource=AS32934" | python3 -c '
+import ipaddress, json, sys
+p = [x["prefix"] for x in json.load(sys.stdin)["data"]["prefixes"] if ":" not in x["prefix"]]
+nets = list(ipaddress.collapse_addresses(ipaddress.ip_network(x) for x in p))
+print(json.dumps([str(n) for n in nets]) if len(nets) >= 10 else "")
+' 2>/dev/null || true)
+    if [ -z "$META_CIDRS" ]; then
+        echo "ERRO: não consegui buscar as faixas de IP da Meta (stat.ripe.net). Tente de novo." >&2
+        exit 1
+    fi
+    echo "    WhatsApp ligado: $(echo "$META_CIDRS" | python3 -c 'import json,sys; print(len(json.load(sys.stdin)))') faixas da Meta liberadas na entrada"
+fi
+
 echo "==> [4/6] Deployment do Bicep"
 OUTPUTS=$(az deployment group create \
     -g "$RESOURCE_GROUP" \
@@ -194,6 +216,12 @@ OUTPUTS=$(az deployment group create \
         telegramBotToken="$TELEGRAM_BOT_TOKEN" \
         telegramWebhookSecret="${TELEGRAM_WEBHOOK_SECRET:-}" \
         adminTelegramChatId="${ADMIN_TELEGRAM_CHAT_ID:-}" \
+        metaAllowedCidrs="$META_CIDRS" \
+        whatsappToken="${WHATSAPP_TOKEN:-}" \
+        metaAppSecret="${META_APP_SECRET:-}" \
+        metaVerifyToken="${META_VERIFY_TOKEN:-}" \
+        phoneNumberId="${PHONE_NUMBER_ID:-}" \
+        whatsappApiUrl="${WHATSAPP_API_URL:-https://graph.facebook.com/v25.0}" \
         mistralApiKey="$MISTRAL_API_KEY" \
         correctionProvider="${CORRECTION_PROVIDER:-deepseek}" \
         correctionModel="${CORRECTION_MODEL:-deepseek-flash}" \
@@ -227,6 +255,12 @@ RESP=$(curl -s "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
     --data-urlencode "url=https://$FQDN/v1/webhook/telegram" \
     ${TELEGRAM_WEBHOOK_SECRET:+--data-urlencode "secret_token=${TELEGRAM_WEBHOOK_SECRET}"})
 echo "    Telegram: $RESP"
+
+if [ -n "${WHATSAPP_TOKEN:-}" ]; then
+    echo "    WhatsApp: no painel da Meta (app → WhatsApp → Configuração → Webhook), callback"
+    echo "    https://$FQDN/v1/webhook/whatsapp com o META_VERIFY_TOKEN do .env e o campo 'messages' assinado."
+    echo "    Acorde o app antes (uma mensagem ao bot do Telegram): a validação da Meta não espera o cold start."
+fi
 
 echo ""
 echo "✅ Pronto. App: https://$FQDN"

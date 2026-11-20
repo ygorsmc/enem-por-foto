@@ -56,11 +56,23 @@ param telegramWebhookSecret string = ''
 @description('Chat do Telegram do dono do bot: recebe o alerta de uso a cada usageAlertEveryTokens tokens do LLM. Vazio = sem alerta.')
 param adminTelegramChatId string = ''
 param usageAlertEveryTokens int = 1000000
-@description('Únicas origens aceitas na entrada HTTP do app. Padrão: as faixas de onde o Telegram chama webhooks (core.telegram.org/bots/webhooks; o Telegram avisa que podem mudar). Sem elas, qualquer um que descobrisse a URL podia manter a réplica acordada (custo de compute). Para WhatsApp, troque pelas faixas da Meta; lista vazia = aberto a todos.')
+@description('Únicas origens aceitas na entrada HTTP do app. Padrão: as faixas de onde o Telegram chama webhooks (core.telegram.org/bots/webhooks; o Telegram avisa que podem mudar). Sem elas, qualquer um que descobrisse a URL podia manter a réplica acordada (custo de compute). Lista vazia (e metaAllowedCidrs vazia) = aberto a todos.')
 param ingressAllowedCidrs array = [
   '149.154.160.0/20'
   '91.108.4.0/22'
 ]
+@description('Faixas IPv4 da Meta (AS32934), somadas às do Telegram quando o WhatsApp está ligado. O deploy.sh as busca a cada deploy (RIPEstat) e junta as vizinhas; a Meta não publica uma lista fixa só de webhooks.')
+param metaAllowedCidrs array = []
+
+// WhatsApp Cloud API (opcional): sem o token, o canal fica desligado na nuvem.
+@secure()
+param whatsappToken string = ''
+@secure()
+param metaAppSecret string = ''
+@secure()
+param metaVerifyToken string = ''
+param phoneNumberId string = ''
+param whatsappApiUrl string = 'https://graph.facebook.com/v25.0'
 @secure()
 param mistralApiKey string
 
@@ -246,7 +258,13 @@ var providerSecrets = concat(
   empty(jevApiKey) ? [] : [ { name: 'jev-api-key', value: jevApiKey } ],
   correctionMode == 'hibrido' ? [ { name: 'hybrid-artifacts-url', value: artifactsUrl } ] : []
 )
-var allSecrets = concat(baseSecrets, registrySecret, providerSecrets)
+var whatsappOn = !empty(whatsappToken)
+var whatsappSecrets = whatsappOn ? [
+  { name: 'whatsapp-token', value: whatsappToken }
+  { name: 'meta-app-secret', value: metaAppSecret }
+  { name: 'meta-verify-token', value: metaVerifyToken }
+] : []
+var allSecrets = concat(baseSecrets, registrySecret, providerSecrets, whatsappSecrets)
 
 var registries = empty(registryServer) ? [] : [
   {
@@ -291,7 +309,14 @@ var providerEnv = concat(
   empty(jevApiKey) ? [] : [ { name: 'JEV_API_KEY', secretRef: 'jev-api-key' } ],
   correctionMode == 'hibrido' ? [ { name: 'HYBRID_ARTIFACTS_URL', secretRef: 'hybrid-artifacts-url' } ] : []
 )
-var allEnv = concat(baseEnv, webhookSecretEnv, providerEnv)
+var whatsappEnv = whatsappOn ? [
+  { name: 'WHATSAPP_TOKEN', secretRef: 'whatsapp-token' }
+  { name: 'META_APP_SECRET', secretRef: 'meta-app-secret' }
+  { name: 'META_VERIFY_TOKEN', secretRef: 'meta-verify-token' }
+  { name: 'PHONE_NUMBER_ID', value: phoneNumberId }
+  { name: 'WHATSAPP_API_URL', value: whatsappApiUrl }
+] : []
+var allEnv = concat(baseEnv, webhookSecretEnv, providerEnv, whatsappEnv)
 
 // ── Container App ────────────────────────────────────────────────────────────
 // API 2025-01-01: GA que já aceita scale.cooldownPeriod (a 2024-03-01 não aceita).
@@ -308,7 +333,7 @@ resource app 'Microsoft.App/containerApps@2025-01-01' = {
         transport: 'auto'
         // Com ao menos uma regra Allow, toda origem fora da lista é recusada pela plataforma (antes do app).
         ipSecurityRestrictions: [
-          for (cidr, i) in ingressAllowedCidrs: {
+          for (cidr, i) in concat(ingressAllowedCidrs, metaAllowedCidrs): {
             name: 'permitido-${i}'
             ipAddressRange: cidr
             action: 'Allow'

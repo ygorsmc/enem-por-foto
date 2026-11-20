@@ -111,7 +111,7 @@ class TelegramChannel(IMessagingChannel):
                 return await self._send_request("sendMessage", payload)
             raise
 
-    async def send_typing(self, user_id: str) -> None:
+    async def send_typing(self, user_id: str, message_id: str | None = None) -> None:
         await self._send_request("sendChatAction", {"chat_id": user_id, "action": "typing"})
 
     async def download_media(self, media_id: str) -> bytes:

@@ -18,10 +18,15 @@ LLM_PROVIDER_LABELS = {
     "maritaca": "*Sabiá* (Maritaca AI, Brasil)",
 }
 
-_CONSENT_INTRO = (
+CONSENT_INTRO = (
     "Olá! 👋 Eu sou o *Corretor ENEM*: corrijo redações no modelo do ENEM, com "
     "nota estimada por competência e dicas de melhoria.\n\n"
     "Antes de começar, preciso do seu aceite:\n"
+)
+# Quem já aceitou uma versão anterior do termo (o texto mudou: provedor, modo, prazo de guarda etc.).
+CONSENT_INTRO_UPDATED = (
+    "📄 *O termo de uso mudou* desde o seu último aceite. Para continuar, "
+    "preciso que você aceite a versão nova:\n"
 )
 # {minutos} = FLOW_TTL_SECONDS em minutos (preenchido no handler): o estado da conversa expira no próprio Redis.
 _CONSENT_STORAGE = (
@@ -34,9 +39,9 @@ _CONSENT_STORAGE = (
 _CONSENT_OUTRO = "• Se você tem menos de 18 anos, leia este aviso com um responsável.\n\nVocê aceita?"
 
 # Modo híbrido: a nota vem do modelo de machine learning (sobre as respostas do Jev) e o LLM só escreve o feedback.
-CONSENT_REQUEST_HIBRIDO = (
-    _CONSENT_INTRO
-    + "• Para corrigir, sua redação passa por três serviços externos: o *Mistral* "
+# Corpo do termo (sem a saudação): é o que define a versão do aceite (ver flow/handlers.py).
+CONSENT_TERMS_HIBRIDO = (
+    "• Para corrigir, sua redação passa por três serviços externos: o *Mistral* "
     "(França) lê a foto, o *Jev* (TypeSafe AI, EUA) analisa o texto e o {llm} "
     "escreve os comentários.\n"
     + _CONSENT_STORAGE
@@ -47,15 +52,17 @@ CONSENT_REQUEST_HIBRIDO = (
 )
 
 # Modo llm: o próprio LLM dá a nota e escreve o feedback (o Jev não é usado).
-CONSENT_REQUEST_LLM = (
-    _CONSENT_INTRO
-    + "• Para corrigir, sua redação passa por dois serviços externos: o *Mistral* "
+CONSENT_TERMS_LLM = (
+    "• Para corrigir, sua redação passa por dois serviços externos: o *Mistral* "
     "(França) lê a foto e o {llm} faz a correção.\n"
     + _CONSENT_STORAGE
     + "• A correção é feita por inteligência artificial e a nota é uma "
     "*estimativa*: não substitui a avaliação oficial.\n"
     + _CONSENT_OUTRO
 )
+
+CONSENT_REQUEST_HIBRIDO = CONSENT_INTRO + CONSENT_TERMS_HIBRIDO
+CONSENT_REQUEST_LLM = CONSENT_INTRO + CONSENT_TERMS_LLM
 
 CONSENT_BTN_YES = {"id": "consent_yes", "title": "Aceito ✅"}
 CONSENT_BTN_NO = {"id": "consent_no", "title": "Não aceito"}
@@ -67,13 +74,20 @@ CONSENT_DECLINED = (
 
 # ── Menu / ajuda ────────────────────────────────────────────────────────────
 
-WELCOME_MENU = (
+_THEME_REQUEST = (
+    "*Digite o tema* da redação, do jeito que ele aparece na proposta.\n\n"
+    "_Exemplo: \"Desafios para a valorização de comunidades e povos "
+    "tradicionais no Brasil\"_"
+)
+
+# Logo após o aceite do termo o fluxo já começa (uma mensagem a menos que um menu com botão "começar").
+WELCOME_START = (
     "Pronto! ✅\n\n"
     "Para corrigir uma redação eu preciso, nessa ordem:\n"
     "1️⃣ O *tema* da redação (digitado)\n"
     "2️⃣ Os *textos motivadores*, se você tiver (opcional)\n"
-    "3️⃣ A *foto* da sua redação manuscrita\n\n"
-    "Vamos começar?"
+    "3️⃣ A *foto* da sua redação manuscrita (ou o texto digitado)\n\n"
+    "Vamos começar! " + _THEME_REQUEST
 )
 
 HELP_MENU = (
@@ -81,7 +95,7 @@ HELP_MENU = (
     "Como funciona:\n"
     "1️⃣ Você me diz o *tema*\n"
     "2️⃣ Cola os *textos motivadores* (se tiver)\n"
-    "3️⃣ Manda a *foto* da redação\n\n"
+    "3️⃣ Manda a *foto* da redação (ou o texto digitado)\n\n"
     "E eu devolvo a nota estimada (0 a 1000) por competência, com dicas "
     "citando trechos do seu texto.\n\n"
     "_Para recomeçar do zero a qualquer momento: /cancelar_"
@@ -91,12 +105,7 @@ BTN_START = {"id": "start_correction", "title": "Corrigir redação ✍️"}
 
 # ── Fluxo: tema ─────────────────────────────────────────────────────────────
 
-ASK_THEME = (
-    "Vamos lá! ✍️\n\n"
-    "*Digite o tema* da redação, do jeito que ele aparece na proposta.\n\n"
-    "_Exemplo: \"Desafios para a valorização de comunidades e povos "
-    "tradicionais no Brasil\"_"
-)
+ASK_THEME = "Vamos lá! ✍️\n\n" + _THEME_REQUEST
 
 THEME_MUST_BE_TEXT = (
     "Nesta etapa eu preciso do tema *digitado como texto*, não em foto. 🙏\n\n"
@@ -143,10 +152,13 @@ ASK_ESSAY_PHOTO = (
     "da mesa ao redor\n"
     "• Foto de frente (não inclinada)\n"
     "• Capricha na letra: quanto mais legível, mais fácil a leitura — e "
-    "menos ajuste manual depois"
+    "menos ajuste manual depois\n\n"
+    "✍️ Sem uma foto boa? Você também pode *digitar ou colar o texto* da "
+    "redação aqui, numa mensagem só.\n"
+    "⚠️ Escreva exatamente como está na folha, com os mesmos erros: se o "
+    "corretor automático do celular consertar palavras, a nota de escrita "
+    "(Competência 1) sai mais alta do que seria."
 )
-
-ESSAY_PROCESSING = "Foto recebida! 🔍 Estou lendo o seu texto, um instante..."
 
 ESSAY_OCR_FAILED = (
     "Não consegui ler o texto direito nessa foto. 😕\n\n"
@@ -155,7 +167,8 @@ ESSAY_OCR_FAILED = (
 )
 
 ESSAY_AWAITING_PHOTO_REMINDER = (
-    "Estou esperando a *foto* da sua redação. 📸\n\n"
+    "Estou esperando a *foto* da sua redação 📸 ou o *texto completo*, "
+    "digitado ou colado numa mensagem só.\n\n"
     "_Se quiser recomeçar (mudar o tema, por exemplo): /cancelar_"
 )
 
@@ -233,6 +246,20 @@ EDITED_TEXT_TOO_SHORT = (
     "envie de novo."
 )
 
+# Redação digitada ou colada no lugar da foto (sem OCR): eco para o aluno conferir antes de corrigir.
+TYPED_TEXT_PREVIEW = (
+    "Recebi o texto da sua redação! 👇\n\n"
+    "─────────────\n"
+    "{essay_text}\n"
+    "─────────────\n\n"
+    "Está igual ao que você escreveu na folha, com os mesmos erros?\n"
+    "• Se sim, toque em *Corrigir agora*.\n"
+    "• Se precisar ajustar, toque em *Editar texto*."
+)
+
+# Fecho do preview da leitura, que vai junto com os botões.
+CHOOSE_ACTION = "O que fazemos?"
+
 CONFIRMING_REMINDER = (
     "Sua redação está pronta para correção. 👇 Escolha uma opção nos botões "
     "acima, ou mande /cancelar para recomeçar."
@@ -245,25 +272,24 @@ CORRECTING = (
     "ENEM — isso leva um minutinho..."
 )
 
-_FOOTER_NEXT = (
-    "_Quer corrigir outra redação (ou uma nova versão desta)? É só tocar no "
-    "botão ou mandar /corrigir._"
-)
+# Sem botão "corrigir outra" depois do feedback: seria mais uma mensagem (o WhatsApp cobra por mensagem).
+_FOOTER_NEXT = "_Quer corrigir outra redação (ou uma nova versão desta)? É só mandar /corrigir._"
 
-CORRECTION_FOOTER = (
+_FOOTER_IA = (
     "\n\n─────────────\n"
     "_🤖 Correção automática por IA. A nota é uma estimativa: no ENEM oficial, "
-    "sua redação é avaliada por dois corretores humanos._\n" + _FOOTER_NEXT
+    "sua redação é avaliada por dois corretores humanos._\n"
 )
-
 # Modo híbrido: a nota é do modelo de machine learning, não do LLM.
-CORRECTION_FOOTER_HIBRIDO = (
+_FOOTER_ML = (
     "\n\n─────────────\n"
     "_🤖 Nota calculada por um modelo de machine learning treinado com milhares de "
     "redações reais corrigidas; os comentários são escritos por IA. A nota é uma "
     "estimativa: no ENEM oficial, sua redação é avaliada por dois corretores "
-    "humanos._\n" + _FOOTER_NEXT
+    "humanos._\n"
 )
+CORRECTION_FOOTER = _FOOTER_IA + _FOOTER_NEXT
+CORRECTION_FOOTER_HIBRIDO = _FOOTER_ML + _FOOTER_NEXT
 
 CORRECTION_FAILED = (
     "Tive um problema técnico na hora de corrigir. 😔 Sua redação não foi "

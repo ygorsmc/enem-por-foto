@@ -188,6 +188,7 @@ footer.site-footer{background:#2A2018;color:#C4B6A0;margin-top:64px;border-top:2
         <div class="tab-dropdown">
 <a href="#teste-o-bot" class="dropdown-link" data-page="inicio">Teste o bot</a>
 <a href="#como-funciona" class="dropdown-link" data-page="inicio">Como funciona</a>
+<a href="#a-conversa" class="dropdown-link" data-page="inicio">A conversa</a>
 <a href="#o-fluxo-etapa-por-etapa" class="dropdown-link" data-page="inicio">O fluxo, etapa por etapa</a>
 <a href="#arquitetura" class="dropdown-link" data-page="inicio">Arquitetura</a>
 <a href="#por-que-mensageria-e-n-o-um-app-de-ia" class="dropdown-link" data-page="inicio">Por que mensageria, e não um app de IA</a>
@@ -356,14 +357,14 @@ footer.site-footer{background:#2A2018;color:#C4B6A0;margin-top:64px;border-top:2
 <div class="content-wrapper"><h1 id="corretor-enem-">Corretor ENEM 📝</h1>
 
 
-<p>Bot multicanal (<strong>WhatsApp + Telegram</strong>) que corrige redações do ENEM a partir de uma <strong>foto do manuscrito</strong>: o aluno informa o tema, cola os textos motivadores (se tiver) e manda a foto — e recebe de volta a nota estimada (0 a 1000) por competência, com feedback pedagógico citando trechos exatos do próprio texto.</p>
+<p>Bot multicanal (<strong>WhatsApp + Telegram</strong>) que corrige redações do ENEM a partir de uma <strong>foto do manuscrito</strong>: o aluno informa o tema, cola os textos motivadores (se tiver) e manda a foto (ou digita o texto) — e recebe de volta a nota estimada (0 a 1000) por competência, com feedback pedagógico citando trechos exatos do próprio texto.</p>
 
 <h2 id="teste-o-bot">Teste o bot</h2>
 
-<p>Ele está no ar no Telegram: <strong><a href="https://t.me/asn_corretor_bot">@asn_corretor_bot</a></strong>. Mande <code>/start</code>, aceite o termo e siga os passos: tema, textos motivadores (opcional) e a foto da redação.</p>
+<p>Ele está no ar no Telegram: <strong><a href="https://t.me/asn_corretor_bot">@asn_corretor_bot</a></strong>. Mande <code>/start</code>, aceite o termo e siga os passos: tema, textos motivadores (opcional) e a foto da redação. Sem uma foto boa, dá para digitar ou colar o texto.</p>
 
 <ul>
-<li><strong>Limites por conta:</strong> 2 correções e 6 fotos por dia (3 fotos para cada correção).</li>
+<li><strong>Limites por conta:</strong> 10 correções e 30 fotos por dia (3 fotos para cada correção). O contador zera à meia-noite UTC (21h em Brasília).</li>
 <li><strong>A primeira mensagem pode levar ~45 s:</strong> o bot desliga depois de 10 minutos sem uso e precisa acordar. Depois responde na hora, e cada correção leva cerca de 1 minuto.</li>
 <li><strong>De onde vem a nota:</strong> de um modelo de machine learning treinado com milhares de redações corrigidas (<a href="#modo-híbrido-experimental">modo híbrido</a>); o comentário é escrito por IA.</li>
 <li><strong>Para onde vai a redação:</strong> o Mistral (França) lê a foto, o Jev (TypeSafe AI, EUA) analisa o texto e o DeepSeek (China) escreve o comentário. A foto é descartada logo após a leitura e nada fica guardado depois da correção; esses serviços podem manter cópias conforme as regras de cada um.</li>
@@ -372,6 +373,48 @@ footer.site-footer{background:#2A2018;color:#C4B6A0;margin-top:64px;border-top:2
 
 
 <h2 id="como-funciona">Como funciona</h2>
+
+<p>O projeto é um <strong>workflow</strong>, não um agente: o código define a ordem das etapas, e cada modelo (OCR, Jev, modelo de ML e LLM) faz uma tarefa fixa num ponto fixo. Nenhum modelo decide qual é o próximo passo.</p>
+
+<pre><code class="lang-text">
+              WhatsApp / Telegram
+                       │  mensagem do aluno (texto, botão ou foto)
+                       ▼
+ ┌───────────────────────────────────────────┐
+ │ 1. Webhook (FastAPI)                      │  valida a assinatura e responde 200 na hora
+ └─────────────────────┬─────────────────────┘
+                       │  despacha o trabalho (task em memória ou fila do Azure)
+                       ▼
+ ┌───────────────────────────────────────────┐     ┌────────────────────────────┐
+ │ 2. Máquina de estados da conversa         │◀───▶│ Redis: estado da conversa, │
+ │    termo → tema → motivadores →           │     │ aceite e limites diários   │
+ │    foto ou texto → confirmação            │     └────────────────────────────┘
+ └─────────────────────┬─────────────────────┘
+                       │  foto (o texto digitado pula o OCR)
+                       ▼
+ ┌───────────────────────────────────────────┐
+ │ 3. OCR (Mistral)                          │  a foto é descartada; só o texto segue
+ └─────────────────────┬─────────────────────┘
+                       │  o aluno confere o texto (edita, se precisar) e confirma
+           ┌───────────┴────────────┐
+       modo llm               modo híbrido
+           │                        ▼
+           │    ┌───────────────────────────────────────┐
+           │    │ 4. Jev: 71 perguntas sobre a redação  │
+           │    │    → modelo de ML → nota de C1 a C5   │
+           │    │    + portão de nota zero e pistas     │
+           │    └───────────────────┬───────────────────┘
+           │                        │
+           ▼                        ▼
+ ┌───────────────────────────────────────────┐
+ │ 5. LLM (DeepSeek): feedback citando       │  modo llm: o LLM também dá a nota
+ │    trechos da própria redação             │  modo híbrido: recebe a nota pronta
+ └─────────────────────┬─────────────────────┘
+                       ▼
+          nota + feedback para o aluno
+</code></pre>
+
+<h3 id="a-conversa">A conversa</h3>
 
 <p>Toda a correção acontece dentro de uma conversa de WhatsApp ou Telegram, a partir de uma <strong>foto do manuscrito</strong> — o aluno não sai do mensageiro:</p>
 
@@ -383,8 +426,8 @@ Aluno                    Bot
   │◀── "textos motivad.?"─┤
   │  textos / Pular       │
   │◀── "manda a foto" ────┤
-  │  📷 foto da redação   │──▶ download (background) → Mistral OCR
-  │◀── preview do OCR ────┤   foto descartada; só o texto segue
+  │  📷 foto ou texto     │──▶ foto: download (background) → Mistral OCR
+  │◀── preview do OCR ────┤   foto descartada; texto digitado pula o OCR
   │  [Editar texto]       │   opcional: aluno cola o texto ajustado
   │◀── eco p/ confirmar ──┤   (letra difícil → OCR imperfeito)
   │  [Corrigir agora]     │──▶ LLM + matriz de correção do ENEM
@@ -395,8 +438,8 @@ Aluno                    Bot
 
 <ul class="ordered">
 <li><strong>Tema e textos motivadores</strong> entram como texto digitado (o OCR fica reservado para a redação); os motivadores são opcionais.</li>
-<li><strong>A foto da redação</strong> (até 3 imagens, frente/verso) chega ao webhook, que apenas valida, responde <code>200</code> em <200 ms (SLA da Meta) e despacha o trabalho pesado — download da mídia, OCR e LLM — para uma task asyncio. Nunca no handler HTTP.</li>
-<li><strong>O OCR</strong> (Mistral <code>mistral-ocr-latest</code>) transcreve só a foto da redação. Em seguida a <strong>foto é descartada</strong>: apenas o texto segue adiante.</li>
+<li><strong>A foto da redação</strong> (até 2 imagens, frente e verso) chega ao webhook, que apenas valida, responde <code>200</code> em <200 ms (SLA da Meta) e despacha o trabalho pesado — download da mídia, OCR e LLM — para uma task asyncio. Nunca no handler HTTP.</li>
+<li><strong>O OCR</strong> (Mistral <code>mistral-ocr-latest</code>) transcreve só a foto da redação. Em seguida a <strong>foto é descartada</strong>: apenas o texto segue adiante. Sem uma foto boa, o aluno pode <strong>digitar ou colar o texto</strong> no lugar dela: não passa pelo OCR nem gasta leitura de foto, e o bot avisa para manter os erros da folha, porque o corretor automático do celular deixaria a nota de C1 mais alta do que seria.</li>
 <li><strong>Preview e edição manual</strong>: o aluno vê a transcrição com as palavras de baixa confiança destacadas e pode ajustar o que a letra difícil fez o OCR errar; o bot ecoa a versão final para confirmação antes de corrigir.</li>
 <li><strong>A correção</strong> vai para um LLM com prompt de corretor especialista baseado na Matriz de Referência do INEP (5 competências, triagem de nota zero, checklist da proposta de intervenção). Volta a nota estimada por competência (0–200 cada; 0–1000 no total) e o feedback citando trechos, formatado para o mensageiro (sem tabelas/<code>#</code>). No <a href="#modo-híbrido-experimental">modo híbrido</a>, a nota vem de um modelo de ML e o LLM só escreve o feedback.</li>
 </ul>
@@ -432,6 +475,8 @@ LLM (DeepSeek, raciocínio high): recebe a redação, as notas FIXAS e as pistas
 
 <h3 id="o-modelo-de-ml">O modelo de ML</h3>
 
+<p>O notebook <a href="https://github.com/ygorsmc/enem-por-foto/blob/main/notebooks/modelo_hibrido.ipynb"><code>notebooks/modelo_hibrido.ipynb</code></a> refaz este modelo do zero, para quem quiser conferir cada passo: os dados com as respostas do Jev, a divisão em treino e teste, as features, a escolha do algoritmo, a calibração, a avaliação e a checagem de que o resultado é o mesmo modelo do bot. As 71 perguntas feitas ao Jev, com a coluna de cada uma, estão em <a href="https://github.com/ygorsmc/enem-por-foto/blob/main/notebooks/perguntas_jev.md"><code>notebooks/perguntas_jev.md</code></a>.</p>
+
 <ul>
 <li><strong>O Jev como sensor, não como corretor.</strong> O Jev (<code>jev-1.14.0</code>, da TypeSafe AI) responde perguntas atômicas sobre a redação, como "a proposta tem um agente definido?" ou "o repertório é legitimado?", cada uma com uma probabilidade. Usado direto para dar a nota, ele puxa tudo para o meio da escala (QWK total 0,45). Como entrada de um modelo calibrado, funciona bem.</li>
 <li><strong>Dados.</strong> Corpus <a href="https://github.com/lplnufpi/essay-br">Essay-BR</a> (MIT; redações do Brasil Escola com nota por competência) na divisão oficial: treino 4.529 · validação 970 · teste 976. Os modelos foram escolhidos na validação e medidos <strong>uma única vez</strong> no teste. O modelo de produção é retreinado com as 6.475.</li>
@@ -464,7 +509,7 @@ LLM (DeepSeek, raciocínio high): recebe a redação, as notas FIXAS e as pistas
 <tr><td>Fonseca et al. (2018), mesmo corpus</td><td>0,44</td><td>0,48</td><td>0,42</td><td>0,47</td><td>0,38</td><td>0,53</td><td>157</td><td>—</td></tr>
 </table></div>
 
-<p>Os baselines são do artigo do corpus (Marinho, Anchiêta & Moura, <em>JIDM</em> 2022, Tabelas XI e XII). Como referência, dois corretores humanos concordam entre si com QWK total de 0,69 (Barbosa & Mauá, PROPOR 2026, em outro conjunto de dados). Em temas que o modelo nunca viu, a queda estimada é pequena (0,676 → 0,669, medida com um Ridge).</p>
+<p>Os baselines são do artigo do corpus (Marinho, Anchiêta & Moura, <em>JIDM</em> 2022, Tabelas XI e XII). Como referência, dois corretores humanos concordam entre si com QWK total de 0,69 (Barbosa & Mauá, PROPOR 2026, em outro conjunto de dados). Em temas que o modelo nunca viu, a queda é pequena: QWK total de 0,692 para 0,684, em validação cruzada por tema (ver o notebook).</p>
 
 <p><strong>Limitações:</strong></p>
 <ul>
@@ -516,7 +561,7 @@ CORRECTION_MODEL=deepseek-flash
 CORRECTION_EFFORT=high
 </code></pre>
 
-<p>Os <strong>artefatos do modelo</strong> (<code>src/correction/hybrid/artifacts/</code>: o modelo treinado, as perguntas do Jev e os cortes do checklist) <strong>não estão neste repositório nem na imagem Docker</strong>; são gerados pelo script de treino do laboratório, que também fica fora. Sem eles, use o modo padrão (<code>llm</code>). Localmente, o <code>docker-compose</code> monta a pasta no contêiner, só para leitura. No deploy, o <code>deploy.sh</code> envia os arquivos para um contêiner privado do Blob Storage, e o app os baixa por um link SAS só de leitura (ver <a href="deploy/README.md">deploy/README.md</a>). As versões de <code>numpy</code>, <code>scipy</code>, <code>scikit-learn</code> e <code>joblib</code> em <code>requirements.txt</code> são fixas porque precisam ser as mesmas do treino.</p>
+<p>Os <strong>artefatos do modelo</strong> (<code>src/correction/hybrid/artifacts/</code>: o modelo treinado, as perguntas no formato da API do Jev e os cortes do checklist) <strong>não estão neste repositório nem na imagem Docker</strong>; são gerados pelo script de treino do laboratório, que também fica fora. O modelo pode ser refeito com o <a href="https://github.com/ygorsmc/enem-por-foto/blob/main/notebooks/modelo_hibrido.ipynb">notebook</a>. Sem os artefatos, use o modo padrão (<code>llm</code>). Localmente, o <code>docker-compose</code> monta a pasta no contêiner, só para leitura. No deploy, o <code>deploy.sh</code> envia os arquivos para um contêiner privado do Blob Storage, e o app os baixa por um link SAS só de leitura (ver <a href="deploy/README.md">deploy/README.md</a>). As versões de <code>numpy</code>, <code>scipy</code>, <code>scikit-learn</code> e <code>joblib</code> em <code>requirements.txt</code> são fixas porque precisam ser as mesmas do treino.</p>
 
 <h2 id="custo-e-observabilidade">Custo e observabilidade</h2>
 
@@ -534,12 +579,12 @@ CORRECTION_EFFORT=high
 <h2 id="lgpd-o-p-blico-menor-de-idade-">LGPD (o público é menor de idade)</h2>
 
 <ul>
-<li><strong>Consentimento explícito</strong> no primeiro contato, antes de qualquer processamento. O termo nomeia os serviços externos por onde a redação passa e o país de cada um (Mistral, França; Jev, EUA, no modo híbrido; o provedor do LLM), avisa que eles podem manter cópias conforme as regras próprias e pede que menores de 18 leiam com um responsável.</li>
+<li><strong>Consentimento explícito</strong> no primeiro contato, antes de qualquer processamento. O aceite fica guardado junto com a versão do termo (um hash do texto): o termo só volta a aparecer quando o texto muda, por exemplo ao trocar o provedor do LLM, e quem recusa a versão nova perde o aceite antigo. O termo nomeia os serviços externos por onde a redação passa e o país de cada um (Mistral, França; Jev, EUA, no modo híbrido; o provedor do LLM), avisa que eles podem manter cópias conforme as regras próprias e pede que menores de 18 leiam com um responsável.</li>
 <li>A <strong>foto é descartada</strong> logo após o OCR; o texto transcrito vive apenas no estado Redis, que <strong>expira em 45 min</strong>. Nada persiste após a correção (não há histórico).</li>
 <li>No <strong>modo híbrido</strong>, o texto da redação (nunca a foto) também é enviado à API do Jev (TypeSafe AI). Confira os termos de tratamento de dados do provedor antes de usar esse modo com alunos.</li>
 <li>O <strong>Langfuse</strong>, se ligado, recebe só números de uso e custo (ver <a href="#custo-e-observabilidade">Custo e observabilidade</a>).</li>
 <li>O feedback deixa claro que a correção é feita por IA e que a nota é uma <strong>estimativa</strong> (no ENEM oficial são dois corretores humanos).</li>
-<li>Rate-limit diário (<code>ESSAY_DAILY_LIMIT</code>, default 2, e <code>PHOTOS_PER_ESSAY</code> fotos por correção) — controle de custo do fluxo OCR + LLM.</li>
+<li>Rate-limit diário (<code>ESSAY_DAILY_LIMIT</code>, default 10, e <code>PHOTOS_PER_ESSAY</code> fotos por correção) — controle de custo do fluxo OCR + LLM.</li>
 </ul>
 
 <h2 id="rodando-local">Rodando local</h2>
@@ -630,9 +675,9 @@ make deploy                                        # build da imagem (Docker loc
 
 <h2 id="estrutura">Estrutura</h2>
 
-<p>Só o que é essencial para rodar, testar e fazer deploy do bot. O portal de</p>
-<p>documentação renderizado fica em <code>docs/index.html</code>; a fonte que o gera e os</p>
-<p>scripts de laboratório não fazem parte deste repositório.</p>
+<p>Só o que é essencial para rodar, testar e fazer deploy do bot, mais o notebook do</p>
+<p>modelo. O portal de documentação renderizado fica em <code>docs/index.html</code>; a fonte que o</p>
+<p>gera e os scripts de laboratório não fazem parte deste repositório.</p>
 
 <pre><code class="lang-text">
 .
@@ -688,11 +733,17 @@ make deploy                                        # build da imagem (Docker loc
 │           ├── scoring.py                             # soma exata, portão de nota zero, checklist
 │           └── pipeline.py                             # nota do modelo → notas fixas → feedback do LLM
 │
+├── notebooks/
+│   ├── modelo_hibrido.ipynb     # o modelo do modo híbrido refeito do zero (dados → teste → paridade com o bot)
+│   ├── perguntas_jev.md          # as 71 perguntas do Jev e a coluna de cada uma
+│   ├── requirements.txt           # dependências do notebook (mesmas versões de numpy/scikit-learn do bot)
+│   └── data/                       # Essay-BR + respostas do Jev (CSV) e a licença MIT do corpus
+│
 ├── scripts/
 │   └── simulate.py            # REPL de conversa com canal fake — E2E local sem provedor real
 │
 └── tests/
-    └── unit/                     # 144 testes puros — FakeRedis + FakeChannel, sem I/O
+    └── unit/                     # 163 testes puros — FakeRedis + FakeChannel, sem I/O
 </code></pre>
 </div>
 </div>

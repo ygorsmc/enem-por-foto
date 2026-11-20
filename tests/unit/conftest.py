@@ -58,6 +58,7 @@ class FakeChannel(IMessagingChannel):
 
     def __init__(self, media: bytes = b""):
         self.sent: list[tuple] = []       # ("text", corpo) | ("buttons", corpo, [ids])
+        self.typing: list[str | None] = []  # message_id de cada send_typing
         self.media = media
 
     async def send_text(self, user_id, text, reply_to=None) -> dict:
@@ -68,8 +69,8 @@ class FakeChannel(IMessagingChannel):
         self.sent.append(("buttons", body, [b["id"] for b in buttons]))
         return {}
 
-    async def send_typing(self, user_id) -> None:
-        pass
+    async def send_typing(self, user_id, message_id=None) -> None:
+        self.typing.append(message_id)
 
     async def download_media(self, media_id) -> bytes:
         return self.media

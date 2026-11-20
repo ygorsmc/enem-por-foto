@@ -8,6 +8,7 @@
 _local
 deploy
 docs
+notebooks
 scripts
 tests
 # Modelo do modo híbrido: nunca na imagem (pacote público). Local: montado pelo

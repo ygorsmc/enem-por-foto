@@ -59,6 +59,12 @@ class TestConsentGate:
         run(handlers.handle_message(channel, button_msg("consent_no")))
         assert ("text", m.CONSENT_DECLINED) in channel.sent
 
+    def test_accept_starts_the_flow_in_one_message(self, channel):
+        # Boas-vindas + pedido do tema numa mensagem só, sem menu com botão "começar".
+        run(handlers.handle_message(channel, button_msg("consent_yes")))
+        assert channel.sent == [("text", m.WELCOME_START)]
+        assert run(load_flow("fake", "aluno1")).state == FlowState.AWAITING_THEME
+
 
 class TestHappyPath:
     def test_full_flow_delivers_feedback_and_clears_state(self, channel, monkeypatch):
@@ -77,8 +83,8 @@ class TestHappyPath:
 
     def test_ocr_preview_is_shown_before_confirm(self, channel):
         run(_advance_to_confirming(channel))
-        texts = [s[1] for s in channel.sent if s[0] == "text"]
-        assert any(FAKE_OCR_TEXT[:50] in t for t in texts)
+        bodies = [s[1] for s in channel.sent]
+        assert any(FAKE_OCR_TEXT[:50] in t for t in bodies)
         flow = run(load_flow("fake", "aluno1"))
         assert flow.state == FlowState.CONFIRMING
 
@@ -277,7 +283,7 @@ class TestLowConfidenceWords:
     def test_flagged_words_shown_in_preview(self, channel, monkeypatch):
         self._patch_flagging_ocr(monkeypatch)
         run(_advance_to_confirming(channel))
-        texts = [s[1] for s in channel.sent if s[0] == "text"]
+        texts = [s[1] for s in channel.sent]
         # Poucas palavras (2): mensagem pontual "confira estas palavras".
         assert any("Palavras a conferir" in t and "intransponível" in t for t in texts)
         assert not any("ficou difícil" in t for t in texts)
@@ -293,7 +299,7 @@ class TestLowConfidenceWords:
 
         monkeypatch.setattr(handlers, "ocr_image", ocr)
         run(_advance_to_confirming(channel))
-        texts = [s[1] for s in channel.sent if s[0] == "text"]
+        texts = [s[1] for s in channel.sent]
         assert any("ficou difícil" in t and "reler o texto inteiro" in t for t in texts)
         # Mostra só as primeiras (piores), não a lista inteira.
         preview = next(t for t in texts if "ficou difícil" in t)
@@ -426,6 +432,7 @@ class TestCommands:
     def test_idle_photo_gets_guidance(self, channel):
         async def scenario():
             await _consent(channel)
+            await handlers.handle_message(channel, text_msg("/cancelar"))  # o aceite já abre o fluxo
             await handlers.handle_message(channel, image_msg())
 
         run(scenario())
@@ -506,3 +513,165 @@ class TestPhotoLimit:
         run(scenario())
         texts = [s[1] for s in channel.sent if s[0] == "text"]
         assert not any("fotos hoje" in t for t in texts)
+
+
+LONG_TYPED = "A redação digitada pelo aluno, com os mesmos erros da folha. " * 5
+
+
+async def _advance_to_essay_step(channel):
+    await _consent(channel)
+    await handlers.handle_message(channel, text_msg(THEME))
+    await handlers.handle_message(channel, button_msg("skip_motivators"))
+
+
+class TestTypedEssay:
+    """No passo da foto, o aluno pode digitar ou colar o texto: sem OCR e sem gastar leitura de foto."""
+
+    def test_pedido_da_foto_oferece_o_texto_com_aviso_do_corretor(self):
+        assert "digitar ou colar o texto" in m.ASK_ESSAY_PHOTO
+        assert "corretor automático" in m.ASK_ESSAY_PHOTO and "Competência 1" in m.ASK_ESSAY_PHOTO
+
+    def test_typed_essay_goes_to_confirmation_without_ocr(self, channel, monkeypatch, fake_redis):
+        async def no_ocr(*a, **k):
+            raise AssertionError("OCR não deveria rodar para texto digitado")
+
+        monkeypatch.setattr(handlers, "ocr_image", no_ocr)
+
+        async def scenario():
+            await _advance_to_essay_step(channel)
+            await handlers.handle_message(channel, text_msg(LONG_TYPED))
+            return await load_flow("fake", "aluno1")
+
+        flow = run(scenario())
+        assert flow.state == FlowState.CONFIRMING
+        assert flow.essay_parts == [LONG_TYPED.strip()]
+        kind, body, ids = channel.sent[-1]
+        assert kind == "buttons" and LONG_TYPED[:40] in body
+        assert ids == ["confirm_correct", "edit_text"]
+        assert not any(k.startswith("photo_count:") for k in fake_redis.store)  # leitura de foto não gasta
+
+    def test_typed_essay_is_what_gets_corrected(self, channel, monkeypatch):
+        seen = {}
+
+        async def fake_correct(theme, motivators, essay_text):
+            seen["essay"] = essay_text
+            return FAKE_FEEDBACK
+
+        monkeypatch.setattr(handlers, "correct_essay", fake_correct)
+
+        async def scenario():
+            await _advance_to_essay_step(channel)
+            await handlers.handle_message(channel, text_msg(LONG_TYPED))
+            await handlers.handle_message(channel, button_msg("confirm_correct"))
+
+        run(scenario())
+        assert seen["essay"] == LONG_TYPED.strip()
+
+    def test_short_text_gets_reminder(self, channel):
+        async def scenario():
+            await _advance_to_essay_step(channel)
+            await handlers.handle_message(channel, text_msg("ok"))
+            return await load_flow("fake", "aluno1")
+
+        flow = run(scenario())
+        assert channel.sent[-1] == ("text", m.ESSAY_AWAITING_PHOTO_REMINDER)
+        assert flow.state == FlowState.AWAITING_ESSAY_PHOTO
+
+    def test_typed_essay_respects_daily_quota(self, channel, monkeypatch):
+        monkeypatch.setattr(settings, "ESSAY_DAILY_LIMIT", 0)
+
+        async def scenario():
+            await _advance_to_essay_step(channel)
+            await handlers.handle_message(channel, text_msg(LONG_TYPED))
+            return await load_flow("fake", "aluno1")
+
+        flow = run(scenario())
+        assert channel.sent[-1] == ("text", m.RATE_LIMITED.format(limit=0))
+        assert flow.state == FlowState.AWAITING_ESSAY_PHOTO
+
+
+class TestMenosMensagens:
+    """Plano de mensagens enxuto, igual nos dois canais (o WhatsApp cobra por mensagem)."""
+
+    def test_photo_shows_typing_instead_of_a_waiting_message(self, channel):
+        run(_advance_to_confirming(channel))
+        assert "m2" in channel.typing  # indicador atrelado à mensagem da foto
+        assert not any("Estou lendo" in s[1] for s in channel.sent)
+
+    def test_preview_and_buttons_in_one_message(self, channel):
+        run(_advance_to_confirming(channel))
+        kind, body, ids = channel.sent[-1]
+        assert kind == "buttons" and FAKE_OCR_TEXT[:40] in body and body.endswith(m.CHOOSE_ACTION)
+        assert ids == ["confirm_correct", "edit_text", "redo_photo"]
+
+    def test_no_button_after_feedback(self, channel, monkeypatch):
+        monkeypatch.setattr(settings, "CORRECTION_MODE", "llm")
+
+        async def scenario():
+            await _advance_to_confirming(channel)
+            await handlers.handle_message(channel, button_msg("confirm_correct"))
+
+        run(scenario())
+        kind, body = channel.sent[-1][:2]
+        assert kind == "text" and body.endswith(m.CORRECTION_FOOTER)
+        assert "/corrigir" in m.CORRECTION_FOOTER and "botão" not in m.CORRECTION_FOOTER
+
+    def test_full_correction_message_count(self, channel):
+        # Aceite → tema → pular motivadores → foto → corrigir: 6 mensagens do bot (eram 10, sem contar a divisão do
+        # feedback): boas-vindas+tema, motivadores, pedido da foto, preview+botões, "corrigindo", feedback.
+        async def scenario():
+            await _consent(channel)
+            await handlers.handle_message(channel, text_msg(THEME))
+            await handlers.handle_message(channel, button_msg("skip_motivators"))
+            await handlers.handle_message(channel, image_msg())
+            await handlers.handle_message(channel, button_msg("confirm_correct"))
+
+        run(scenario())
+        assert len(channel.sent) == 6
+
+
+
+class TestTermoVersionado:
+    """O aceite vale para a versão do termo: só é pedido de novo quando o texto muda."""
+
+    def test_consent_is_asked_only_once(self, channel):
+        async def scenario():
+            await _consent(channel)
+            await handlers.handle_message(channel, text_msg("/cancelar"))
+            await handlers.handle_message(channel, text_msg("oi"))
+
+        run(scenario())
+        assert not any(s[0] == "buttons" and s[2] == ["consent_yes", "consent_no"] for s in channel.sent)
+
+    def test_term_change_asks_again_with_update_notice(self, channel, monkeypatch):
+        monkeypatch.setattr(settings, "CORRECTION_PROVIDER", "deepseek")
+        run(_consent(channel))
+        monkeypatch.setattr(settings, "CORRECTION_PROVIDER", "gemini")  # o termo agora nomeia outro serviço
+        run(handlers.handle_message(channel, text_msg("oi")))
+        kind, body, ids = channel.sent[-1]
+        assert kind == "buttons" and ids == ["consent_yes", "consent_no"]
+        assert body.startswith(m.CONSENT_INTRO_UPDATED) and "Gemini" in body
+
+    def test_accepting_new_version_unlocks_the_bot(self, channel, monkeypatch):
+        run(_consent(channel))
+        monkeypatch.setattr(settings, "FLOW_TTL_SECONDS", 3600)  # prazo de guarda mudou → versão nova
+        run(_consent(channel))
+        assert channel.sent[-1] == ("text", m.WELCOME_START)
+        assert run(handlers.accepted_consent_version("fake", "aluno1")) == handlers._consent_version()
+
+    def test_legacy_consent_is_asked_again(self, channel, fake_redis):
+        fake_redis.store["consent:fake:aluno1"] = "1"  # aceites anteriores ao versionamento
+        run(handlers.handle_message(channel, text_msg("oi")))
+        assert channel.sent[-1][1].startswith(m.CONSENT_INTRO_UPDATED)
+
+    def test_declining_new_version_revokes_old_consent(self, channel, monkeypatch, fake_redis):
+        run(_consent(channel))
+        monkeypatch.setattr(settings, "FLOW_TTL_SECONDS", 3600)
+        run(handlers.handle_message(channel, button_msg("consent_no")))
+        assert "consent:fake:aluno1" not in fake_redis.store
+        assert run(load_flow("fake", "aluno1")) is None
+        assert channel.sent[-1] == ("text", m.CONSENT_DECLINED)
+
+    def test_first_contact_uses_greeting(self, channel):
+        run(handlers.handle_message(channel, text_msg("oi")))
+        assert channel.sent[0][1].startswith(m.CONSENT_INTRO)

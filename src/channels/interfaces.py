@@ -38,8 +38,9 @@ class IMessagingChannel(ABC):
         pass
 
     @abstractmethod
-    async def send_typing(self, user_id: str) -> None:
-        """Indicador de 'digitando...' (no-op no WhatsApp Cloud API)."""
+    async def send_typing(self, user_id: str, message_id: str | None = None) -> None:
+        """Indicador de 'digitando...'. `message_id` é a mensagem recebida que está sendo respondida: o WhatsApp
+        só mostra o indicador atrelado a ela (e a marca como lida); sem ela, lá é no-op."""
         pass
 
     @abstractmethod

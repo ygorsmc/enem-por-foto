@@ -43,7 +43,7 @@ class ConsoleChannel(IMessagingChannel):
         print()
         return {}
 
-    async def send_typing(self, user_id: str) -> None:
+    async def send_typing(self, user_id: str, message_id: str | None = None) -> None:
         print("   (digitando...)")
 
     async def download_media(self, media_id: str) -> bytes:

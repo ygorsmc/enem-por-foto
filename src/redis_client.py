@@ -3,7 +3,7 @@
 O Redis guarda TODO o estado do produto (não há banco relacional). As chaves,
 opcionalmente prefixadas por REDIS_NAMESPACE (ver redis_key):
   - flow:{canal}:{sender}      → estado da conversa (JSON, TTL 45 min)
-  - consent:{canal}:{sender}   → aceite LGPD (sem TTL)
+  - consent:{canal}:{sender}   → aceite LGPD (sem TTL; valor = versão do termo aceito)
   - essay_count:{canal}:{sender}:{yyyymmdd} → rate-limit diário
   - webhook:{message_id}       → idempotência (provedores reenviam updates)
 """

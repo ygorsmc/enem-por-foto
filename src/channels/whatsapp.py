@@ -118,9 +118,24 @@ class WhatsAppChannel(IMessagingChannel):
 
         return await self._send_request(message)
 
-    async def send_typing(self, user_id: str) -> None:
-        # WhatsApp Cloud API não suporta indicador de typing direto.
-        pass
+    async def send_typing(self, user_id: str, message_id: str | None = None) -> None:
+        """Marca a mensagem recebida como lida e mostra "digitando..." (some com a próxima resposta ou em ~25 s).
+
+        É uma atualização de status, não uma mensagem: não entra na cobrança por mensagem. Falha aqui nunca
+        interrompe o fluxo (é só cosmético)."""
+        if not message_id:
+            return
+        try:
+            await self._send_request(
+                {
+                    "messaging_product": "whatsapp",
+                    "status": "read",
+                    "message_id": message_id,
+                    "typing_indicator": {"type": "text"},
+                }
+            )
+        except Exception as e:
+            logger.warning("whatsapp_typing_failed", error=str(e)[:200])
 
     async def download_media(self, media_id: str) -> bytes:
         """Baixa uma mídia recebida: GET /media_id → url assinada → bytes."""

@@ -152,3 +152,37 @@ class TestTelegramSendRetry:
         with pytest.raises(httpx.ReadTimeout):
             asyncio.run(TelegramChannel().send_text("1", "oi"))
         assert len(chamadas) == 1
+
+
+class TestWhatsAppTyping:
+    """'Digitando...' no WhatsApp: status de leitura atrelado à mensagem recebida (não é mensagem cobrada)."""
+
+    def test_typing_marks_read_with_indicator(self, monkeypatch):
+        sent = []
+
+        async def fake_send(self, message):
+            sent.append(message)
+            return {}
+
+        monkeypatch.setattr(WhatsAppChannel, "_send_request", fake_send)
+        asyncio.run(WhatsAppChannel().send_typing("5511999999999", "wamid.9"))
+        assert sent == [{
+            "messaging_product": "whatsapp",
+            "status": "read",
+            "message_id": "wamid.9",
+            "typing_indicator": {"type": "text"},
+        }]
+
+    def test_typing_without_message_id_is_noop(self, monkeypatch):
+        async def fail(self, message):
+            raise AssertionError("não deveria chamar a API")
+
+        monkeypatch.setattr(WhatsAppChannel, "_send_request", fail)
+        asyncio.run(WhatsAppChannel().send_typing("5511999999999"))
+
+    def test_typing_failure_never_breaks_the_flow(self, monkeypatch):
+        async def boom(self, message):
+            raise RuntimeError("400")
+
+        monkeypatch.setattr(WhatsAppChannel, "_send_request", boom)
+        asyncio.run(WhatsAppChannel().send_typing("5511999999999", "wamid.9"))  # não levanta

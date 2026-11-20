@@ -1,5 +1,5 @@
-"""Máquina de estados da conversa: consentimento → tema → motivadores → foto →
-confirmação (com edição manual opcional do texto OCR) → correção.
+"""Máquina de estados da conversa: consentimento → tema → motivadores → foto (ou
+texto digitado) → confirmação (com edição manual opcional do texto) → correção.
 
 Roda SEMPRE na task de background (nunca no handler HTTP do webhook): é aqui
 que acontecem download de mídia, OCR e LLM. Regras herdadas do pai:
@@ -10,6 +10,7 @@ que acontecem download de mídia, OCR e LLM. Regras herdadas do pai:
     técnica na correção devolve o crédito.
 """
 
+import hashlib
 import time
 
 import structlog
@@ -22,10 +23,11 @@ from src.correction.ocr import ocr_image
 from src.flow.states import (
     FlowData,
     FlowState,
+    accepted_consent_version,
     clear_flow,
     grant_consent,
-    has_consent,
     load_flow,
+    revoke_consent,
     save_flow,
 )
 from src.rate_limit import (
@@ -59,15 +61,26 @@ def _merge_flagged(existing: list[str], new: list[str]) -> list[str]:
     return merged[:MAX_FLAGGED_WORDS_STORED]
 
 
-def _consent_text() -> str:
-    """Termo de consentimento do modo e do provedor em uso: nomeia os serviços por onde a redação passa."""
+def _consent_terms() -> str:
+    """Corpo do termo para o modo e o provedor em uso: nomeia os serviços por onde a redação passa."""
     hibrido = settings.CORRECTION_MODE == "hibrido"
-    template = m.CONSENT_REQUEST_HIBRIDO if hibrido else m.CONSENT_REQUEST_LLM
+    template = m.CONSENT_TERMS_HIBRIDO if hibrido else m.CONSENT_TERMS_LLM
     provider = settings.CORRECTION_PROVIDER
     return template.format(
         llm=m.LLM_PROVIDER_LABELS.get(provider, f"*{provider}*"),
         minutos=settings.FLOW_TTL_SECONDS // 60,
     )
+
+
+def _consent_version() -> str:
+    """Versão do termo = hash do corpo mostrado ao aluno. Qualquer mudança no texto (outro provedor, outro modo,
+    outro prazo de guarda, nova redação) muda a versão, e quem aceitou a anterior vê o termo de novo."""
+    return hashlib.sha256(_consent_terms().encode("utf-8")).hexdigest()[:12]
+
+
+def _consent_text(updated: bool = False) -> str:
+    """Primeiro contato: saudação + termo. Aceite de versão anterior: aviso de que o termo mudou + termo."""
+    return (m.CONSENT_INTRO_UPDATED if updated else m.CONSENT_INTRO) + _consent_terms()
 
 
 def _correction_footer() -> str:
@@ -96,14 +109,23 @@ async def handle_message(channel: IMessagingChannel, msg: InboundMessage) -> Non
     btn = _button_id(msg)
 
     # ── Portão de consentimento (LGPD — nada é processado antes do aceite) ──
-    if not await has_consent(ch, sender):
+    # O aceite vale para a versão do termo que o aluno viu: texto novo → aceite de novo.
+    version = _consent_version()
+    accepted = await accepted_consent_version(ch, sender)
+    if accepted != version:
         if btn == "consent_yes":
-            await grant_consent(ch, sender)
-            await channel.send_buttons(sender, m.WELCOME_MENU, [m.BTN_START])
+            await grant_consent(ch, sender, version)
+            # Já começa o fluxo: as boas-vindas e o pedido do tema vão numa mensagem só.
+            await save_flow(ch, sender, FlowData(state=FlowState.AWAITING_THEME))
+            await channel.send_text(sender, m.WELCOME_START)
         elif btn == "consent_no":
+            await revoke_consent(ch, sender)  # recusou a versão nova: o aceite antigo também deixa de valer
+            await clear_flow(ch, sender)
             await channel.send_text(sender, m.CONSENT_DECLINED)
         else:
-            await channel.send_buttons(sender, _consent_text(), [m.CONSENT_BTN_YES, m.CONSENT_BTN_NO])
+            await channel.send_buttons(
+                sender, _consent_text(updated=accepted is not None), [m.CONSENT_BTN_YES, m.CONSENT_BTN_NO]
+            )
         return
 
     # ── Comandos globais (valem em qualquer estado) ──────────────────────────
@@ -188,14 +210,38 @@ async def _handle_awaiting_motivators(
 async def _handle_awaiting_photo(
     channel: IMessagingChannel, sender: str, flow: FlowData, msg: InboundMessage
 ) -> None:
-    if msg.message_type != "image" or not msg.media_id:
-        await channel.send_text(sender, m.ESSAY_AWAITING_PHOTO_REMINDER)
+    if msg.message_type == "image" and msg.media_id:
+        await _process_essay_photo(channel, sender, flow, msg.media_id, msg.message_id)
         return
-    await _process_essay_photo(channel, sender, flow, msg.media_id)
+    text = (msg.text or "").strip()
+    if msg.message_type == "text" and len(text) >= settings.MIN_ESSAY_CHARS:
+        await _accept_typed_essay(channel, sender, flow, text)
+        return
+    await channel.send_text(sender, m.ESSAY_AWAITING_PHOTO_REMINDER)
+
+
+async def _accept_typed_essay(channel: IMessagingChannel, sender: str, flow: FlowData, text: str) -> None:
+    """Redação digitada ou colada no lugar da foto: sem OCR (e sem gastar leitura de foto). Segue o mesmo caminho
+    da edição manual: eco do texto e confirmação antes de corrigir."""
+    ch = channel.channel_name
+    if not await has_quota(ch, sender):
+        await channel.send_text(sender, m.RATE_LIMITED.format(limit=settings.ESSAY_DAILY_LIMIT))
+        return
+    flow.essay_parts = [text]
+    flow.flagged_words = []
+    flow.state = FlowState.CONFIRMING
+    await save_flow(ch, sender, flow)
+    logger.info("essay_typed_received", channel=ch, chars=len(text))
+    preview = flow.essay_text[: settings.OCR_PREVIEW_MAX_CHARS]
+    await channel.send_buttons(
+        sender,
+        m.TYPED_TEXT_PREVIEW.format(essay_text=preview),
+        [m.BTN_CONFIRM_CORRECT, m.BTN_EDIT_TEXT],
+    )
 
 
 async def _process_essay_photo(
-    channel: IMessagingChannel, sender: str, flow: FlowData, media_id: str
+    channel: IMessagingChannel, sender: str, flow: FlowData, media_id: str, message_id: str | None = None
 ) -> None:
     """Download → OCR → preview + confirmação. A foto (bytes) morre aqui."""
     ch = channel.channel_name
@@ -211,8 +257,8 @@ async def _process_essay_photo(
         )
         return
 
-    await channel.send_text(sender, m.ESSAY_PROCESSING)
-    await channel.send_typing(sender)
+    # Só o indicador de "digitando" (não é mensagem; no WhatsApp não entra na cobrança), sem aviso "estou lendo".
+    await channel.send_typing(sender, message_id)
 
     t_task = time.perf_counter()
     try:
@@ -268,12 +314,12 @@ async def _process_essay_photo(
             else m.OCR_FLAGGED_NOTE
         )
         preview_msg += note.format(words=shown)
-    await channel.send_text(sender, preview_msg)
+    # Preview e botões numa mensagem só (no WhatsApp, corpo acima de 1024 caracteres vira texto + botões).
     # WhatsApp aceita no máximo 3 botões: "adicionar foto" não vira botão —
     # mandar outra foto direto já acrescenta uma parte (ver _handle_confirming).
     await channel.send_buttons(
         sender,
-        "O que fazemos?",
+        preview_msg + "\n\n" + m.CHOOSE_ACTION,
         [m.BTN_CONFIRM_CORRECT, m.BTN_EDIT_TEXT, m.BTN_REDO_PHOTO],
     )
 
@@ -302,7 +348,7 @@ async def _handle_confirming(
             return
         if msg.message_type == "image" and msg.media_id:
             # Foto mandada direto na confirmação = mais uma parte da redação.
-            await _process_essay_photo(channel, sender, flow, msg.media_id)
+            await _process_essay_photo(channel, sender, flow, msg.media_id, msg.message_id)
         else:
             flow.state = FlowState.AWAITING_ESSAY_PHOTO
             await save_flow(ch, sender, flow)
@@ -314,7 +360,7 @@ async def _handle_confirming(
         return
 
     if btn == "confirm_correct":
-        await _run_correction(channel, sender, flow)
+        await _run_correction(channel, sender, flow, msg.message_id)
         return
 
     await channel.send_text(sender, m.CONFIRMING_REMINDER)
@@ -362,7 +408,9 @@ async def _handle_editing_text(
     )
 
 
-async def _run_correction(channel: IMessagingChannel, sender: str, flow: FlowData) -> None:
+async def _run_correction(
+    channel: IMessagingChannel, sender: str, flow: FlowData, message_id: str | None = None
+) -> None:
     """Rate-limit → LLM → feedback. Falha técnica devolve o crédito do dia e
     mantém o estado (o aluno pode tentar de novo sem repetir o fluxo)."""
     ch = channel.channel_name
@@ -372,7 +420,7 @@ async def _run_correction(channel: IMessagingChannel, sender: str, flow: FlowDat
         return
 
     await channel.send_text(sender, m.CORRECTING)
-    await channel.send_typing(sender)
+    await channel.send_typing(sender, message_id)
 
     t_task = time.perf_counter()
     try:
@@ -389,8 +437,8 @@ async def _run_correction(channel: IMessagingChannel, sender: str, flow: FlowDat
     # Estado morre ANTES da entrega: se o envio falhar no meio dos chunks, o
     # aluno recomeça limpo em vez de ficar preso num CONFIRMING fantasma.
     await clear_flow(ch, sender)
+    # Sem botão "corrigir outra" (seria mais uma mensagem): o rodapé diz como começar outra correção.
     await channel.send_text(sender, feedback + _correction_footer())
-    await channel.send_buttons(sender, "Quer corrigir outra redação?", [m.BTN_START])
     task_ms = round((time.perf_counter() - t_task) * 1000)
     logger.info(
         "essay_flow_completed",
