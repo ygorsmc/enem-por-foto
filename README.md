@@ -43,7 +43,7 @@ O projeto é um **workflow**, não um agente: o código define a ordem das etapa
      IA generativa           modelo treinado
            │                        ▼
            │    ┌───────────────────────────────────────┐
-           │    │ 4. Jev: 71 perguntas sobre a redação  │
+           │    │ 4. Jev: 59 perguntas sobre a redação  │
            │    │    → modelo de ML → nota de C1 a C5   │
            │    │    + portão de nota zero e pistas     │
            │    └───────────────────┬───────────────────┘
@@ -102,7 +102,7 @@ No modo padrão (`CORRECTION_MODE=llm`), o LLM dá a nota **e** escreve o feedba
 
 ```
 texto confirmado pelo aluno
-   ├─► Jev: 1 chamada com {tema, redação} e 71 perguntas objetivas → probabilidades de 0 a 1
+   ├─► Jev: 1 chamada com {tema, redação} e 59 perguntas objetivas → probabilidades de 0 a 1
    ├─► Python: medidas do texto (contagens, estrutura, relação com o tema) e 6 notas de um TF-IDF
    ▼
 ExtraTrees (C1..C5 e total) → calibração → ajuste para C1+…+C5 = total
@@ -114,7 +114,7 @@ LLM (DeepSeek, raciocínio high): recebe a redação, as notas FIXAS e as pistas
 
 ### O modelo de ML
 
-O notebook [`notebooks/modelo_hibrido.ipynb`](https://github.com/ygorsmc/enem-por-foto/blob/main/notebooks/modelo_hibrido.ipynb) refaz este modelo do zero, para quem quiser conferir cada passo: os dados com as respostas do Jev, a divisão em treino e teste, as features, a escolha do algoritmo, a calibração, a avaliação e a checagem de que o resultado é o mesmo modelo do bot. As 71 perguntas feitas ao Jev, com a coluna de cada uma, estão em [`notebooks/perguntas_jev.md`](https://github.com/ygorsmc/enem-por-foto/blob/main/notebooks/perguntas_jev.md).
+O notebook [`notebooks/modelo_hibrido.ipynb`](https://github.com/ygorsmc/enem-por-foto/blob/main/notebooks/modelo_hibrido.ipynb) refaz este modelo do zero, para quem quiser conferir cada passo: os dados com as respostas do Jev, a divisão em treino e teste, as features, a escolha do algoritmo, a calibração, a avaliação e a checagem de que o resultado é o mesmo modelo do bot. As 59 perguntas feitas ao Jev, com a coluna de cada uma, estão em [`notebooks/perguntas_jev.md`](https://github.com/ygorsmc/enem-por-foto/blob/main/notebooks/perguntas_jev.md).
 
 - **O Jev como sensor, não como corretor.** O Jev (`jev-1.14.0`, da TypeSafe AI) responde perguntas atômicas sobre a redação, como "a proposta tem um agente definido?" ou "o repertório é legitimado?", cada uma com uma probabilidade. Usado direto para dar a nota, ele puxa tudo para o meio da escala (QWK total 0,45). Como entrada de um modelo calibrado, funciona bem.
 - **Dados.** Corpus [Essay-BR](https://github.com/lplnufpi/essay-br) (MIT; redações do Brasil Escola com nota por competência) na divisão oficial: treino 4.529 · validação 970 · teste 976. Os modelos foram escolhidos na validação e medidos **uma única vez** no teste. O modelo de produção é retreinado com as 6.475.
@@ -132,20 +132,32 @@ O notebook [`notebooks/modelo_hibrido.ipynb`](https://github.com/ygorsmc/enem-po
 - **Calibração.** Modelos de regressão comprimem as notas para o meio. Um ajuste linear, feito sobre previsões fora da amostra, devolve às notas previstas a média e o desvio-padrão das notas reais.
 - **Soma exata.** O total é previsto direto, e as 5 competências são projetadas nos níveis inteiros mais próximos (0, 40, …, 200) cuja soma é exatamente o total. Isso corta o erro médio em ~10 pontos.
 - **Nota zero e pistas.** Um portão aplica as regras da Cartilha do INEP (fuga ao tema, texto não dissertativo, carta, identificação, impropério, texto insuficiente etc.) sobre as respostas do Jev; nas 6.475 redações normais, dispara em 0,6%. Um checklist de 38 itens gera pistas para o LLM e é calibrado para não criticar quem escreve bem: não dá pistas em competência com nota prevista de 160 ou mais.
-- **71 perguntas enviadas, 55 no modelo.** O registro de perguntas guarda versões antigas e novas de alguns conceitos. O modelo usa uma pergunta por conceito, então nenhum conceito pesa em dobro. O Jev ainda responde as 71 porque as 10 colunas combinadas (como a incerteza média) foram calculadas, no treino, sobre todas as respostas; perguntar menos mudaria essas colunas em produção.
+- **59 perguntas enviadas, 55 no modelo.** O registro do Jev tem 71 perguntas e guarda versões antigas e novas de alguns conceitos. O modelo usa uma pergunta por conceito, então nenhum conceito pesa em dobro. O bot ainda faz 4 versões antigas, que servem ao aviso de tangenciamento, ao checklist e às colunas combinadas (como a incerteza média); as outras 12 não eram usadas por nada e deixaram de ser feitas. A nota no teste não mudou, e cada chamada ao Jev ficou cerca de 12% mais barata.
 
 **Resultado no teste oficial** (976 redações que o modelo nunca viu):
 
 | | C1 | C2 | C3 | C4 | C5 | QWK total | RMSE | MAE |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| **Este modelo** | 0,52 | 0,59 | 0,56 | 0,67 | 0,60 | **0,726** | **125** | **97** |
+| **Este modelo** | 0,52 | 0,59 | 0,56 | 0,67 | 0,60 | **0,727** | **125** | **97** |
 | Amorim & Veloso (2017), mesmo corpus | 0,39 | 0,46 | 0,40 | 0,38 | 0,34 | 0,49 | 161 | — |
 | Fonseca et al. (2018), mesmo corpus | 0,44 | 0,48 | 0,42 | 0,47 | 0,38 | 0,53 | 157 | — |
 
-Os baselines são do artigo do corpus (Marinho, Anchiêta & Moura, *JIDM* 2022, Tabelas XI e XII). Como referência, dois corretores humanos concordam entre si com QWK total de 0,69 (Barbosa & Mauá, PROPOR 2026, em outro conjunto de dados). Em temas que o modelo nunca viu, a queda é pequena: QWK total de 0,692 para 0,684, em validação cruzada por tema (ver o notebook).
+Os baselines são do artigo do corpus (Marinho, Anchiêta & Moura, *JIDM* 2022, Tabelas XI e XII). Como referência, dois corretores humanos concordam entre si com QWK total de 0,69 (Barbosa & Mauá, PROPOR 2026, em outro conjunto de dados). Em temas que o modelo nunca viu, a queda é pequena: QWK total de 0,692 para 0,686, em validação cruzada por tema (ver o notebook).
+
+**Validação externa** (corpus [AES-ENEM](https://huggingface.co/datasets/kamel-usp/aes_enem_dataset), Silveira, Barbosa & Mauá, PROPOR 2024; detalhes nas seções 11 e 12 do notebook):
+
+- **Contra corretores especialistas.** 322 redações do Essay-BR foram recorrigidas por dois especialistas. A nota do site, que é o rótulo do treino, concorda pouco com eles; o modelo, com previsões fora da amostra, concorda com os especialistas quase tanto quanto um especialista com o outro:
+
+  | Quem concorda com quem | QWK total |
+  |---|---:|
+  | Especialista A × especialista B | 0,63 |
+  | Nota do site (rótulo do treino) × média dos especialistas | 0,44 |
+  | **Este modelo × média dos especialistas** | **0,63** |
+
+- **Redações nota mil do ENEM oficial.** Em 152 redações que tiraram 1000 no ENEM (publicadas por G1, O Globo e um site de professor), nenhuma delas no Essay-BR, o modelo dá em média 908: 97% ficam com 800 ou mais, 57% com 900 ou mais e nenhuma abaixo de 700.
 
 **Limitações:**
-- **Viés nas pontas:** redações de até 440 pontos são superestimadas em +82 em média, e as de 720 ou mais, subestimadas em −38. É regressão à média (correlação 0,70 com a nota real); calibrar as pontas só troca um erro por outro.
+- **Viés nas pontas:** contra a nota do site, redações de até 440 pontos são superestimadas em +82 em média, e as de 720 ou mais, subestimadas em −37. É regressão à média (correlação 0,70 com a nota real); calibrar as pontas ou balancear o treino por faixa de nota só troca um erro por outro. Contra os especialistas, o viés das boas quase some (de −115 para −4): era ruído do rótulo. O das fracas fica (cerca de +97) e é o ponto fraco real do modelo.
 - **O LLM justifica bem qualquer nota que recebe**, inclusive os erros do modelo: o feedback nunca é melhor que a nota que o alimenta.
 - **O Essay-BR é texto digitado.** O efeito dos erros de OCR sobre a nota do modelo ainda não foi medido.
 
@@ -343,7 +355,7 @@ gera e os scripts de laboratório não fazem parte deste repositório.
 │       ├── factory.py                          # get_corrector(provider) — troca via CORRECTION_PROVIDER
 │       ├── providers/                           # gemini.py, claude.py, openai_compatible.py (openai/deepseek/maritaca)
 │       └── hybrid/                              # CORRECTION_MODE=hibrido ou ambos — ver "Modo híbrido"
-│           ├── jev.py                              # cliente da API do Jev (71 perguntas)
+│           ├── jev.py                              # cliente da API do Jev (59 perguntas)
 │           ├── features.py, deterministic.py        # medidas do texto, iguais às do treino
 │           ├── model.py                              # previsão + calibração (artefatos fora do repo)
 │           ├── scoring.py                             # soma exata, portão de nota zero, checklist
@@ -351,9 +363,9 @@ gera e os scripts de laboratório não fazem parte deste repositório.
 │
 ├── notebooks/
 │   ├── modelo_hibrido.ipynb     # o modelo do modo híbrido refeito do zero (dados → teste → paridade com o bot)
-│   ├── perguntas_jev.md          # as 71 perguntas do Jev e a coluna de cada uma
+│   ├── perguntas_jev.md          # as 59 perguntas do Jev e a coluna de cada uma
 │   ├── requirements.txt           # dependências do notebook (mesmas versões de numpy/scikit-learn do bot)
-│   └── data/                       # Essay-BR + respostas do Jev (CSV) e a licença MIT do corpus
+│   └── data/                       # Essay-BR + respostas do Jev (CSV), Jev nas nota mil do AES-ENEM (sem texto) e a licença MIT do corpus
 │
 ├── scripts/
 │   └── simulate.py            # REPL de conversa com canal fake — E2E local sem provedor real

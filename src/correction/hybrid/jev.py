@@ -1,9 +1,12 @@
-"""Cliente do Jev (TypeSafe AI, `POST /v1/systemone`): uma chamada com o estado {tema, redacao} e as 71 perguntas.
+"""Cliente do Jev (TypeSafe AI, `POST /v1/systemone`): uma chamada com o estado {tema, redacao} e as perguntas de
+`questions.json` (59).
 
-O modelo foi treinado com as respostas às 71 perguntas do registro v4. Ele usa diretamente 55 (uma por conceito),
-mas as features combinadas (JEV_DOM, ex.: a incerteza média) foram calculadas no treino sobre TODAS as respostas —
-por isso o bot pergunta as 71, exatamente como no treino. O custo vem quase todo do texto das perguntas
-(~10,7 mil tokens de entrada; a redação é ~0,6 mil): ~US$ 0,00045 por chamada, saída gratuita.
+O registro v4 do Jev tem 71 perguntas; o bot faz 59. As 12 que saíram não eram usadas por nada (nem coluna do modelo,
+nem aviso, nem checklist). O modelo usa diretamente 55 (uma por conceito); as outras 4 servem ao aviso de
+tangenciamento, ao checklist e às features combinadas (JEV_DOM). A incerteza média do JEV_DOM é calculada sobre
+TODAS as respostas recebidas, e o modelo foi treinado exatamente com essas 59: não pergunte outro conjunto sem
+retreinar (`_local/scripts/jev_v4_export.py`). O custo vem quase todo do texto das perguntas (~9,4 mil tokens de
+entrada, medido em 364 chamadas; a redação é ~0,6 mil): ~US$ 0,0004 por chamada, saída gratuita.
 """
 
 import httpx

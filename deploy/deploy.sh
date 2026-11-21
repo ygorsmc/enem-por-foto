@@ -242,11 +242,21 @@ read -r FQDN STORAGE_ACCOUNT ARTIFACTS_CONTAINER <<< "$(echo "$OUTPUTS" | tr '\n
 
 if [ "$CORRECTION_MODE" != "llm" ]; then
     echo "==> [5/6] Artefatos do modelo → Blob PRIVADO ($STORAGE_ACCOUNT/$ARTIFACTS_CONTAINER)"
-    # O app baixa ao iniciar e, se ainda não houver, antes da 1ª correção híbrida
-    # (ver src/correction/hybrid/artifacts.py) — por isso pode subir antes do upload.
+    # O app baixa ao iniciar o que ainda não tiver (ver src/correction/hybrid/artifacts.py). A revisão nova do
+    # passo 4 já sobe antes deste upload: no 1º deploy, não acha nada e baixa antes da 1ª correção híbrida; numa
+    # TROCA de modelo, baixa os artefatos ANTIGOS que ainda estão no Blob e não baixa de novo (aconteceu em
+    # 2026-11-21). Por isso, com réplica no ar, a revisão é reiniciada depois do upload.
     az storage blob upload-batch --account-name "$STORAGE_ACCOUNT" --auth-mode key \
         -d "$ARTIFACTS_CONTAINER" -s "$ARTIFACTS_DIR" --pattern '[!.]*' \
         --overwrite --only-show-errors -o none
+    REVISION=$(az containerapp show -n "$APP_NAME" -g "$RESOURCE_GROUP" \
+        --query properties.latestRevisionName -o tsv 2>/dev/null)
+    REPLICAS=$(az containerapp replica list -n "$APP_NAME" -g "$RESOURCE_GROUP" --revision "$REVISION" \
+        --query 'length(@)' -o tsv 2>/dev/null || echo 0)
+    if [ "${REPLICAS:-0}" != "0" ]; then
+        az containerapp revision restart -n "$APP_NAME" -g "$RESOURCE_GROUP" --revision "$REVISION" -o none
+        echo "    Revisão $REVISION reiniciada para baixar os artefatos novos"
+    fi
 else
     echo "==> [5/6] Modo llm: sem artefatos do modelo para enviar"
 fi

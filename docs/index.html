@@ -357,7 +357,7 @@ footer.site-footer{background:#2A2018;color:#C4B6A0;margin-top:64px;border-top:2
 <div class="content-wrapper"><h1 id="corretor-enem-">Corretor ENEM 📝</h1>
 
 
-<p>Bot multicanal (<strong>WhatsApp + Telegram</strong>) que corrige redações do ENEM a partir de uma <strong>foto do manuscrito</strong>: o aluno informa o tema, cola os textos motivadores (se tiver) e manda a foto (ou digita o texto) — e recebe de volta a nota estimada (0 a 1000) por competência, dada por um modelo de machine learning ou pela IA generativa (o aluno escolhe), com feedback pedagógico citando trechos exatos do próprio texto.</p>
+<p>Bot multicanal (<strong>WhatsApp + Telegram</strong>) que corrige redações do ENEM a partir de uma <strong>foto do manuscrito</strong>: o aluno informa o tema, cola os textos motivadores (se tiver) e manda a foto (ou digita o texto) — e recebe de volta a nota estimada (0 a 1000) por competência, dada por um modelo de machine learning ou pela IA generativa (útil para comparação), com feedback pedagógico citando trechos exatos do próprio texto.</p>
 
 <h2 id="teste-o-bot">Teste o bot</h2>
 
@@ -400,7 +400,7 @@ footer.site-footer{background:#2A2018;color:#C4B6A0;margin-top:64px;border-top:2
      IA generativa           modelo treinado
            │                        ▼
            │    ┌───────────────────────────────────────┐
-           │    │ 4. Jev: 71 perguntas sobre a redação  │
+           │    │ 4. Jev: 59 perguntas sobre a redação  │
            │    │    → modelo de ML → nota de C1 a C5   │
            │    │    + portão de nota zero e pistas     │
            │    └───────────────────┬───────────────────┘
@@ -463,7 +463,7 @@ Aluno                    Bot
 
 <pre><code class="lang-text">
 texto confirmado pelo aluno
-   ├─► Jev: 1 chamada com {tema, redação} e 71 perguntas objetivas → probabilidades de 0 a 1
+   ├─► Jev: 1 chamada com {tema, redação} e 59 perguntas objetivas → probabilidades de 0 a 1
    ├─► Python: medidas do texto (contagens, estrutura, relação com o tema) e 6 notas de um TF-IDF
    ▼
 ExtraTrees (C1..C5 e total) → calibração → ajuste para C1+…+C5 = total
@@ -475,7 +475,7 @@ LLM (DeepSeek, raciocínio high): recebe a redação, as notas FIXAS e as pistas
 
 <h3 id="o-modelo-de-ml">O modelo de ML</h3>
 
-<p>O notebook <a href="https://github.com/ygorsmc/enem-por-foto/blob/main/notebooks/modelo_hibrido.ipynb"><code>notebooks/modelo_hibrido.ipynb</code></a> refaz este modelo do zero, para quem quiser conferir cada passo: os dados com as respostas do Jev, a divisão em treino e teste, as features, a escolha do algoritmo, a calibração, a avaliação e a checagem de que o resultado é o mesmo modelo do bot. As 71 perguntas feitas ao Jev, com a coluna de cada uma, estão em <a href="https://github.com/ygorsmc/enem-por-foto/blob/main/notebooks/perguntas_jev.md"><code>notebooks/perguntas_jev.md</code></a>.</p>
+<p>O notebook <a href="https://github.com/ygorsmc/enem-por-foto/blob/main/notebooks/modelo_hibrido.ipynb"><code>notebooks/modelo_hibrido.ipynb</code></a> refaz este modelo do zero, para quem quiser conferir cada passo: os dados com as respostas do Jev, a divisão em treino e teste, as features, a escolha do algoritmo, a calibração, a avaliação e a checagem de que o resultado é o mesmo modelo do bot. As 59 perguntas feitas ao Jev, com a coluna de cada uma, estão em <a href="https://github.com/ygorsmc/enem-por-foto/blob/main/notebooks/perguntas_jev.md"><code>notebooks/perguntas_jev.md</code></a>.</p>
 
 <ul>
 <li><strong>O Jev como sensor, não como corretor.</strong> O Jev (<code>jev-1.14.0</code>, da TypeSafe AI) responde perguntas atômicas sobre a redação, como "a proposta tem um agente definido?" ou "o repertório é legitimado?", cada uma com uma probabilidade. Usado direto para dar a nota, ele puxa tudo para o meio da escala (QWK total 0,45). Como entrada de um modelo calibrado, funciona bem.</li>
@@ -497,23 +497,40 @@ LLM (DeepSeek, raciocínio high): recebe a redação, as notas FIXAS e as pistas
 <li><strong>Calibração.</strong> Modelos de regressão comprimem as notas para o meio. Um ajuste linear, feito sobre previsões fora da amostra, devolve às notas previstas a média e o desvio-padrão das notas reais.</li>
 <li><strong>Soma exata.</strong> O total é previsto direto, e as 5 competências são projetadas nos níveis inteiros mais próximos (0, 40, …, 200) cuja soma é exatamente o total. Isso corta o erro médio em ~10 pontos.</li>
 <li><strong>Nota zero e pistas.</strong> Um portão aplica as regras da Cartilha do INEP (fuga ao tema, texto não dissertativo, carta, identificação, impropério, texto insuficiente etc.) sobre as respostas do Jev; nas 6.475 redações normais, dispara em 0,6%. Um checklist de 38 itens gera pistas para o LLM e é calibrado para não criticar quem escreve bem: não dá pistas em competência com nota prevista de 160 ou mais.</li>
-<li><strong>71 perguntas enviadas, 55 no modelo.</strong> O registro de perguntas guarda versões antigas e novas de alguns conceitos. O modelo usa uma pergunta por conceito, então nenhum conceito pesa em dobro. O Jev ainda responde as 71 porque as 10 colunas combinadas (como a incerteza média) foram calculadas, no treino, sobre todas as respostas; perguntar menos mudaria essas colunas em produção.</li>
+<li><strong>59 perguntas enviadas, 55 no modelo.</strong> O registro do Jev tem 71 perguntas e guarda versões antigas e novas de alguns conceitos. O modelo usa uma pergunta por conceito, então nenhum conceito pesa em dobro. O bot ainda faz 4 versões antigas, que servem ao aviso de tangenciamento, ao checklist e às colunas combinadas (como a incerteza média); as outras 12 não eram usadas por nada e deixaram de ser feitas. A nota no teste não mudou, e cada chamada ao Jev ficou cerca de 12% mais barata.</li>
 </ul>
 
 <p><strong>Resultado no teste oficial</strong> (976 redações que o modelo nunca viu):</p>
 
 <div class="table-wrap"><table>
 <tr><th></th><th>C1</th><th>C2</th><th>C3</th><th>C4</th><th>C5</th><th>QWK total</th><th>RMSE</th><th>MAE</th></tr>
-<tr><td><strong>Este modelo</strong></td><td>0,52</td><td>0,59</td><td>0,56</td><td>0,67</td><td>0,60</td><td><strong>0,726</strong></td><td><strong>125</strong></td><td><strong>97</strong></td></tr>
+<tr><td><strong>Este modelo</strong></td><td>0,52</td><td>0,59</td><td>0,56</td><td>0,67</td><td>0,60</td><td><strong>0,727</strong></td><td><strong>125</strong></td><td><strong>97</strong></td></tr>
 <tr><td>Amorim & Veloso (2017), mesmo corpus</td><td>0,39</td><td>0,46</td><td>0,40</td><td>0,38</td><td>0,34</td><td>0,49</td><td>161</td><td>—</td></tr>
 <tr><td>Fonseca et al. (2018), mesmo corpus</td><td>0,44</td><td>0,48</td><td>0,42</td><td>0,47</td><td>0,38</td><td>0,53</td><td>157</td><td>—</td></tr>
 </table></div>
 
-<p>Os baselines são do artigo do corpus (Marinho, Anchiêta & Moura, <em>JIDM</em> 2022, Tabelas XI e XII). Como referência, dois corretores humanos concordam entre si com QWK total de 0,69 (Barbosa & Mauá, PROPOR 2026, em outro conjunto de dados). Em temas que o modelo nunca viu, a queda é pequena: QWK total de 0,692 para 0,684, em validação cruzada por tema (ver o notebook).</p>
+<p>Os baselines são do artigo do corpus (Marinho, Anchiêta & Moura, <em>JIDM</em> 2022, Tabelas XI e XII). Como referência, dois corretores humanos concordam entre si com QWK total de 0,69 (Barbosa & Mauá, PROPOR 2026, em outro conjunto de dados). Em temas que o modelo nunca viu, a queda é pequena: QWK total de 0,692 para 0,686, em validação cruzada por tema (ver o notebook).</p>
+
+<p><strong>Validação externa</strong> (corpus <a href="https://huggingface.co/datasets/kamel-usp/aes_enem_dataset">AES-ENEM</a>, Silveira, Barbosa & Mauá, PROPOR 2024; detalhes nas seções 11 e 12 do notebook):</p>
+
+<ul>
+<li><strong>Contra corretores especialistas.</strong> 322 redações do Essay-BR foram recorrigidas por dois especialistas. A nota do site, que é o rótulo do treino, concorda pouco com eles; o modelo, com previsões fora da amostra, concorda com os especialistas quase tanto quanto um especialista com o outro:</li>
+</ul>
+
+<div class="table-wrap"><table>
+<tr><th>Quem concorda com quem</th><th>QWK total</th></tr>
+<tr><td>Especialista A × especialista B</td><td>0,63</td></tr>
+<tr><td>Nota do site (rótulo do treino) × média dos especialistas</td><td>0,44</td></tr>
+<tr><td><strong>Este modelo × média dos especialistas</strong></td><td><strong>0,63</strong></td></tr>
+</table></div>
+
+<ul>
+<li><strong>Redações nota mil do ENEM oficial.</strong> Em 152 redações que tiraram 1000 no ENEM (publicadas por G1, O Globo e um site de professor), nenhuma delas no Essay-BR, o modelo dá em média 908: 97% ficam com 800 ou mais, 57% com 900 ou mais e nenhuma abaixo de 700.</li>
+</ul>
 
 <p><strong>Limitações:</strong></p>
 <ul>
-<li><strong>Viés nas pontas:</strong> redações de até 440 pontos são superestimadas em +82 em média, e as de 720 ou mais, subestimadas em −38. É regressão à média (correlação 0,70 com a nota real); calibrar as pontas só troca um erro por outro.</li>
+<li><strong>Viés nas pontas:</strong> contra a nota do site, redações de até 440 pontos são superestimadas em +82 em média, e as de 720 ou mais, subestimadas em −37. É regressão à média (correlação 0,70 com a nota real); calibrar as pontas ou balancear o treino por faixa de nota só troca um erro por outro. Contra os especialistas, o viés das boas quase some (de −115 para −4): era ruído do rótulo. O das fracas fica (cerca de +97) e é o ponto fraco real do modelo.</li>
 <li><strong>O LLM justifica bem qualquer nota que recebe</strong>, inclusive os erros do modelo: o feedback nunca é melhor que a nota que o alimenta.</li>
 <li><strong>O Essay-BR é texto digitado.</strong> O efeito dos erros de OCR sobre a nota do modelo ainda não foi medido.</li>
 </ul>
@@ -621,7 +638,7 @@ make lint                  # ruff check; `make fmt` para auto-corrigir e formata
 <h2 id="conectando-os-canais">Conectando os canais</h2>
 
 <blockquote>
-<p><strong>Telegram é o canal recomendado.</strong> A partir de <strong>01/10/2026</strong>, o WhatsApp Business Platform passa a cobrar por mensagem de serviço (a categoria de conversa que este bot usa) — o Telegram Bot API continua gratuito. Para manter o custo operacional no menor patamar possível, prefira o Telegram como canal principal; o WhatsApp fica como opção para quem já opera nesse canal e absorve o custo por mensagem.</p>
+<p><strong>Telegram é o canal recomendado.</strong> A partir de <strong>01/10/2026</strong>, o WhatsApp Business Platform passa a cobrar por mensagem de serviço (a categoria de conversa que este bot usa), mas ainda mantém uma cota mensal gratuita de 1000 mensagens — o Telegram Bot API continua gratuito sem limitações. Para manter o custo operacional no menor patamar possível, prefira o Telegram como canal principal; o WhatsApp fica como opção para quem já opera nesse canal e absorve o custo por mensagem ou não ultrapassa a cota mensal de 1000 mensagens de serviço.</p>
 </blockquote>
 
 <p>O teste real mais barato é o <strong>Telegram</strong> (token grátis no @BotFather) com um túnel local:</p>
@@ -727,7 +744,7 @@ make deploy                                        # build da imagem (Docker loc
 │       ├── factory.py                          # get_corrector(provider) — troca via CORRECTION_PROVIDER
 │       ├── providers/                           # gemini.py, claude.py, openai_compatible.py (openai/deepseek/maritaca)
 │       └── hybrid/                              # CORRECTION_MODE=hibrido ou ambos — ver "Modo híbrido"
-│           ├── jev.py                              # cliente da API do Jev (71 perguntas)
+│           ├── jev.py                              # cliente da API do Jev (59 perguntas)
 │           ├── features.py, deterministic.py        # medidas do texto, iguais às do treino
 │           ├── model.py                              # previsão + calibração (artefatos fora do repo)
 │           ├── scoring.py                             # soma exata, portão de nota zero, checklist
@@ -735,9 +752,9 @@ make deploy                                        # build da imagem (Docker loc
 │
 ├── notebooks/
 │   ├── modelo_hibrido.ipynb     # o modelo do modo híbrido refeito do zero (dados → teste → paridade com o bot)
-│   ├── perguntas_jev.md          # as 71 perguntas do Jev e a coluna de cada uma
+│   ├── perguntas_jev.md          # as 59 perguntas do Jev e a coluna de cada uma
 │   ├── requirements.txt           # dependências do notebook (mesmas versões de numpy/scikit-learn do bot)
-│   └── data/                       # Essay-BR + respostas do Jev (CSV) e a licença MIT do corpus
+│   └── data/                       # Essay-BR + respostas do Jev (CSV), Jev nas nota mil do AES-ENEM (sem texto) e a licença MIT do corpus
 │
 ├── scripts/
 │   └── simulate.py            # REPL de conversa com canal fake — E2E local sem provedor real
@@ -1753,7 +1770,7 @@ Aluno                         Bot
 
 <p><strong>Por que não dá para medir contra a nota oficial do INEP.</strong> O INEP publica a nota da redação de cada participante nos microdados oficiais, mas <strong>nunca o texto do manuscrito</strong> — por privacidade, a redação em si não é disponibilizada. Sem o texto, não há como alimentar o corretor: não existe caminho para medir "vs. nota oficial do INEP", nem para este projeto, nem para nenhum outro.</p>
 
-<p>O proxy público mais próximo é o <strong>Essay-BR</strong>: ~6.500 redações reais de estudantes brasileiros, corrigidas por especialistas seguindo os critérios do ENEM — na mesma escala oficial (0/40/80/120/160/200 por competência, 0–1.000 no total), sem conversão necessária. Não é a nota oficial (o INEP usa dois corretores humanos, com um terceiro em caso de forte discordância — ver nota de contexto abaixo); é uma aproximação séria, com texto real e nota por competência.</p>
+<p>O proxy público mais próximo é o <strong>Essay-BR</strong>: ~6.500 redações reais de estudantes brasileiros, corrigidas pelos corretores de um site de redação seguindo os critérios do ENEM — na mesma escala oficial (0/40/80/120/160/200 por competência, 0–1.000 no total), sem conversão necessária. Não é a nota oficial (o INEP usa dois corretores humanos, com um terceiro em caso de forte discordância — ver nota de contexto abaixo); é uma aproximação séria, com texto real e nota por competência. Mas é ruidosa: em 322 redações recorrigidas por dois especialistas (corpus AES-ENEM), a nota do site concorda com eles com QWK de só 0,44, contra 0,63 entre os dois especialistas (README, "Validação externa").</p>
 
 <blockquote>
 <p><strong>Fonte:</strong> Essay-BR — github.com/lplnufpi/essay-br (licença MIT, Laboratório de Processamento de Linguagem Natural, UFPI).</p>

@@ -1,12 +1,12 @@
 # Perguntas feitas ao Jev
 
-Cada redação foi enviada ao Jev (`jev-1.14.0`, da TypeSafe AI) com estas 71 perguntas. O Jev responde cada uma de forma independente, e a resposta vira uma ou mais colunas `jev_*` do dataset [`data/essaybr_jev.csv.gz`](data/essaybr_jev.csv.gz), usado no [notebook do modelo](modelo_hibrido.ipynb).
+O bot envia ao Jev (`jev-1.14.0`, da TypeSafe AI) estas 59 perguntas junto com a redação. O Jev responde cada uma de forma independente, e a resposta vira uma ou mais colunas `jev_*` do dataset [`data/essaybr_jev.csv.gz`](data/essaybr_jev.csv.gz), usado no [notebook do modelo](modelo_hibrido.ipynb). O registro do Jev tem 71 perguntas; as outras 12 não eram usadas por nada (nem no modelo, nem no aviso de tangenciamento, nem no checklist do feedback) e deixaram de ser feitas, sem mudar a nota.
 
 - **`noul`** (sim ou não): a coluna é a probabilidade de "sim" que o Jev devolve, entre 0 e 1.
 - **`score`** (escala de níveis): a coluna é o nível contínuo que o Jev devolve (campo `score`, por exemplo 1,89): de 0 a 5 nas cinco notas por competência (`score_c1` a `score_c5`) e de 0 a 2 nas demais.
 - **`choice`** (escolha entre opções): uma coluna `jev_tipo_<opção>` por opção, com a probabilidade de cada.
 - `redacao` e `tema` são os campos enviados junto com as perguntas. Nas perguntas com `{tema}`, o texto do tema entra na própria pergunta.
-- **No modelo:** 60 das 76 colunas entram no modelo de nota. As outras 16 são versões antigas ou variantes de perguntas reformuladas (o mesmo conceito duas vezes) e ficam de fora; algumas delas ainda servem ao portão de nota zero ou ao checklist do feedback no bot.
+- **No modelo:** 60 das 64 colunas entram no modelo de nota. As outras 4 são versões antigas de perguntas reformuladas (o mesmo conceito duas vezes): ficam fora do modelo, mas o bot ainda as faz porque servem ao aviso de tangenciamento, ao checklist do feedback ou às colunas combinadas do Jev (`eng_jev_*`).
 
 ## `score_c1`
 
@@ -102,20 +102,6 @@ Tipo `noul` · coluna `jev_triagem_fuga_total` · no modelo: **não**
 
 - **Sim:** O texto trata de um assunto completamente alheio ao `tema` proposto. *Não incluir:* Textos que abordam o assunto geral de forma rasa ou tangenciam o recorte.
 - **Não:** O texto aborda ao menos o assunto geral de `tema` ou seu recorte específico.
-
-## `triagem_identificacao`
-
-Tipo `noul` · coluna `jev_triagem_identificacao` · no modelo: **não**
-
-**Pergunta:** A `redacao` contém nome próprio do autor ou assinatura no corpo do texto para se identificar?
-
-
-## `triagem_parte_desconectada`
-
-Tipo `noul` · coluna `jev_triagem_parte_desconectada` · no modelo: **não**
-
-**Pergunta:** A `redacao` contém recado dirigido à banca, xingamento proposital ou trecho solto sem relação com o argumento?
-
 
 ## `triagem_lingua_estrangeira`
 
@@ -350,16 +336,6 @@ Níveis:
 - **1:** Alguns desvios, que se repetem ou chamam atenção.
 - **2:** No máximo um deslize isolado e não reincidente.
 
-## `c2_tangenciamento`
-
-Tipo `noul` · coluna `jev_c2_tangenciamento` · no modelo: **não**
-
-**Pergunta:** A `redacao` discute apenas o assunto geral de `tema`, sem enfrentar o recorte específico pedido?
-<br>**Inspecionar:** `tema`, `redacao`
-
-- **Sim:** Fala do assunto amplo (por exemplo, 'educação') e ignora a delimitação do `tema` (por exemplo, 'educação de surdos'), ou trata só de uma parte secundária dele.
-- **Não:** A discussão gira em torno do recorte específico do `tema`.
-
 ## `c2_tracos_outro_tipo`
 
 Tipo `noul` · coluna `jev_c2_tracos_outro_tipo` · no modelo: **sim**
@@ -379,16 +355,6 @@ Tipo `noul` · coluna `jev_c2_estrutura_completa` · no modelo: **sim**
 
 - **Sim:** As três partes são reconhecíveis: a introdução apresenta o ponto de vista, o desenvolvimento argumenta e há um fechamento.
 - **Não:** Falta alguma das três partes, ou elas não são reconhecíveis.
-
-## `c2_repertorio_de_bolso`
-
-Tipo `noul` · coluna `jev_c2_repertorio_de_bolso` · no modelo: **não**
-
-**Pergunta:** O repertório citado em `redacao` é genérico, do tipo que serviria para qualquer tema, sem conexão específica com `tema`?
-<br>**Inspecionar:** `tema`, `redacao`
-
-- **Sim:** Usa referência pronta e decorativa (por exemplo, Constituição citada de forma genérica, Bauman, 'Utopia') sem relacioná-la ao recorte do `tema`.
-- **Não:** O repertório é específico do `tema` e explicado, ou não há repertório.
 
 ## `c2_argumentacao_consistente`
 
@@ -415,26 +381,6 @@ Níveis:
 - **0:** As ideias se repetem ou saltam de um assunto a outro sem ligação.
 - **1:** Progressão em geral clara, com algum salto ou repetição pontual.
 - **2:** Cada parte acrescenta algo novo e prepara a seguinte, em progressão clara.
-
-## `c3_contradicao`
-
-Tipo `noul` · coluna `jev_c3_contradicao` · no modelo: **não**
-
-**Pergunta:** A `redacao` apresenta ideias que se contradizem ou que contrariam o ponto de vista defendido?
-<br>**Inspecionar:** `redacao`
-
-- **Sim:** Há afirmações incompatíveis entre si, ou trechos que enfraquecem ou negam a tese defendida.
-- **Não:** As ideias são compatíveis entre si e com o ponto de vista.
-
-## `c3_informacoes_soltas`
-
-Tipo `noul` · coluna `jev_c3_informacoes_soltas` · no modelo: **não**
-
-**Pergunta:** A `redacao` traz informações, fatos ou opiniões soltos, sem desenvolvimento nem ligação com o ponto de vista?
-<br>**Inspecionar:** `redacao`
-
-- **Sim:** Há informações jogadas no texto que não são explicadas nem usadas para sustentar a tese.
-- **Não:** Cada informação é desenvolvida e ligada ao ponto de vista.
 
 ## `c3_autoria`
 
@@ -524,36 +470,6 @@ Níveis:
 - **1:** Usa retomadas, mas com repetições ou ambiguidades.
 - **2:** Retoma termos com recursos variados e referentes claros.
 
-## `c4_conectivos_artificiais`
-
-Tipo `noul` · coluna `jev_c4_conectivos_artificiais` · no modelo: **não**
-
-**Pergunta:** A `redacao` empilha conectivos de forma artificial ou excessiva, sem relação lógica real entre as partes?
-<br>**Inspecionar:** `redacao`
-
-- **Sim:** Usa conectivos ou expressões de transição em excesso, como enfeite, sem que liguem ideias de fato.
-- **Não:** Os conectivos aparecem onde há relação lógica a expressar.
-
-## `c5_proposta_vaga`
-
-Tipo `noul` · coluna `jev_c5_proposta_vaga` · no modelo: **não**
-
-**Pergunta:** A proposta de intervenção em `redacao` é vaga ou genérica, aplicável a quase qualquer problema?
-<br>**Inspecionar:** `tema`, `redacao`
-
-- **Sim:** Propõe algo genérico (por exemplo, 'o governo deve investir em educação e conscientização') sem especificar o problema do `tema`.
-- **Não:** A proposta é específica para o problema discutido, ou não há proposta.
-
-## `c5_condicional`
-
-Tipo `noul` · coluna `jev_c5_condicional` · no modelo: **não**
-
-**Pergunta:** A proposta de intervenção em `redacao` é formulada só como condição ou hipótese, sem propor a ação de forma assertiva?
-<br>**Inspecionar:** `redacao`
-
-- **Sim:** Usa construções como 'se X for feito, Y poderá acontecer' sem afirmar o que deve ser feito.
-- **Não:** Propõe a ação de forma assertiva, ou não há proposta.
-
 ## `c5_relacionada_recorte`
 
 Tipo `noul` · coluna `jev_c5_relacionada_recorte` · no modelo: **não**
@@ -617,26 +533,6 @@ Tipo `noul` · coluna `jev_tema_recorte_ref` · no modelo: **sim**
 - **Sim:** A discussão gira em torno do problema delimitado por `tema`.
 - **Não:** O texto fica no assunto amplo, trata de outro aspecto ou de outro assunto.
 
-## `tema_assunto_emb`
-
-Tipo `noul` · coluna `jev_tema_assunto_emb` · no modelo: **não**
-
-**Pergunta:** A `redacao` trata do assunto geral do tema "{tema}"?
-<br>**Inspecionar:** `redacao`
-
-- **Sim:** O texto discute o mesmo assunto amplo do tema "{tema}", mesmo que não chegue ao recorte específico.
-- **Não:** O texto trata de outro assunto, sem relação com o tema "{tema}".
-
-## `tema_recorte_emb`
-
-Tipo `noul` · coluna `jev_tema_recorte_emb` · no modelo: **não**
-
-**Pergunta:** A `redacao` discute o recorte específico do tema "{tema}", e não só o assunto amplo?
-<br>**Inspecionar:** `redacao`
-
-- **Sim:** A discussão gira em torno do problema delimitado pelo tema "{tema}".
-- **Não:** O texto fica no assunto amplo, trata de outro aspecto ou de outro assunto.
-
 ## `tema_e_emb`
 
 Tipo `noul` · coluna `jev_tema_e_emb` · no modelo: **não**
@@ -656,16 +552,6 @@ Tipo `noul` · coluna `jev_c5_recorte_emb` · no modelo: **sim**
 
 - **Sim:** A ação proposta ataca o problema do tema "{tema}".
 - **Não:** A proposta trata de outro problema, só do assunto geral, ou não há proposta.
-
-## `triagem_identificacao_v2`
-
-Tipo `noul` · coluna `jev_triagem_identificacao_v2` · no modelo: **não**
-
-**Pergunta:** A `redacao` traz a assinatura ou o nome de quem a escreveu?
-<br>**Inspecionar:** `redacao`
-
-- **Sim:** O autor se identifica no texto: assina, escreve o próprio nome ou se apresenta pelo nome.
-- **Não:** O autor não se identifica. Nomes de pessoas citadas como referência (autores, cientistas, personagens históricos ou públicos) não contam como identificação.
 
 ## `c3_coerencia`
 

@@ -130,7 +130,9 @@ webhook do Telegram. Ao fim ele imprime a URL do app, a imagem e o comando de lo
 > do Bicep, ele envia os arquivos para o contêiner **privado** `hybrid-artifacts`
 > do Storage Account. O app baixa por um link SAS só de leitura (secret
 > `HYBRID_ARTIFACTS_URL`, validade de 2 anos, renovado a cada deploy): ao iniciar
-> e, se ainda não houver, antes da primeira correção híbrida.
+> e, se ainda não houver, antes da primeira correção híbrida. A revisão nova sobe
+> antes do upload, então numa troca de modelo ela pegaria os arquivos antigos: se
+> houver réplica no ar, o script a reinicia depois do upload.
 
 > **Primeira publicação:** o GitHub cria o pacote como **privado**, e o Container
 > App não conseguiria baixá-lo sem credenciais. O script confere isso como um

@@ -1,9 +1,9 @@
 """Correção no modo híbrido: a nota vem do modelo calibrado e o LLM só escreve o feedback.
 
-Passos: texto do OCR normalizado (só para o modelo e o Jev) → Jev (71 perguntas) → features → modelo (níveis
+Passos: texto do OCR normalizado (só para o modelo e o Jev) → Jev (59 perguntas) → features → modelo (níveis
 C1..C5, soma = total) → portão de zero / avisos → checklist (pistas) → LLM com as notas FIXAS no bloco
 `HYBRID_GRADES_BLOCK` (ou `HYBRID_ZERO_BLOCK`). O LLM recebe a transcrição como o aluno a confirmou, igual ao
-modo `llm`. Ver `_local/RELATORIO_JEV.md` §2 para a origem de cada passo.
+modo `llm`. Ver `_local/reports/RELATORIO_JEV.md` §2 para a origem de cada passo.
 """
 
 import asyncio

@@ -6,4 +6,5 @@ scikit-learn==1.9.1
 joblib==1.6.0
 pandas==3.1.1
 matplotlib==3.11.2
+pyarrow==26.0.1  # lê o AES-ENEM (parquet) nas seções 11 e 12
 jupyterlab
