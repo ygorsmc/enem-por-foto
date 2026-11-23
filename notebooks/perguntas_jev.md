@@ -1,6 +1,6 @@
 # Perguntas feitas ao Jev
 
-O bot envia ao Jev (`jev-1.14.0`, da TypeSafe AI) estas 59 perguntas junto com a redação. O Jev responde cada uma de forma independente, e a resposta vira uma ou mais colunas `jev_*` do dataset [`data/essaybr_jev.csv.gz`](data/essaybr_jev.csv.gz), usado no [notebook do modelo](modelo_hibrido.ipynb). O registro do Jev tem 71 perguntas; as outras 12 não eram usadas por nada (nem no modelo, nem no aviso de tangenciamento, nem no checklist do feedback) e deixaram de ser feitas, sem mudar a nota.
+O bot envia ao Jev (`jev-1.14.0`, da TypeSafe AI) estas 59 perguntas junto com a redação. O Jev responde cada uma de forma independente, e a resposta vira uma ou mais colunas `jev_*` do dataset usado no [notebook do modelo](modelo_hibrido.ipynb). As respostas não estão no repositório: o script [`coletar_jev.py`](coletar_jev.py) as coleta com a sua chave da API e monta o dataset. O mesmo conjunto, no formato da API, está em [`perguntas_jev.json`](perguntas_jev.json). O registro do Jev tem 71 perguntas; as outras 12 não eram usadas por nada (nem no modelo, nem no aviso de tangenciamento, nem no checklist do feedback) e deixaram de ser feitas, sem mudar a nota.
 
 - **`noul`** (sim ou não): a coluna é a probabilidade de "sim" que o Jev devolve, entre 0 e 1.
 - **`score`** (escala de níveis): a coluna é o nível contínuo que o Jev devolve (campo `score`, por exemplo 1,89): de 0 a 5 nas cinco notas por competência (`score_c1` a `score_c5`) e de 0 a 2 nas demais.

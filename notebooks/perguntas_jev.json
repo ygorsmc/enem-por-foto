@@ -1,0 +1,918 @@
+{
+ "modelo": "jev-1.14.0",
+ "colunas": [
+  "jev_c1_periodos_complexos",
+  "jev_c1_registro_informal",
+  "jev_c1_reincidencia_desvios",
+  "jev_c1_truncamento",
+  "jev_c1_vocabulario",
+  "jev_c2_aborda_recorte_completo",
+  "jev_c2_argumentacao_consistente",
+  "jev_c2_estrutura_completa",
+  "jev_c2_repertorio_especifico",
+  "jev_c2_repertorio_legitimado",
+  "jev_c2_repertorio_presente",
+  "jev_c2_repertorio_produtivo",
+  "jev_c2_tese_explicita",
+  "jev_c2_tipo_dissertativo_argumentativo",
+  "jev_c2_tracos_outro_tipo",
+  "jev_c3_argumentos_desenvolvidos",
+  "jev_c3_autoria",
+  "jev_c3_coerencia",
+  "jev_c3_conclusao_retoma_tese",
+  "jev_c3_especificidade",
+  "jev_c3_evidencia_concreta",
+  "jev_c3_informacoes_articuladas",
+  "jev_c3_progressao",
+  "jev_c3_projeto_texto_claro",
+  "jev_c4_articulacao_paragrafos",
+  "jev_c4_articulacao_periodos",
+  "jev_c4_conectivos_funcionais",
+  "jev_c4_inadequacoes_coesivas",
+  "jev_c4_referenciacao",
+  "jev_c5_acao",
+  "jev_c5_agente_especifico",
+  "jev_c5_agente_presente",
+  "jev_c5_articulada_discussao",
+  "jev_c5_detalhamento",
+  "jev_c5_efeito",
+  "jev_c5_modo_meio",
+  "jev_c5_proposta_assertiva",
+  "jev_c5_proposta_especifica",
+  "jev_c5_recorte_emb",
+  "jev_c5_relacionada_recorte",
+  "jev_c5_tem_proposta",
+  "jev_c5_viola_direitos_humanos",
+  "jev_global_persuasao",
+  "jev_score_c1",
+  "jev_score_c2",
+  "jev_score_c3",
+  "jev_score_c4",
+  "jev_score_c5",
+  "jev_tema_assunto_ref",
+  "jev_tema_e_emb",
+  "jev_tema_recorte_ref",
+  "jev_tipo_carta",
+  "jev_tipo_dissertativo_argumentativo",
+  "jev_tipo_expositivo",
+  "jev_tipo_lista",
+  "jev_tipo_narrativo",
+  "jev_tipo_poema",
+  "jev_triagem_fuga_total",
+  "jev_triagem_identificacao_v3",
+  "jev_triagem_improperio",
+  "jev_triagem_ininteligivel",
+  "jev_triagem_lingua_estrangeira",
+  "jev_triagem_prosa",
+  "jev_triagem_trechos_relacionados"
+ ],
+ "perguntas": {
+  "score_c1": {
+   "type": "score",
+   "instructions": {
+    "pergunta": "Qual o nível de domínio da escrita formal da língua portuguesa em `redacao`?",
+    "inspecionar": "`redacao`",
+    "foco": "Avaliar desvios gramaticais, ortografia, acentuação, pontuação, regência, concordância, crase, registro formal e estrutura sintática dos períodos."
+   },
+   "criteria": [
+    {
+     "situacao": "Desconhecimento da modalidade escrita formal.",
+     "sinais": [
+      "Texto incompreensível ou quase sem domínio das convenções básicas da escrita."
+     ]
+    },
+    {
+     "situacao": "Domínio precário da escrita formal.",
+     "sinais": [
+      "Desvios frequentes, diversificados e sistemáticos de gramática, ortografia, pontuação ou oralidade ao longo de todo o texto."
+     ]
+    },
+    {
+     "situacao": "Domínio insuficiente da escrita formal.",
+     "sinais": [
+      "Muitos desvios de gramática, convenções da escrita, registro informal ou falhas frequentes de estruturação dos períodos."
+     ]
+    },
+    {
+     "situacao": "Domínio mediano da escrita formal.",
+     "sinais": [
+      "Alguns desvios gramaticais, de pontuação ou de convenção que se repetem ou chamam atenção, mas sem impedir a leitura."
+     ]
+    },
+    {
+     "situacao": "Bom domínio da escrita formal.",
+     "sinais": [
+      "Poucos desvios pontuais de gramática ou convenção da escrita e períodos no geral bem estruturados."
+     ]
+    },
+    {
+     "situacao": "Domínio excelente da escrita formal.",
+     "sinais": [
+      "Escrita formal consistente, períodos bem articulados e no máximo desvio raro e isolado."
+     ]
+    }
+   ]
+  },
+  "score_c2": {
+   "type": "score",
+   "instructions": {
+    "pergunta": "Qual o nível de compreensão do tema, estrutura dissertativo-argumentativa e uso de repertório em `redacao`?",
+    "inspecionar": [
+     "`tema`",
+     "`redacao`"
+    ],
+    "foco": "Avaliar aderência completa ao recorte do tema, defesa de ponto de vista em texto dissertativo-argumentativo e produtividade do repertório sociocultural."
+   },
+   "criteria": [
+    {
+     "situacao": "Fuga total ao `tema` ou texto não dissertativo-argumentativo.",
+     "sinais": [
+      "Não trata nem do assunto geral de `tema`, ou predomina outro tipo textual (narrativo/descritivo)."
+     ]
+    },
+    {
+     "situacao": "Tangenciamento do `tema` ou traços constantes de outro tipo textual.",
+     "sinais": [
+      "Aborda apenas o assunto genérico sem alcançar o recorte específico de `tema`."
+     ]
+    },
+    {
+     "situacao": "Estrutura dissertativa insuficiente.",
+     "sinais": [
+      "Falta proposição, argumentação ou conclusão reconhecíveis."
+     ]
+    },
+    {
+     "situacao": "Aborda o tema com argumentação previsível e domínio mediano da estrutura.",
+     "sinais": [
+      "Repertório ausente, senso comum ou repertório de bolso desconectado do argumento."
+     ]
+    },
+    {
+     "situacao": "Argumentação consistente sobre o tema e bom domínio da estrutura dissertativa.",
+     "sinais": [
+      "Proposição, argumentação e conclusão bem formadas, com repertório pertinente mas pouco produtivo."
+     ]
+    },
+    {
+     "situacao": "Argumentação consistente com repertório sociocultural produtivo e excelente domínio da estrutura.",
+     "sinais": [
+      "Repertório legítimo, pertinente ao `tema` e articulado diretamente ao argumento."
+     ]
+    }
+   ]
+  },
+  "score_c3": {
+   "type": "score",
+   "instructions": {
+    "pergunta": "Qual o nível do projeto de texto, seleção, organização e desenvolvimento dos argumentos em `redacao`?",
+    "inspecionar": [
+     "`tema`",
+     "`redacao`"
+    ],
+    "foco": "Avaliar a arquitetura das ideias: planejamento prévio, progressão lógica, desenvolvimento das causas/consequências e autoria própria."
+   },
+   "criteria": [
+    {
+     "situacao": "Informações não relacionadas ao `tema` e sem defesa de ponto de vista.",
+     "sinais": [
+      "Ausência total de tese e de projeto argumentativo."
+     ]
+    },
+    {
+     "situacao": "Pouco relacionado ao `tema`, incoerente ou sem defesa clara de ponto de vista.",
+     "sinais": [
+      "Ideias soltas ou contraditórias que não sustentam uma tese."
+     ]
+    },
+    {
+     "situacao": "Argumentos desorganizados ou contraditórios, presos a ideias genéricas sobre o `tema`.",
+     "sinais": [
+      "Reprodução desarticulada de ideias óbvias sobre o assunto, com lacunas graves."
+     ]
+    },
+    {
+     "situacao": "Argumentos previsíveis, presos a ideias genéricas sobre o `tema`, e pouco organizados.",
+     "sinais": [
+      "Ideias apenas enunciadas sem aprofundamento suficiente ou sem hierarquia clara."
+     ]
+    },
+    {
+     "situacao": "Projeto de texto organizado com indícios de autoria.",
+     "sinais": [
+      "Argumentos bem relacionados à tese e desenvolvidos, ainda que com alguma lacuna pontual."
+     ]
+    },
+    {
+     "situacao": "Projeto de texto consistente, bem organizado e com autoria evidente.",
+     "sinais": [
+      "Progressão lógica clara entre introdução, desenvolvimentos e conclusão, com explicação completa dos argumentos."
+     ]
+    }
+   ]
+  },
+  "score_c4": {
+   "type": "score",
+   "instructions": {
+    "pergunta": "Qual o nível de coesão textual na articulação das partes de `redacao`?",
+    "inspecionar": "`redacao`",
+    "foco": "Avaliar conectivos entre parágrafos e períodos, adequação das relações lógicas e uso de referenciação (pronomes, sinônimos) sem repetição excessiva."
+   },
+   "criteria": [
+    {
+     "situacao": "Não articula as informações.",
+     "sinais": [
+      "Frases desconexas sem ligação linguística entre si."
+     ]
+    },
+    {
+     "situacao": "Articulação precária.",
+     "sinais": [
+      "Texto em bloco único ou com ausência generalizada de conectivos e referenciação."
+     ]
+    },
+    {
+     "situacao": "Articulação insuficiente, com muitas inadequações e repertório coesivo limitado.",
+     "sinais": [
+      "Conectivos usados fora da relação lógica real ou muitas repetições desnecessárias de palavras."
+     ]
+    },
+    {
+     "situacao": "Articulação mediana, com algumas inadequações e repertório pouco diversificado.",
+     "sinais": [
+      "Conectivos repetitivos ou falhas pontuais de ligação entre orações e parágrafos."
+     ]
+    },
+    {
+     "situacao": "Boa articulação, com poucas inadequações e repertório coesivo diversificado.",
+     "sinais": [
+      "Uso variado e no geral adequado de conectivos interparágrafo e referenciação."
+     ]
+    },
+    {
+     "situacao": "Boa articulação em todo o texto, com repertório diversificado de recursos coesivos e sem inadequações graves.",
+     "sinais": [
+      "Parágrafos e períodos articulados com variedade e precisão lógica."
+     ]
+    }
+   ]
+  },
+  "score_c5": {
+   "type": "score",
+   "instructions": {
+    "pergunta": "Qual o nível da proposta de intervenção apresentada em `redacao`?",
+    "inspecionar": [
+     "`tema`",
+     "`redacao`"
+    ],
+    "foco": "Avaliar quantos dos cinco elementos válidos estão presentes (agente específico, ação, modo/meio, efeito, detalhamento) e se a proposta se articula à discussão, respeitando os direitos humanos."
+   },
+   "criteria": [
+    {
+     "situacao": "Sem proposta de intervenção, proposta não relacionada ao `tema` ou violação aos direitos humanos.",
+     "sinais": [
+      "Apenas constata um problema, ou não propõe ação, ou viola direitos humanos."
+     ]
+    },
+    {
+     "situacao": "Proposta vaga, precária ou ligada apenas ao assunto genérico fora do recorte de `tema`.",
+     "sinais": [
+      "Apenas um elemento válido ou formulação condicional/hipotética sem ação concreta."
+     ]
+    },
+    {
+     "situacao": "Proposta insuficiente ou desarticulada da discussão do texto.",
+     "sinais": [
+      "Apenas dois elementos válidos ou proposta genérica que não responde aos argumentos desenvolvidos."
+     ]
+    },
+    {
+     "situacao": "Proposta elaborada de forma mediana.",
+     "sinais": [
+      "Apresenta cerca de três elementos válidos relacionados ao problema discutido."
+     ]
+    },
+    {
+     "situacao": "Proposta bem elaborada, relacionada ao `tema` e articulada à discussão.",
+     "sinais": [
+      "Apresenta quatro elementos válidos (por exemplo: agente específico, ação, modo/meio e efeito)."
+     ]
+    },
+    {
+     "situacao": "Proposta muito bem elaborada, detalhada, relacionada ao `tema` e articulada à discussão.",
+     "sinais": [
+      "Apresenta todos os cinco elementos válidos: agente específico, ação, modo/meio, efeito e detalhamento de algum deles."
+     ]
+    }
+   ]
+  },
+  "triagem_fuga_total": {
+   "type": "noul",
+   "instructions": {
+    "pergunta": "A `redacao` foge totalmente do assunto geral e do recorte específico de `tema`?",
+    "inspecionar": [
+     "`tema`",
+     "`redacao`"
+    ]
+   },
+   "criteria": {
+    "true": {
+     "o_que_e": "O texto trata de um assunto completamente alheio ao `tema` proposto.",
+     "nao_incluir": "Textos que abordam o assunto geral de forma rasa ou tangenciam o recorte."
+    },
+    "false": {
+     "o_que_e": "O texto aborda ao menos o assunto geral de `tema` ou seu recorte específico."
+    }
+   }
+  },
+  "triagem_lingua_estrangeira": {
+   "type": "noul",
+   "instructions": "A maior parte de `redacao` está escrita em outro idioma que não o português?"
+  },
+  "c2_aborda_recorte_completo": {
+   "type": "noul",
+   "instructions": {
+    "pergunta": "A `redacao` desenvolve todos os elementos centrais e o recorte específico de `tema`?",
+    "inspecionar": [
+     "`tema`",
+     "`redacao`"
+    ]
+   },
+   "criteria": {
+    "true": "Trata explicitamente tanto do assunto geral quanto do recorte específico pedido em `tema`.",
+    "false": "Fica apenas no assunto genérico (tangenciamento) ou foge totalmente do `tema`."
+   }
+  },
+  "c2_tipo_dissertativo_argumentativo": {
+   "type": "noul",
+   "instructions": {
+    "pergunta": "A `redacao` é predominantemente um texto dissertativo-argumentativo?",
+    "inspecionar": "`redacao`"
+   },
+   "criteria": {
+    "true": "O texto busca defender uma opinião/tese por meio de argumentos e explicações.",
+    "false": "Predomina relato narrativo, descrição neutra, lista de instruções ou pura exposição informativa sem defesa de tese."
+   }
+  },
+  "c2_tese_explicita": {
+   "type": "noul",
+   "instructions": "A `redacao` enuncia explicitamente uma tese ou ponto de vista sobre `tema`?",
+   "criteria": {
+    "true": "Há posicionamento claro defendido ao longo do texto.",
+    "false": "O texto apenas descreve fatos ou menciona o assunto sem tomar posição clara."
+   }
+  },
+  "c2_repertorio_legitimado": {
+   "type": "noul",
+   "instructions": "O repertório sociocultural citado em `redacao` apoia-se em área do conhecimento reconhecida ou fonte nomeada (obra, autor, lei, fato histórico, órgão ou especialista)?",
+   "criteria": {
+    "true": "Cita pelo menos uma obra, autor, lei, fato histórico, conceito teórico, dado com instituição ou especialista identificado por nome ou área.",
+    "false": "Não há repertório externo, ou limita-se a senso comum sem fonte ('estudos apontam', 'a ciência diz', 'dizem por aí')."
+   }
+  },
+  "c2_repertorio_produtivo": {
+   "type": "noul",
+   "instructions": "O repertório sociocultural em `redacao` é articulado para sustentar um argumento específico?",
+   "criteria": {
+    "true": "A referência é explicada e conectada ao argumento de modo que removê-la enfraqueceria o parágrafo.",
+    "false": "Não há repertório externo, ou ele é apenas mencionado de passagem / usado de forma genérica aplicável a qualquer tema."
+   }
+  },
+  "c3_projeto_texto_claro": {
+   "type": "noul",
+   "instructions": "A `redacao` demonstra planejamento prévio em que cada parágrafo cumpre uma função clara na defesa da tese?",
+   "criteria": {
+    "true": "É possível identificar o plano do texto, com introdução, desenvolvimento dos argumentos e conclusão articulados entre si.",
+    "false": "As ideias parecem enfileiradas sem hierarquia, com saltos ou falta de direção argumentativa."
+   }
+  },
+  "c3_argumentos_desenvolvidos": {
+   "type": "score",
+   "instructions": {
+    "pergunta": "Em que grau os argumentos anunciados em `redacao` são desenvolvidos e explicados?",
+    "inspecionar": "`redacao`"
+   },
+   "criteria": [
+    "Os argumentos ficam só enunciados, são contraditórios ou deixam lacunas graves de sentido.",
+    "Parte dos argumentos é explicada, mas há trechos rasos ou apoiados só em afirmações genéricas.",
+    "Os argumentos são explicados de forma consistente (causa-consequência, dados, comparações ou exemplos) com elaboração própria."
+   ]
+  },
+  "c3_conclusao_retoma_tese": {
+   "type": "score",
+   "instructions": {
+    "pergunta": "Em que grau o último parágrafo de `redacao` fecha a argumentação desenvolvida no texto?",
+    "inspecionar": "`redacao`"
+   },
+   "criteria": [
+    "Não há parágrafo conclusivo, ou o último parágrafo muda de assunto, contradiz a tese ou traz ideia nova não preparada.",
+    "O último parágrafo existe, mas é genérico: repete frases feitas ou só propõe medidas sem amarrar a tese e os argumentos.",
+    "O último parágrafo retoma a tese e os argumentos desenvolvidos e os fecha de forma coerente com a introdução."
+   ]
+  },
+  "c5_tem_proposta": {
+   "type": "noul",
+   "instructions": "A `redacao` apresenta ao menos uma proposta de intervenção social ou institucional para enfrentar o problema de `tema`?",
+   "criteria": {
+    "true": "Propõe medida concreta de intervenção na sociedade (política pública, ação educativa, regulação, projeto coletivo ou iniciativa institucional).",
+    "false": "Apenas constata o problema, faz desejo genérico ou dá só conselhos individuais de cuidado pessoal ao leitor sem medida coletiva ou institucional."
+   }
+  },
+  "c5_agente_presente": {
+   "type": "noul",
+   "instructions": "A proposta de intervenção em `redacao` nomeia quem deve executar a ação?",
+   "criteria": {
+    "true": "Há um sujeito indicado como responsável pela ação, mesmo que genérico.",
+    "false": "Não há proposta ou a ação aparece sem indicar quem a executa ('é preciso fazer X')."
+   }
+  },
+  "c5_agente_especifico": {
+   "type": "noul",
+   "instructions": "A proposta de intervenção em `redacao` nomeia um agente específico e institucional (e não um agente vago)?",
+   "criteria": {
+    "true": "Indica órgão, poder ou instituição concreta (como Ministério da Educação, governo federal, escolas, mídia, ONGs).",
+    "false": "Não nomeia agente ou usa termo vago como 'a sociedade', 'as pessoas', 'todos', 'nós' ou 'alguém'."
+   }
+  },
+  "c5_acao": {
+   "type": "noul",
+   "instructions": "A proposta de intervenção em `redacao` indica claramente qual ação deve ser realizada?"
+  },
+  "c5_modo_meio": {
+   "type": "noul",
+   "instructions": "A proposta de intervenção em `redacao` explica como ou por qual meio a ação será executada?",
+   "criteria": {
+    "true": "Especifica o instrumento, canal ou forma de execução (ex.: 'por meio de campanhas...', 'através de verbas...').",
+    "false": "Diz apenas o que fazer sem explicar como ou por qual meio executar."
+   }
+  },
+  "c5_efeito": {
+   "type": "noul",
+   "instructions": "A proposta de intervenção em `redacao` declara a finalidade ou resultado esperado da ação?",
+   "criteria": {
+    "true": "Explicita o objetivo da medida (ex.: 'para reduzir...', 'a fim de garantir...', 'com o intuito de...').",
+    "false": "Não indica qual efeito ou finalidade se espera alcançar com a medida."
+   }
+  },
+  "c5_detalhamento": {
+   "type": "noul",
+   "instructions": "A proposta de intervenção em `redacao` aprofunda ou exemplifica algum dos elementos (agente, ação, modo/meio ou efeito) com informação adicional?"
+  },
+  "c5_articulada_discussao": {
+   "type": "noul",
+   "instructions": "A proposta de intervenção em `redacao` responde diretamente aos problemas discutidos nos parágrafos anteriores?"
+  },
+  "c5_viola_direitos_humanos": {
+   "type": "noul",
+   "instructions": "A `redacao` defende tortura, execução sumária, justiça com as próprias mãos, discurso de ódio ou incitação à violência contra grupos?",
+   "criteria": {
+    "true": "Há defesa explícita de violação grave aos direitos humanos na proposta ou no texto.",
+    "false": "A proposta e o texto respeitam os direitos humanos."
+   }
+  },
+  "c2_repertorio_presente": {
+   "type": "noul",
+   "instructions": {
+    "pergunta": "A `redacao` usa algum repertório sociocultural — informação, fato, citação, dado, lei, obra, conceito ou experiência — relacionado ao `tema` como argumento?",
+    "inspecionar": [
+     "`tema`",
+     "`redacao`"
+    ]
+   },
+   "criteria": {
+    "true": "Cita ao menos uma referência (autor, obra, filme, dado estatístico, fato histórico, lei, conceito teórico ou experiência) usada para sustentar o ponto de vista.",
+    "false": "Baseia-se apenas em opinião e senso comum, sem nenhuma referência."
+   }
+  },
+  "c1_truncamento": {
+   "type": "score",
+   "instructions": {
+    "pergunta": "Com que frequência `redacao` apresenta períodos truncados (ponto final separando orações que deveriam formar um mesmo período) ou justapostos (vírgula no lugar de ponto final)?",
+    "inspecionar": "`redacao`"
+   },
+   "criteria": [
+    "Truncamentos ou justaposições recorrentes, prejudicando a fluidez em vários trechos.",
+    "Truncamentos ou justaposições em casos isolados.",
+    "Períodos completos e bem delimitados ao longo do texto."
+   ]
+  },
+  "c1_periodos_complexos": {
+   "type": "noul",
+   "instructions": {
+    "pergunta": "A `redacao` constrói períodos complexos, com orações subordinadas ou intercaladas bem articuladas?",
+    "inspecionar": "`redacao`"
+   },
+   "criteria": {
+    "true": "Alterna períodos simples e complexos com segurança, usando subordinação ou intercalação sem perder a clareza.",
+    "false": "Predominam períodos curtos e simples, ou os períodos complexos ficam mal resolvidos."
+   }
+  },
+  "c1_registro_informal": {
+   "type": "noul",
+   "instructions": {
+    "pergunta": "A `redacao` usa registro informal ou marcas de oralidade?",
+    "inspecionar": "`redacao`"
+   },
+   "criteria": {
+    "true": "Usa gírias, coloquialismos ou marcas de fala (como 'a gente', 'tipo', 'né', 'pra', 'tá', 'aí').",
+    "false": "Mantém o registro formal ao longo de todo o texto."
+   }
+  },
+  "c1_vocabulario": {
+   "type": "score",
+   "instructions": {
+    "pergunta": "Em que grau o vocabulário de `redacao` é preciso e adequado ao contexto?",
+    "inspecionar": "`redacao`"
+   },
+   "criteria": [
+    "Há palavras com sentido trocado ou impreciso, ou confusão entre palavras parecidas.",
+    "Vocabulário adequado, mas genérico ou repetitivo.",
+    "Vocabulário preciso, variado e usado no sentido correto."
+   ]
+  },
+  "c1_reincidencia_desvios": {
+   "type": "score",
+   "instructions": {
+    "pergunta": "Como se distribuem os desvios de gramática e de convenções da escrita em `redacao`?",
+    "inspecionar": "`redacao`"
+   },
+   "criteria": [
+    "Desvios frequentes e variados ao longo de todo o texto.",
+    "Alguns desvios, que se repetem ou chamam atenção.",
+    "No máximo um deslize isolado e não reincidente."
+   ]
+  },
+  "c2_tracos_outro_tipo": {
+   "type": "noul",
+   "instructions": {
+    "pergunta": "A `redacao` tem trechos extensos predominantemente narrativos, descritivos ou meramente expositivos, sem defesa de opinião?",
+    "inspecionar": "`redacao`"
+   },
+   "criteria": {
+    "true": "Em parte relevante do texto, conta uma história, descreve ou apenas informa, sem argumentar.",
+    "false": "Argumenta em defesa de um ponto de vista ao longo do texto."
+   }
+  },
+  "c2_estrutura_completa": {
+   "type": "noul",
+   "instructions": {
+    "pergunta": "A `redacao` apresenta as três partes do texto dissertativo-argumentativo: introdução com proposição, desenvolvimento argumentativo e conclusão?",
+    "inspecionar": "`redacao`"
+   },
+   "criteria": {
+    "true": "As três partes são reconhecíveis: a introdução apresenta o ponto de vista, o desenvolvimento argumenta e há um fechamento.",
+    "false": "Falta alguma das três partes, ou elas não são reconhecíveis."
+   }
+  },
+  "c2_argumentacao_consistente": {
+   "type": "score",
+   "instructions": {
+    "pergunta": "Em que grau a argumentação de `redacao` vai além do senso comum?",
+    "inspecionar": [
+     "`tema`",
+     "`redacao`"
+    ]
+   },
+   "criteria": [
+    "Argumentação previsível: repete ideias óbvias e clichês sobre o `tema`, sem aprofundar.",
+    "Argumentação parcialmente consistente: alguns argumentos vão além do óbvio, outros ficam no senso comum.",
+    "Argumentação consistente: argumentos fundamentados, com reflexão que vai além do senso comum."
+   ]
+  },
+  "c3_progressao": {
+   "type": "score",
+   "instructions": {
+    "pergunta": "Em que grau as ideias de `redacao` progridem sem saltos temáticos nem repetições desnecessárias?",
+    "inspecionar": "`redacao`"
+   },
+   "criteria": [
+    "As ideias se repetem ou saltam de um assunto a outro sem ligação.",
+    "Progressão em geral clara, com algum salto ou repetição pontual.",
+    "Cada parte acrescenta algo novo e prepara a seguinte, em progressão clara."
+   ]
+  },
+  "c3_autoria": {
+   "type": "score",
+   "instructions": {
+    "pergunta": "Em que grau `redacao` revela autoria, isto é, interpretação própria das informações em defesa do ponto de vista?",
+    "inspecionar": "`redacao`"
+   },
+   "criteria": [
+    "Só reproduz informações genéricas, sem interpretação própria.",
+    "Há indícios de autoria, mas parte do texto é genérica.",
+    "Autoria evidente: interpreta e relaciona as informações de forma própria e consistente."
+   ]
+  },
+  "c3_especificidade": {
+   "type": "score",
+   "instructions": {
+    "pergunta": "Em que grau os argumentos de `redacao` são específicos e concretos?",
+    "inspecionar": [
+     "`tema`",
+     "`redacao`"
+    ]
+   },
+   "criteria": [
+    "Afirmações amplas que serviriam para muitos temas.",
+    "Argumentos parcialmente específicos.",
+    "Argumentos que apontam causas, grupos, situações ou consequências precisas ligadas ao `tema`."
+   ]
+  },
+  "c3_evidencia_concreta": {
+   "type": "noul",
+   "instructions": {
+    "pergunta": "A `redacao` sustenta algum argumento com exemplo concreto, dado ou fato verificável?",
+    "inspecionar": "`redacao`"
+   },
+   "criteria": {
+    "true": "Usa exemplo real, estatística, fato histórico ou caso documentado para apoiar um argumento.",
+    "false": "Usa só afirmações gerais ou exemplos hipotéticos."
+   }
+  },
+  "c4_articulacao_paragrafos": {
+   "type": "score",
+   "instructions": {
+    "pergunta": "Em que grau os parágrafos de `redacao` se ligam uns aos outros por conectivos ou expressões de retomada?",
+    "inspecionar": "`redacao`"
+   },
+   "criteria": [
+    "Parágrafos justapostos, sem marca de ligação entre eles.",
+    "Alguns parágrafos se ligam explicitamente ao anterior, outros começam soltos.",
+    "Todos os parágrafos se ligam explicitamente ao anterior."
+   ]
+  },
+  "c4_articulacao_periodos": {
+   "type": "score",
+   "instructions": {
+    "pergunta": "Em que grau as frases dentro dos parágrafos de `redacao` estão encadeadas?",
+    "inspecionar": "`redacao`"
+   },
+   "criteria": [
+    "Frases soltas, sem conectivos nem retomadas.",
+    "Encadeamento irregular: parte das frases ligadas, parte soltas.",
+    "Frases encadeadas por conectivos e retomadas variados."
+   ]
+  },
+  "c4_inadequacoes_coesivas": {
+   "type": "score",
+   "instructions": {
+    "pergunta": "Com que frequência `redacao` usa conectivos ou retomadas com relação lógica inadequada (por exemplo, 'portanto' sem conclusão, 'entretanto' sem oposição)?",
+    "inspecionar": "`redacao`"
+   },
+   "criteria": [
+    "Inadequações frequentes.",
+    "Inadequações pontuais.",
+    "Nenhuma inadequação: cada conectivo expressa a relação lógica correta."
+   ]
+  },
+  "c4_referenciacao": {
+   "type": "score",
+   "instructions": {
+    "pergunta": "Em que grau `redacao` retoma termos já citados por pronomes, sinônimos ou expressões resumitivas em vez de repeti-los?",
+    "inspecionar": "`redacao`"
+   },
+   "criteria": [
+    "Repete as mesmas palavras em vez de retomá-las, ou usa pronomes com referente confuso.",
+    "Usa retomadas, mas com repetições ou ambiguidades.",
+    "Retoma termos com recursos variados e referentes claros."
+   ]
+  },
+  "c5_relacionada_recorte": {
+   "type": "noul",
+   "instructions": {
+    "pergunta": "A proposta de intervenção em `redacao` enfrenta o problema específico do recorte de `tema`, e não só o assunto geral?",
+    "inspecionar": [
+     "`tema`",
+     "`redacao`"
+    ]
+   },
+   "criteria": {
+    "true": "A ação proposta ataca o problema delimitado pelo `tema`.",
+    "false": "A proposta trata só do assunto geral, de outro problema, ou não há proposta."
+   }
+  },
+  "triagem_prosa": {
+   "type": "noul",
+   "instructions": {
+    "pergunta": "A `redacao` está escrita em prosa, em parágrafos, e não em versos, tópicos ou lista?",
+    "inspecionar": "`redacao`"
+   },
+   "criteria": {
+    "true": "O texto é corrido, organizado em frases e parágrafos.",
+    "false": "O texto está em versos, em tópicos ou em forma de lista."
+   }
+  },
+  "triagem_ininteligivel": {
+   "type": "noul",
+   "instructions": {
+    "pergunta": "Uma parte relevante de `redacao` é ininteligível, com sequências de palavras sem sentido?",
+    "inspecionar": "`redacao`"
+   },
+   "criteria": {
+    "true": "Há trechos que não podem ser compreendidos, com palavras truncadas ou sem nexo.",
+    "false": "O texto pode ser lido e compreendido, mesmo com desvios."
+   }
+  },
+  "global_persuasao": {
+   "type": "score",
+   "instructions": {
+    "pergunta": "Quão convincente seria a argumentação de `redacao` para um leitor que ainda não concorda com o ponto de vista?",
+    "inspecionar": [
+     "`tema`",
+     "`redacao`"
+    ]
+   },
+   "criteria": [
+    "Pouco convincente: o leitor não teria motivo para mudar de opinião.",
+    "Convence em parte: alguns argumentos têm força, outros não.",
+    "Convincente: os argumentos juntos sustentam bem o ponto de vista."
+   ]
+  },
+  "tema_assunto_ref": {
+   "type": "noul",
+   "instructions": {
+    "pergunta": "A `redacao` trata do assunto geral de `tema`?",
+    "inspecionar": [
+     "`tema`",
+     "`redacao`"
+    ]
+   },
+   "criteria": {
+    "true": "O texto discute o mesmo assunto amplo de `tema`, mesmo que não chegue ao recorte específico.",
+    "false": "O texto trata de outro assunto, sem relação com `tema`."
+   }
+  },
+  "tema_recorte_ref": {
+   "type": "noul",
+   "instructions": {
+    "pergunta": "A `redacao` discute o recorte específico proposto em `tema`, e não só o assunto amplo?",
+    "inspecionar": [
+     "`tema`",
+     "`redacao`"
+    ]
+   },
+   "criteria": {
+    "true": "A discussão gira em torno do problema delimitado por `tema`.",
+    "false": "O texto fica no assunto amplo, trata de outro aspecto ou de outro assunto."
+   }
+  },
+  "tema_e_emb": {
+   "type": "noul",
+   "instructions": {
+    "pergunta": "O tema de `redacao` é \"§TEMA§\"?",
+    "inspecionar": [
+     "`redacao`"
+    ]
+   },
+   "criteria": {
+    "true": "A redação foi escrita sobre esse tema.",
+    "false": "A redação foi escrita sobre outro tema."
+   }
+  },
+  "c5_recorte_emb": {
+   "type": "noul",
+   "instructions": {
+    "pergunta": "A proposta de intervenção em `redacao` enfrenta o problema do tema \"§TEMA§\"?",
+    "inspecionar": [
+     "`redacao`"
+    ]
+   },
+   "criteria": {
+    "true": "A ação proposta ataca o problema do tema \"§TEMA§\".",
+    "false": "A proposta trata de outro problema, só do assunto geral, ou não há proposta."
+   }
+  },
+  "c3_coerencia": {
+   "type": "noul",
+   "instructions": {
+    "pergunta": "As ideias de `redacao` são coerentes entre si e com o ponto de vista defendido?",
+    "inspecionar": [
+     "`redacao`"
+    ]
+   },
+   "criteria": {
+    "true": "Todas as afirmações são compatíveis entre si e ajudam a sustentar o ponto de vista.",
+    "false": "Há afirmações incompatíveis entre si, ou trechos que enfraquecem ou negam o ponto de vista."
+   }
+  },
+  "c3_informacoes_articuladas": {
+   "type": "noul",
+   "instructions": {
+    "pergunta": "Cada informação, fato ou opinião de `redacao` é desenvolvido e ligado ao ponto de vista?",
+    "inspecionar": [
+     "`redacao`"
+    ]
+   },
+   "criteria": {
+    "true": "As informações são explicadas e usadas para sustentar a tese.",
+    "false": "Há informações jogadas no texto, sem explicação nem ligação com a tese."
+   }
+  },
+  "c5_proposta_especifica": {
+   "type": "noul",
+   "instructions": {
+    "pergunta": "A proposta de intervenção de `redacao` é específica para o problema de `tema`?",
+    "inspecionar": [
+     "`tema`",
+     "`redacao`"
+    ]
+   },
+   "criteria": {
+    "true": "Diz concretamente o que fazer diante do problema discutido; não serviria para qualquer outro tema.",
+    "false": "Propõe algo genérico, que serviria para quase qualquer problema (por exemplo, 'investir em educação e conscientização'), ou não há proposta."
+   }
+  },
+  "c4_conectivos_funcionais": {
+   "type": "noul",
+   "instructions": {
+    "pergunta": "Os conectivos de `redacao` expressam relações lógicas reais entre as ideias que ligam?",
+    "inspecionar": [
+     "`redacao`"
+    ]
+   },
+   "criteria": {
+    "true": "Cada conectivo marca uma relação de fato presente entre as ideias (causa, oposição, conclusão, adição).",
+    "false": "Há conectivos usados como enfeite ou em excesso, sem relação lógica real."
+   }
+  },
+  "c2_repertorio_especifico": {
+   "type": "noul",
+   "instructions": {
+    "pergunta": "O repertório citado em `redacao` tem relação direta com o recorte de `tema`?",
+    "inspecionar": [
+     "`tema`",
+     "`redacao`"
+    ]
+   },
+   "criteria": {
+    "true": "A referência trata do mesmo problema delimitado pelo tema e é explicada no texto.",
+    "false": "A referência é genérica, serviria para qualquer tema, ou não há repertório."
+   }
+  },
+  "c5_proposta_assertiva": {
+   "type": "noul",
+   "instructions": {
+    "pergunta": "A proposta de intervenção de `redacao` afirma diretamente qual ação deve ser feita?",
+    "inspecionar": [
+     "`redacao`"
+    ]
+   },
+   "criteria": {
+    "true": "Diz o que deve ser feito de forma assertiva (por exemplo, 'o Ministério da Educação deve criar…').",
+    "false": "Só levanta hipóteses ou condições ('se X for feito, Y poderá acontecer'), ou não há proposta."
+   }
+  },
+  "triagem_identificacao_v3": {
+   "type": "noul",
+   "instructions": {
+    "pergunta": "A `redacao` traz assinatura, nome, apelido ou rubrica de quem a escreveu?",
+    "inspecionar": [
+     "`redacao`"
+    ]
+   },
+   "criteria": {
+    "true": "O autor se identifica no texto: assina, escreve o próprio nome, apelido ou rubrica, ou se apresenta pelo nome.",
+    "false": "O autor não se identifica. Nomes de pessoas citadas como referência (autores, cientistas, personagens históricos ou públicos) não contam como identificação."
+   }
+  },
+  "triagem_trechos_relacionados": {
+   "type": "noul",
+   "instructions": {
+    "pergunta": "Todos os trechos de `redacao` têm relação com o tema ou com a argumentação?",
+    "inspecionar": [
+     "`tema`",
+     "`redacao`"
+    ]
+   },
+   "criteria": {
+    "true": "Cada trecho trata do tema ou serve à argumentação.",
+    "false": "Há algum trecho solto, sem relação com o tema nem com a argumentação, como receita, hino, letra de música, oração, biografia ou recado à banca."
+   }
+  },
+  "triagem_improperio": {
+   "type": "noul",
+   "instructions": {
+    "pergunta": "A `redacao` contém palavrão, xingamento ou ofensa dirigida a alguém?",
+    "inspecionar": [
+     "`redacao`"
+    ]
+   },
+   "criteria": {
+    "true": "Há palavrão, xingamento ou ofensa a uma pessoa ou grupo.",
+    "false": "O texto não ofende ninguém, mesmo quando critica ideias ou instituições."
+   }
+  },
+  "triagem_tipo_textual": {
+   "type": "choice",
+   "instructions": "Que tipo de texto é `redacao`?",
+   "criteria": {
+    "narrativo": "Conta uma história, com personagens e acontecimentos em sequência.",
+    "poema": "Escrito em versos ou estrofes.",
+    "carta": "Dirigido a um destinatário, com vocativo e despedida (por exemplo, 'Prezado…', 'Atenciosamente').",
+    "lista": "Organizado em tópicos ou itens soltos, não em parágrafos corridos.",
+    "expositivo": "Apenas informa ou explica o assunto, sem defender um ponto de vista.",
+    "dissertativo_argumentativo": "Texto em prosa que defende um ponto de vista com argumentos."
+   }
+  }
+ }
+}

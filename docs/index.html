@@ -192,6 +192,8 @@ footer.site-footer{background:#2A2018;color:#C4B6A0;margin-top:64px;border-top:2
 <a href="#o-fluxo-etapa-por-etapa" class="dropdown-link" data-page="inicio">O fluxo, etapa por etapa</a>
 <a href="#arquitetura" class="dropdown-link" data-page="inicio">Arquitetura</a>
 <a href="#por-que-mensageria-e-n-o-um-app-de-ia" class="dropdown-link" data-page="inicio">Por que mensageria, e não um app de IA</a>
+<a href="#o-limite-pr-tico-a-caligrafia" class="dropdown-link" data-page="inicio">O limite prático: a caligrafia</a>
+<a href="#por-que-o-deepseek" class="dropdown-link" data-page="inicio">Por que o DeepSeek</a>
 <a href="#modo-h-brido-experimental-" class="dropdown-link" data-page="inicio">Modo híbrido (experimental)</a>
 <a href="#o-modelo-de-ml" class="dropdown-link" data-page="inicio">O modelo de ML</a>
 <a href="#h-brido-s-llm" class="dropdown-link" data-page="inicio">Híbrido × só LLM</a>
@@ -366,7 +368,8 @@ footer.site-footer{background:#2A2018;color:#C4B6A0;margin-top:64px;border-top:2
 <ul>
 <li><strong>Limites por conta:</strong> 10 correções e 30 fotos por dia (3 fotos para cada correção). O contador zera à meia-noite UTC (21h em Brasília).</li>
 <li><strong>A primeira mensagem pode levar ~45 s:</strong> o bot desliga depois de 10 minutos sem uso e precisa acordar. Depois responde na hora, e cada correção leva cerca de 1 minuto.</li>
-<li><strong>Você escolhe quem dá a nota:</strong> o <strong>modelo treinado</strong> (machine learning, aprendeu com milhares de redações corrigidas — <a href="#modo-híbrido-experimental">modo híbrido</a>) ou a <strong>IA generativa</strong> sozinha. Nos dois, o comentário é escrito por IA. Dá para mandar a mesma redação duas vezes e comparar: o modelo quase sempre repete a nota, e a IA varia mais.</li>
+<li><strong>A letra é o principal limite:</strong> em caligrafia pouco legível, a leitura da foto erra muitas palavras, e você precisa corrigir o texto à mão antes da nota (ver <a href="#o-limite-prático-a-caligrafia">O limite prático: a caligrafia</a>). Nesse caso, digitar ou colar o texto pode dar menos trabalho.</li>
+<li><strong>Você escolhe quem dá a nota:</strong> o <strong>modelo treinado</strong> (machine learning, aprendeu com milhares de redações corrigidas — <a href="#modo-híbrido-experimental">modo híbrido</a>), que é o recomendado por chegar mais perto da nota real (<a href="#híbrido--só-llm">comparação</a>), ou a <strong>IA generativa</strong> sozinha. Nos dois, o comentário é escrito por IA. Dá para mandar a mesma redação duas vezes e comparar: o modelo quase sempre repete a nota, e a IA varia mais.</li>
 <li><strong>Para onde vai a redação:</strong> o Mistral (França) lê a foto, o Jev (TypeSafe AI, EUA) analisa o texto quando a nota é pelo modelo treinado e o DeepSeek (China) escreve o comentário. A foto é descartada logo após a leitura e nada fica guardado depois da correção; esses serviços podem manter cópias conforme as regras de cada um.</li>
 <li>A nota é uma <strong>estimativa</strong>: no ENEM oficial, a redação é avaliada por dois corretores humanos.</li>
 </ul>
@@ -450,12 +453,43 @@ Aluno                    Bot
 <li><strong>Mono-container</strong>: FastAPI + Redis no MESMO contêiner. O <code>entrypoint.sh</code> sobe o <code>redis-server</code> (só em <code>127.0.0.1</code>, nunca exposto fora do contêiner), espera o PING responder e só então executa o <code>uvicorn</code>. Um único deploy, sem Redis gerenciado à parte.</li>
 <li><strong>Estado 100% em Redis</strong> (sem banco relacional): máquina de estados da conversa (TTL 45 min), consentimento LGPD, rate-limit diário e idempotência de webhook. O AOF em <code>/data</code> (volume) sobrevive a restart do contêiner.</li>
 <li><strong>Réplica única no modo padrão</strong>: como o Redis embutido não é compartilhado entre réplicas, <code>replicas > 1</code> fragmentaria rate-limit, consentimento e estado de fluxo (cada réplica veria um Redis diferente). Mantenha 1 réplica (folgado para o tráfego de uma escola). Um backend de despacho plugável (<code>QUEUE_BACKEND</code>: <code>memory</code> default, ou <code>azure</code>) também habilita um deploy alternativo em <strong>scale-to-zero</strong> com Redis externo — ver <a href="#deploy-azure-container-apps">Deploy</a> abaixo.</li>
-<li><strong>Correção plugável</strong>: o provedor do LLM troca por env var (<code>CORRECTION_PROVIDER</code>: <code>gemini</code> | <code>claude</code> | <code>openai</code> | <code>deepseek</code> | <code>maritaca</code>; <code>CORRECTION_MODEL</code> define o modelo dentro dele — default <code>deepseek</code> / <code>deepseek-flash</code> (V4.1-Flash), adotado por custo × qualidade), o que permite comparar modelos rápido. O prompt é dividido em bloco estático (matriz, ~6.000 tokens) + bloco dinâmico (tema/motivadores/redação) para aproveitar cache de contexto — explícito no Gemini e no Claude, automático no OpenAI/DeepSeek (a Maritaca não documenta cache; o bloco estático é reenviado sem desconto confirmado).</li>
+<li><strong>Correção plugável</strong>: o provedor do LLM troca por env var (<code>CORRECTION_PROVIDER</code>: <code>gemini</code> | <code>claude</code> | <code>openai</code> | <code>deepseek</code> | <code>maritaca</code>; <code>CORRECTION_MODEL</code> define o modelo dentro dele — default <code>deepseek</code> / <code>deepseek-flash</code> (V4.1-Flash); ver <a href="#por-que-o-deepseek">Por que o DeepSeek</a>), o que permite comparar modelos rápido. O prompt é dividido em bloco estático (matriz, ~6.000 tokens) + bloco dinâmico (tema/motivadores/redação) para aproveitar cache de contexto — explícito no Gemini e no Claude, automático no OpenAI/DeepSeek (a Maritaca não documenta cache; o bloco estático é reenviado sem desconto confirmado).</li>
 </ul>
 
 <h3 id="por-que-mensageria-e-n-o-um-app-de-ia">Por que mensageria, e não um app de IA</h3>
 
 <p>A correção chega pelo canal de <strong>menor atrito</strong>: sem instalar aplicativo, sem criar conta, dentro do mensageiro que o aluno já usa todo dia — inclusive no ambiente escolar, onde ferramentas de IA de uso geral raramente estão disponíveis. E como a entrada é uma <em>foto do manuscrito</em> (não texto digitado), o treino continua fiel ao formato real da prova: o aluno escreve à mão, no papel, como no dia do ENEM.</p>
+
+<h3 id="o-limite-pr-tico-a-caligrafia">O limite prático: a caligrafia</h3>
+
+<p>O que mais limita o uso real é a letra do aluno. A leitura da foto (Mistral OCR) acerta bem a letra caprichada, mas erra muito em caligrafia pouco legível: letras emendadas ou mal formadas, traçado irregular. Em 6 redações reais fotografadas, as de letra caprichada tiveram de 0 a 2 palavras marcadas para conferência; as de letra mais difícil, cerca de 50 cada.</p>
+
+<p>O bot não conserta a leitura sozinho. A Competência I avalia os desvios reais do aluno, e uma correção automática pode apagar um erro que conta na nota: testamos um segundo modelo relendo a foto, e ele ora consertava a leitura, ora "corrigia" o erro do próprio aluno. Por isso, quem tem letra difícil precisa revisar e editar o texto no celular antes da nota, e essa edição manual quebra a fluidez de tirar a foto e receber a correção. Para essa pessoa, digitar ou colar o texto pode dar menos trabalho do que consertar a leitura.</p>
+
+<h3 id="por-que-o-deepseek">Por que o DeepSeek</h3>
+
+<p>O LLM escreve o comentário nos dois modos e, no modo IA generativa, também dá a nota. O DeepSeek (<code>deepseek-flash</code>) ficou como padrão porque, entre os modelos testados, escreveu o comentário mais detalhado, empatou na nota e custa pouco:</p>
+
+<div class="table-wrap"><table>
+<tr><th></th><th>DeepSeek</th><th>Gemini 3.5 Flash Lite</th><th>Nemotron 3 Ultra (NVIDIA)</th></tr>
+<tr><td>Erro médio da nota dada pelo próprio LLM ¹</td><td>148</td><td>189 (144 com um prompt ajustado para ele)</td><td>não medido</td></tr>
+<tr><td>Trechos da redação citados no comentário da Competência I ²</td><td><strong>140</strong></td><td>29 a 46</td><td>83</td></tr>
+<tr><td>Tempo médio do comentário ²</td><td>46 s</td><td><strong>10 a 17 s</strong></td><td>101 s</td></tr>
+<tr><td>Cache do prompt fixo (~6 mil tokens da matriz)</td><td><strong>automático</strong>: 93% da entrada vem do cache</td><td>indisponível no plano gratuito</td><td>não medido</td></tr>
+<tr><td>Custo do LLM por correção, fora do pico</td><td>US$ 0,005 a 0,007 ³</td><td>gratuito dentro da cota; fora dela, não medido</td><td>não medido</td></tr>
+</table></div>
+
+<p>¹ Mesmas 30 redações do Essay-BR, separadas do desenvolvimento do prompt; versão anterior do DeepSeek (V4 Flash), raciocínio <code>max</code>. A diferença entre 148 e 144 não é significativa (teste de sinais, p = 0,85).</p>
+<p>² Mesmas 9 redações, no modo híbrido: a nota vem do modelo treinado, e o LLM só escreve o comentário.</p>
+<p>³ Medido nas 100 redações de <a href="#híbrido--só-llm">Híbrido × só LLM</a>: US$ 0,005 quando só escreve o comentário, US$ 0,007 quando também dá a nota.</p>
+
+<ul>
+<li><strong>O comentário é o que pesa hoje.</strong> A nota recomendada vem do modelo treinado (ver <a href="#híbrido--só-llm">Híbrido × só LLM</a>), e o que se pede ao LLM é um comentário que cite o texto do aluno e aponte os desvios reais. Nisso, o DeepSeek foi o mais detalhado dos testados.</li>
+<li><strong>O Gemini 3.5 Flash Lite é a opção de custo zero:</strong> tem cota gratuita generosa e o comentário mais rápido, mas cita cerca de um terço dos trechos.</li>
+<li><strong>O Gemini 4 Hydrogen</strong> achou desvios que o DeepSeek perdeu, com texto mais enxuto, mas tratou como erro do aluno uma marca de leitura incerta do OCR. No plano gratuito (5 pedidos por minuto, 20 por dia), 4 de 10 tentativas falharam, e o teste ficou incompleto.</li>
+<li><strong>Contra o DeepSeek:</strong> o texto da redação é processado na China (ver <a href="#lgpd-o-público-é-menor-de-idade">LGPD</a>), e no horário de pico de lá o preço dobra.</li>
+<li><strong>Não medidos:</strong> Claude (Anthropic), ChatGPT (OpenAI) e Sabiá (Maritaca) estão no código (<code>CORRECTION_PROVIDER</code>), mas não foram comparados. O DeepSeek é o melhor entre os testados, não entre todos.</li>
+</ul>
 
 <h2 id="modo-h-brido-experimental-">Modo híbrido (experimental)</h2>
 
@@ -475,7 +509,7 @@ LLM (DeepSeek, raciocínio high): recebe a redação, as notas FIXAS e as pistas
 
 <h3 id="o-modelo-de-ml">O modelo de ML</h3>
 
-<p>O notebook <a href="https://github.com/ygorsmc/enem-por-foto/blob/main/notebooks/modelo_hibrido.ipynb"><code>notebooks/modelo_hibrido.ipynb</code></a> refaz este modelo do zero, para quem quiser conferir cada passo: os dados com as respostas do Jev, a divisão em treino e teste, as features, a escolha do algoritmo, a calibração, a avaliação e a checagem de que o resultado é o mesmo modelo do bot. As 59 perguntas feitas ao Jev, com a coluna de cada uma, estão em <a href="https://github.com/ygorsmc/enem-por-foto/blob/main/notebooks/perguntas_jev.md"><code>notebooks/perguntas_jev.md</code></a>.</p>
+<p>O notebook <a href="https://github.com/ygorsmc/enem-por-foto/blob/main/notebooks/modelo_hibrido.ipynb"><code>notebooks/modelo_hibrido.ipynb</code></a> refaz este modelo do zero, para quem quiser conferir cada passo: os dados com as respostas do Jev, a divisão em treino e teste, as features, a escolha do algoritmo, a calibração, a avaliação e a checagem de que o resultado é o mesmo modelo do bot. As 59 perguntas feitas ao Jev, com a coluna de cada uma, estão em <a href="https://github.com/ygorsmc/enem-por-foto/blob/main/notebooks/perguntas_jev.md"><code>notebooks/perguntas_jev.md</code></a>. As respostas do Jev não estão no repositório: para rodar o notebook, colete as suas com a sua chave da API (<code>notebooks/coletar_jev.py</code>, cerca de US$ 2,50 no corpus inteiro).</p>
 
 <ul>
 <li><strong>O Jev como sensor, não como corretor.</strong> O Jev (<code>jev-1.14.0</code>, da TypeSafe AI) responde perguntas atômicas sobre a redação, como "a proposta tem um agente definido?" ou "o repertório é legitimado?", cada uma com uma probabilidade. Usado direto para dar a nota, ele puxa tudo para o meio da escala (QWK total 0,45). Como entrada de um modelo calibrado, funciona bem.</li>
@@ -537,35 +571,49 @@ LLM (DeepSeek, raciocínio high): recebe a redação, as notas FIXAS e as pistas
 
 <h3 id="h-brido-s-llm">Híbrido × só LLM</h3>
 
-<p>Medido nas <strong>mesmas 50 redações</strong>, sorteadas do teste oficial, com o código e o prompt do bot, DeepSeek <code>deepseek-flash</code> (V4.1-Flash) com raciocínio <code>high</code> nos dois modos. No híbrido, a nota é a do modelo treinado sem essas redações.</p>
+<p><strong>Veredito: para dar a nota, o modelo treinado (machine learning) é mais indicado que a IA generativa.</strong> Em 100 redações, ele chegou mais perto da nota real, repetiu a nota quando a mesma redação foi corrigida de novo e saiu mais barato. A IA generativa fica com o que faz bem: escrever o comentário, citando trechos do texto, a partir da nota que o modelo deu. O modo só LLM continua no bot para comparação.</p>
+
+<p>Por que o modelo ganha:</p>
+<ul>
+<li><strong>Aprendeu a escala com quem corrige.</strong> O modelo foi treinado em milhares de redações com nota por competência e reproduz como essas notas se distribuem. O LLM só tem a matriz do INEP no prompt e espreme as notas no meio: põe 66% delas entre 480 e 680 (na nota real, 47%) e tira em média 140 pontos das redações de 720 ou mais. A cada 100 pontos a mais na nota real, a nota do LLM sobe 49; a do modelo, 74.</li>
+<li><strong>É determinístico.</strong> As mesmas respostas do Jev dão sempre a mesma nota, e só sobra a pequena variação do Jev. O LLM refaz o raciocínio a cada chamada, e a nota muda junto.</li>
+<li><strong>O LLM pensa menos.</strong> Com a nota pronta, ele só escreve o comentário e gera 22% menos tokens de saída, que são quase todo o custo.</li>
+</ul>
+
+<p>Medido nas <strong>mesmas 100 redações</strong>, sorteadas do teste oficial, com o código e o prompt do bot, DeepSeek <code>deepseek-flash</code> (V4.1-Flash) com raciocínio <code>high</code> nos dois modos, em 23/11/2026. No híbrido, o Jev respondeu ao vivo as 59 perguntas de produção, e a nota é a do modelo treinado sem o teste oficial.</p>
 
 <div class="table-wrap"><table>
-<tr><th></th><th>Só LLM</th><th>Híbrido (Jev + modelo + LLM)</th></tr>
-<tr><td>Concordância com a nota real (QWK total)</td><td>0,58</td><td><strong>0,71</strong></td></tr>
-<tr><td>QWK por competência (C1 a C5)</td><td>0,17 · 0,41 · 0,35 · 0,39 · 0,58</td><td><strong>0,42 · 0,52 · 0,50 · 0,67 · 0,76</strong></td></tr>
-<tr><td>Erro médio na nota total (MAE)</td><td>122 pontos</td><td><strong>106</strong> pontos</td></tr>
-<tr><td>Viés nas redações de 720 ou mais</td><td>−111</td><td><strong>−3</strong></td></tr>
-<tr><td>Viés nas redações de até 440</td><td>+102</td><td>+89</td></tr>
-<tr><td>Mesma redação corrigida de novo ¹</td><td>nota idêntica em 23%; diferença média de 55 pontos, até 240</td><td>nota idêntica em <strong>93%</strong>; diferença média de <strong>3</strong> pontos, até 40</td></tr>
-<tr><td>Tokens de saída do LLM</td><td>10,4 mil</td><td><strong>8,4 mil</strong></td></tr>
-<tr><td>Tempo médio do LLM</td><td>59 s</td><td><strong>49 s</strong></td></tr>
-<tr><td>Custo por correção, fora do pico ²</td><td>US$ 0,0064</td><td><strong>US$ 0,0056</strong> (com o Jev)</td></tr>
-<tr><td>Custo por correção, no pico ²</td><td>US$ 0,0128</td><td><strong>US$ 0,0108</strong> (com o Jev)</td></tr>
+<tr><th></th><th>Só LLM (IA generativa)</th><th>Híbrido (modelo treinado + LLM)</th></tr>
+<tr><td>Concordância com a nota real (QWK total)</td><td>0,51</td><td><strong>0,76</strong></td></tr>
+<tr><td>QWK por competência (C1 a C5)</td><td>0,10 · 0,37 · 0,41 · 0,38 · 0,54</td><td><strong>0,51 · 0,57 · 0,55 · 0,71 · 0,71</strong></td></tr>
+<tr><td>Erro médio na nota total (MAE)</td><td>128 pontos</td><td><strong>89</strong> pontos</td></tr>
+<tr><td>Viés médio</td><td>−72</td><td><strong>+14</strong></td></tr>
+<tr><td>Viés nas redações de 720 ou mais (38)</td><td>−140</td><td><strong>−17</strong></td></tr>
+<tr><td>Viés nas redações de 480 a 680 (47)</td><td>−60</td><td><strong>+11</strong></td></tr>
+<tr><td>Viés nas redações de até 440 (15)</td><td><strong>+59</strong></td><td>+101</td></tr>
+<tr><td>Notas entre 480 e 680 (na nota real: 47%)</td><td>66%</td><td><strong>51%</strong></td></tr>
+<tr><td>Mesma redação corrigida de novo ¹</td><td>nota idêntica em 22%; diferença média de 55 pontos; 1 em cada 3 mudou 80 ou mais</td><td>nota idêntica em <strong>79%</strong>; diferença média de <strong>11</strong> pontos; 1 em 100 mudou 80 ou mais</td></tr>
+<tr><td>Tokens de saída do LLM</td><td>10,9 mil</td><td><strong>8,4 mil</strong></td></tr>
+<tr><td>Tempo médio do LLM</td><td>54 s</td><td><strong>42 s</strong></td></tr>
+<tr><td>Custo por correção, fora do pico ²</td><td>US$ 0,0066</td><td><strong>US$ 0,0056</strong> (com o Jev)</td></tr>
+<tr><td>Custo por correção, no pico ²</td><td>US$ 0,0132</td><td><strong>US$ 0,0107</strong> (com o Jev)</td></tr>
 <tr><td>O que precisa</td><td>1 API (LLM)</td><td>2 APIs (Jev e LLM) e o modelo treinado (28 MB)</td></tr>
 <tr><td>Para onde vai o texto da redação</td><td>provedor do LLM</td><td>provedor do LLM <strong>e</strong> API do Jev</td></tr>
 </table></div>
 
-<p>¹ Reteste em 30 redações do teste, com o texto digitado (sem foto): o LLM corrigiu cada uma 3 vezes (DeepSeek V4 Flash, raciocínio <code>max</code>, antes do V4.1); no híbrido, o Jev respondeu 2 vezes e o modelo deu a nota (versão treinada em 600 redações, com a calibração de produção). Tabela completa e ressalvas na página de métricas, em "O modo híbrido resolve a instabilidade".</p>
-<p>² Tabela oficial do <code>deepseek-flash</code> e tokens medidos, com 90% da entrada vindo do cache; sem o OCR, igual nos dois modos (US$ 0,004 por foto acima da cota gratuita). O pico é o horário comercial da China, que no Brasil cai no fim da noite e de madrugada; fora dele, o DeepSeek cobra metade.</p>
+<p>¹ Texto digitado, sem OCR. Só LLM: as 50 redações que também estavam no teste de 17/11/2026, corrigidas de novo em 23/11 com o mesmo prompt, modelo e raciocínio. Híbrido: as 100 redações, com o Jev ao vivo comparado às respostas do mesmo Jev coletadas em 15/11.</p>
+<p>² Tabela oficial do <code>deepseek-flash</code> e tokens medidos, com ~93% da entrada vindo do cache; sem o OCR, igual nos dois modos (US$ 0,004 por foto acima da cota gratuita). O pico é o horário comercial da China, que no Brasil cai no fim da noite e de madrugada; fora dele, o DeepSeek cobra metade.</p>
 
 <p>Como ler a tabela:</p>
 <ul>
-<li><strong>A diferença na concordância é real:</strong> +0,13 no QWK total, com intervalo de confiança de 95% entre +0,03 e +0,23. A diferença no erro médio (−16 pontos) ainda não é conclusiva com 50 redações: o híbrido errou menos em 20, mais em 11 e empatou em 19 (p = 0,15).</li>
-<li><strong>Estabilidade:</strong> reenviar a mesma redação quase não muda a nota no híbrido. O modelo é determinístico (as mesmas respostas do Jev dão sempre a mesma nota), e as respostas do Jev mudam pouco entre execuções. No só LLM, 1 em cada 3 redações mudou 80 pontos ou mais só por ser corrigida de novo; no híbrido, nenhuma.</li>
-<li><strong>Onde o híbrido ganha:</strong> nas notas altas e médias. O LLM puxa as boas redações para baixo (−111 nas de 720 ou mais), e o modelo, não. Nas redações fracas, os dois superestimam.</li>
-<li><strong>Um falso zero:</strong> a regra de nota zero do híbrido zerou 1 das 50 redações (nota real 400), e ela está incluída. Sem ela, o erro médio do híbrido cai para 100.</li>
-<li><strong>Custo:</strong> com o mesmo nível de raciocínio, o híbrido sai ~12% mais barato e 10 s mais rápido. Com raciocínio <code>max</code> (o padrão do código até 17/11/2026; hoje é <code>high</code>), o modo só LLM gera ~19 mil tokens de saída (≈ US$ 0,012 por correção fora do pico) sem ganho de acurácia medido.</li>
-<li><strong>Feedback:</strong> o LLM respeitou as notas fixas nas 50 redações e nunca mencionou as pistas ao aluno.</li>
+<li><strong>A diferença é real nas duas medidas:</strong> +0,24 no QWK total (intervalo de confiança de 95% entre +0,15 e +0,34) e 39 pontos a menos de erro médio (entre 19 e 59). Redação a redação, o híbrido errou menos em 53, mais em 32 e empatou em 15. Num teste anterior, com 50 redações, a diferença no erro ainda não era conclusiva; com 100, é.</li>
+<li><strong>O 0,76 tem sorte da amostra:</strong> no teste oficial inteiro (976 redações), o modelo fica em 0,727, e essa é a referência. A nota do site também é ruidosa; contra corretores especialistas, o modelo concorda tanto quanto um especialista com o outro (ver "Validação externa", acima).</li>
+<li><strong>Onde o híbrido ganha:</strong> nas redações médias e boas, 85 das 100. O LLM puxa as boas para baixo (−140 nas de 720 ou mais), e o modelo quase não (−17).</li>
+<li><strong>Onde o LLM foi melhor:</strong> nas redações fracas, os dois superestimam, e nesta amostra o modelo superestimou mais (+101 contra +59, em só 15 redações). No teste de 50 redações tinha sido o contrário (+89 contra +102). É o ponto fraco conhecido do modelo (ver "Limitações", acima).</li>
+<li><strong>Estabilidade:</strong> a única mudança grande no híbrido (280 pontos) veio da regra de nota zero. Ela zerou uma redação de nota real 400 com as respostas antigas do Jev e não a zerou ao vivo, quando a redação recebeu 280. A regra é a parte menos estável do híbrido. No só LLM, 1 em cada 3 redações mudou 80 pontos ou mais só por ser corrigida de novo.</li>
+<li><strong>Custo:</strong> com o mesmo raciocínio, o híbrido sai ~15% mais barato e 12 s mais rápido, já contando o Jev (US$ 0,0004 e 0,2 s por chamada). Com raciocínio <code>max</code> (o padrão do código até 17/11/2026; hoje é <code>high</code>), o modo só LLM gera ~19 mil tokens de saída (≈ US$ 0,012 por correção fora do pico) sem ganho de acurácia medido.</li>
+<li><strong>O que o híbrido exige a mais:</strong> um segundo serviço (o Jev), que também recebe o texto da redação, e um modelo treinado que precisa ser refeito se as perguntas mudarem.</li>
+<li><strong>Feedback:</strong> o LLM respeitou as notas fixas nas 100 redações e nunca mencionou as pistas ao aluno.</li>
 </ul>
 
 <h3 id="como-ativar">Como ativar</h3>
@@ -578,7 +626,7 @@ CORRECTION_MODEL=deepseek-flash
 CORRECTION_EFFORT=high
 </code></pre>
 
-<p>Os <strong>artefatos do modelo</strong> (<code>src/correction/hybrid/artifacts/</code>: o modelo treinado, as perguntas no formato da API do Jev e os cortes do checklist) <strong>não estão neste repositório nem na imagem Docker</strong>; são gerados pelo script de treino do laboratório, que também fica fora. O modelo pode ser refeito com o <a href="https://github.com/ygorsmc/enem-por-foto/blob/main/notebooks/modelo_hibrido.ipynb">notebook</a>. Sem os artefatos, use o modo padrão (<code>llm</code>). Localmente, o <code>docker-compose</code> monta a pasta no contêiner, só para leitura. No deploy, o <code>deploy.sh</code> envia os arquivos para um contêiner privado do Blob Storage, e o app os baixa por um link SAS só de leitura (ver <a href="deploy/README.md">deploy/README.md</a>). As versões de <code>numpy</code>, <code>scipy</code>, <code>scikit-learn</code> e <code>joblib</code> em <code>requirements.txt</code> são fixas porque precisam ser as mesmas do treino.</p>
+<p>Os <strong>artefatos do modelo</strong> (<code>src/correction/hybrid/artifacts/</code>: o modelo treinado, as perguntas no formato da API do Jev e os cortes do checklist) <strong>não estão neste repositório nem na imagem Docker</strong>; são gerados pelo script de treino do laboratório, que também fica fora. O modelo pode ser refeito com o <a href="https://github.com/ygorsmc/enem-por-foto/blob/main/notebooks/modelo_hibrido.ipynb">notebook</a>, e as perguntas estão publicadas em <code>notebooks/perguntas_jev.json</code>. Sem os artefatos, use o modo padrão (<code>llm</code>). Localmente, o <code>docker-compose</code> monta a pasta no contêiner, só para leitura. No deploy, o <code>deploy.sh</code> envia os arquivos para um contêiner privado do Blob Storage, e o app os baixa por um link SAS só de leitura (ver <a href="deploy/README.md">deploy/README.md</a>). As versões de <code>numpy</code>, <code>scipy</code>, <code>scikit-learn</code> e <code>joblib</code> em <code>requirements.txt</code> são fixas porque precisam ser as mesmas do treino.</p>
 
 <h2 id="custo-e-observabilidade">Custo e observabilidade</h2>
 
@@ -753,8 +801,10 @@ make deploy                                        # build da imagem (Docker loc
 ├── notebooks/
 │   ├── modelo_hibrido.ipynb     # o modelo do modo híbrido refeito do zero (dados → teste → paridade com o bot)
 │   ├── perguntas_jev.md          # as 59 perguntas do Jev e a coluna de cada uma
+│   ├── perguntas_jev.json         # as mesmas perguntas no formato da API, com a ordem das colunas
+│   ├── coletar_jev.py              # coleta as respostas do Jev com a sua chave e monta o CSV do notebook
 │   ├── requirements.txt           # dependências do notebook (mesmas versões de numpy/scikit-learn do bot)
-│   └── data/                       # Essay-BR + respostas do Jev (CSV), Jev nas nota mil do AES-ENEM (sem texto) e a licença MIT do corpus
+│   └── data/                       # Essay-BR (CSV), Jev nas nota mil do AES-ENEM (sem texto) e a licença MIT do corpus
 │
 ├── scripts/
 │   └── simulate.py            # REPL de conversa com canal fake — E2E local sem provedor real
@@ -1364,6 +1414,8 @@ Aluno                         Bot
 
 <p><strong>Em aberto.</strong> O OCR é uma <strong>transcrição fiel</strong> da foto — ele não "conserta" nem interpreta a redação. Se o aluno não revisar o preview, um erro de leitura entra na correção como se fosse do texto original. A responsabilidade pela fidelidade do texto é compartilhada com o aluno, e o produto deixa isso explícito na etapa de confirmação.</p>
 
+<p><strong>Na prática, é o principal limite de uso.</strong> Com letra caprichada, o preview quase não tem o que conferir. Com caligrafia pouco legível (letras emendadas ou mal formadas, traçado irregular), dezenas de palavras precisam ser revistas, e o aluno edita o texto no celular antes da nota. Essa edição manual quebra a fluidez de tirar a foto e receber a correção, que é a proposta do produto. Como o conserto automático foi descartado (abaixo), a saída para esse aluno é digitar ou colar o texto.</p>
+
 <h3 id="alternativa-avaliada-e-descartada-segund">Alternativa avaliada e descartada: "segundo olhar" de uma LLM multimodal</h3>
 
 <p>Antes de fixar a edição manual como a única rede de segurança, testamos se uma LLM multimodal (recebendo a <strong>foto + a transcrição do OCR + as palavras de baixa confiança</strong>) conseguiria decifrar os trechos incertos automaticamente — poupando o aluno de reler e corrigir o texto à mão. A hipótese era razoável: um modelo de visão "olhando" a imagem deveria acertar onde o OCR só viu um traço ambíguo.</p>
@@ -1914,10 +1966,10 @@ Aluno                         Bot
 
 <p>Ressalvas:</p>
 <ul>
-<li><strong>Só LLM:</strong> DeepSeek V4 Flash (antes do V4.1), 3 execuções idênticas por redação, comparadas duas a duas. Não foi medido com <code>high</code>, o nível usado hoje.</li>
-<li><strong>Híbrido:</strong> duas execuções reais do Jev sobre as mesmas redações. O modelo era a versão treinada em 600 redações, já com a calibração e as features de produção (sem textos motivadores). O modelo em produção hoje é treinado no corpus completo, mas a estabilidade vem do desenho (modelo determinístico), não do tamanho do treino.</li>
+<li><strong>Só LLM:</strong> DeepSeek V4 Flash (antes do V4.1), 3 execuções idênticas por redação, comparadas duas a duas. Com <code>high</code>, o nível usado hoje, foi remedido em 23/11/2026 em 50 redações corrigidas em dois dias diferentes: 22% de notas idênticas, diferença média de 55 pontos, 34% com 80 ou mais.</li>
+<li><strong>Híbrido:</strong> duas execuções reais do Jev sobre as mesmas redações. O modelo era a versão treinada em 600 redações, já com a calibração e as features de produção (sem textos motivadores). O modelo em produção hoje é treinado no corpus completo, mas a estabilidade vem do desenho (modelo determinístico), não do tamanho do treino. Remedido em 23/11/2026 com o modelo de produção (59 perguntas) em 100 redações, Jev ao vivo × respostas de 15/11: 79% de notas idênticas, diferença média de 11 pontos, 1% com 80 ou mais. A única mudança grande (280 pontos) foi a regra de nota zero, que zerou a redação numa execução e não na outra.</li>
 <li><strong>Sem OCR:</strong> uma foto diferente da mesma redação gera um texto um pouco diferente, e isso pode mudar a nota nos dois modos.</li>
-<li><strong>Estabilidade não é acurácia:</strong> um modelo que dá sempre a mesma nota errada também seria estável. Aqui as duas vieram juntas: no teste pareado de 50 redações, o híbrido também concordou mais com a nota real (QWK 0,71 contra 0,58; README, "Híbrido × só LLM").</li>
+<li><strong>Estabilidade não é acurácia:</strong> um modelo que dá sempre a mesma nota errada também seria estável. Aqui as duas vieram juntas: no teste pareado de 100 redações, o híbrido também concordou mais com a nota real (QWK 0,76 contra 0,51; README, "Híbrido × só LLM").</li>
 </ul>
 
 <h3 id="sensibilidade-ao-code-correction-effort-">Sensibilidade ao <code>CORRECTION_EFFORT</code> — os quatro níveis, medidos na 0731</h3>
@@ -2094,15 +2146,15 @@ tokens_saída    ≈  a correção formatada (competências + feedback + reescri
 </blockquote>
 
 <blockquote>
-<p><strong>Atualização de 2026-11-17: os valores acima são de antes do aumento de preço de agosto/2026.</strong> O DeepSeek passou a cobrar em dois horários. No pico (horário comercial da China, que no Brasil cai no fim da noite e de madrugada), o <code>deepseek-flash</code> (V4.1-Flash) custa US$ 0,30 por milhão de tokens de entrada fora do cache, US$ 0,006 em cache e US$ 1,20 de saída. Fora do pico, metade. Remedido em 50 redações, com 90% da entrada vinda do cache, o custo do LLM por correção é:</p>
+<p><strong>Atualização de 2026-11-17: os valores acima são de antes do aumento de preço de agosto/2026.</strong> O DeepSeek passou a cobrar em dois horários. No pico (horário comercial da China, que no Brasil cai no fim da noite e de madrugada), o <code>deepseek-flash</code> (V4.1-Flash) custa US$ 0,30 por milhão de tokens de entrada fora do cache, US$ 0,006 em cache e US$ 1,20 de saída. Fora do pico, metade. Remedido em 100 redações (23/11/2026), com ~93% da entrada vinda do cache, o custo do LLM por correção é:</p>
 </blockquote>
 <p>></p>
 <blockquote>
 <p>| Modo | Raciocínio | Tokens de saída | Fora do pico | No pico |</p>
 <p>|---|---|---:|---:|---:|</p>
-<p>| Só LLM | <code>high</code> | 10,4 mil | US$ 0,0064 | US$ 0,0128 |</p>
+<p>| Só LLM | <code>high</code> | 10,9 mil | US$ 0,0066 | US$ 0,0132 |</p>
 <p>| Só LLM | <code>max</code> (padrão até 17/11/2026) | ~19 mil ¹ | ≈ US$ 0,012 | ≈ US$ 0,024 |</p>
-<p>| Híbrido (com o Jev) | <code>high</code> | 8,4 mil | US$ 0,0056 | US$ 0,0108 |</p>
+<p>| Híbrido (com o Jev) | <code>high</code> | 8,4 mil | US$ 0,0056 | US$ 0,0107 |</p>
 </blockquote>
 <p>></p>
 <blockquote>

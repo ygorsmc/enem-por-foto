@@ -7,4 +7,5 @@ joblib==1.6.0
 pandas==3.1.1
 matplotlib==3.11.2
 pyarrow==26.0.1  # lê o AES-ENEM (parquet) nas seções 11 e 12
+httpx==0.28.1  # coletar_jev.py (a mesma versão do bot)
 jupyterlab
